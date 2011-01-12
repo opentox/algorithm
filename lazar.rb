@@ -29,7 +29,7 @@ end
 # @ return [text/uri-list] Task URI 
 post '/lazar/?' do 
 
-  subjectid = params[:subjectid] ? subjectid = params[:subjectid] : nil
+  subjectid = params[:subjectid] ? params[:subjectid] : nil
   subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]  
 
   halt 404, "No dataset_uri parameter." unless params[:dataset_uri]

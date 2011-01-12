@@ -67,7 +67,7 @@ end
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do 
 
-    subjectid = params[:subjectid] ? subjectid = params[:subjectid] : nil
+    subjectid = params[:subjectid] ? params[:subjectid] : nil
     subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]  
     # TODO: is this thread safe??
     #@@bbrc = Bbrc::Bbrc.new 
@@ -223,8 +223,7 @@ post '/fminer/bbrc/?' do
 #   - hops Maximum number of hops
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
-  subjectid = nil
-  subjectid = params[:subjectid] if params[:subjectid]
+  subjectid = params[:subjectid] ? params[:subjectid] : nil
   subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]
   #@@last = Last::Last.new 
   minfreq = 5 unless minfreq = params[:min_frequency]
