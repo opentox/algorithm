@@ -87,7 +87,7 @@ post '/fminer/bbrc/?' do
 
     task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
 
-      feature_dataset = OpenTox::Dataset.new
+      feature_dataset = OpenTox::Dataset.new(nil, subjectid)
       feature_dataset.add_metadata({
         DC.title => "BBRC representatives for " + training_dataset.metadata[DC.title].to_s,
         DC.creator => url_for('/fminer/bbrc',:full),
@@ -236,7 +236,7 @@ post '/fminer/last/?' do
   halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
   prediction_feature = params[:prediction_feature]
 
-  training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}"
+  training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", subjectid
   
   training_dataset.load_all(subjectid)
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
