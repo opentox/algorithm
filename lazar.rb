@@ -29,11 +29,14 @@ end
 # @ return [text/uri-list] Task URI 
 post '/lazar/?' do 
 
+  subjectid = params[:subjectid] ? subjectid = params[:subjectid] : nil
+  subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]  
+
   halt 404, "No dataset_uri parameter." unless params[:dataset_uri]
 	dataset_uri = params[:dataset_uri]
 
   halt 404, "Dataset #{dataset_uri} not found." unless training_activities = OpenTox::Dataset.new(dataset_uri)
-  training_activities.load_all
+  training_activities.load_all(subjectid)
 
   prediction_feature = params[:prediction_feature]
   unless prediction_feature # try to read prediction_feature from dataset
@@ -50,8 +53,6 @@ post '/lazar/?' do
   task = OpenTox::Task.create("Create lazar model",url_for('/lazar',:full)) do |task|
 
 		lazar = OpenTox::Model::Lazar.new
-    subjectid = params[:subjectid] if params[:subjectid]
-    subjectid = request.env["HTTP_SUBJECTID"] if !subjectid and request.env["HTTP_SUBJECTID"]
     lazar.min_sim = params[:min_sim] if params[:min_sim] 
 
 		if params[:feature_dataset_uri]
@@ -74,7 +75,7 @@ post '/lazar/?' do
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
     end
 
-    training_features.load_all
+    training_features.load_all(subjectid)
 		halt 404, "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
     # sorted features for index lookups

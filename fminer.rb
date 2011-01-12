@@ -66,7 +66,9 @@ end
 #   - min_chisq_significance Significance threshold (between 0 and 1)
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do 
-    
+
+    subjectid = params[:subjectid] ? subjectid = params[:subjectid] : nil
+    subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]  
     # TODO: is this thread safe??
     #@@bbrc = Bbrc::Bbrc.new 
     minfreq = 5 unless minfreq = params[:min_frequency]
@@ -80,7 +82,7 @@ post '/fminer/bbrc/?' do
     halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
     prediction_feature = params[:prediction_feature]
 
-    training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}"
+    training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", subjectid
     halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
     task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
@@ -95,8 +97,6 @@ post '/fminer/bbrc/?' do
           { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
         ]
       })
-      subjectid = params[:subjectid] if params[:subjectid]
-      subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]
       feature_dataset.save(subjectid)
 
       id = 1 # fminer start id is not 0
@@ -223,7 +223,9 @@ post '/fminer/bbrc/?' do
 #   - hops Maximum number of hops
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
-
+  subjectid = nil
+  subjectid = params[:subjectid] if params[:subjectid]
+  subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]
   #@@last = Last::Last.new 
   minfreq = 5 unless minfreq = params[:min_frequency]
   @@last.SetMinfreq(minfreq)
@@ -237,7 +239,7 @@ post '/fminer/last/?' do
 
   training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}"
   
-  training_dataset.load_all
+  training_dataset.load_all(subjectid)
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
   task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
@@ -252,8 +254,6 @@ post '/fminer/last/?' do
         { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
       ]
     })
-    subjectid = params[:subjectid] if params[:subjectid]
-    subjectid = CGI.unescape(request.env["HTTP_SUBJECTID"]) if !subjectid and request.env["HTTP_SUBJECTID"]
     feature_dataset.save(subjectid)
 
     id = 1 # fminer start id is not 0
