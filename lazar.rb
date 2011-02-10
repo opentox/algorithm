@@ -29,6 +29,7 @@ end
 # @return [text/uri-list] Task URI 
 post '/lazar/?' do 
 
+  params[:subjectid] = @subjectid
   halt 404, "No dataset_uri parameter." unless params[:dataset_uri]
 	dataset_uri = params[:dataset_uri]
 
