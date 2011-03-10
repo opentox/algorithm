@@ -113,18 +113,20 @@ post '/lazar/?' do
       end
       
 			lazar.activities[compound] = [] unless lazar.activities[compound]
-      training_activities.data_entries[compound][params[:prediction_feature]].each do |value|
-				case value.to_s
-				when "true"
-					lazar.activities[compound] << true
-				when "false"
-					lazar.activities[compound] << false
-				else 
-          halt 404, "0 values not allowed in training dataset. log10 is calculated internally." if value.to_f == 0
-					lazar.activities[compound] << value.to_f
-          lazar.prediction_algorithm = "Neighbors.local_svm_regression"
-				end
-			end
+      unless training_activities.data_entries[compound][params[:prediction_feature]].empty?
+        training_activities.data_entries[compound][params[:prediction_feature]].each do |value|
+          case value.to_s
+          when "true"
+            lazar.activities[compound] << true
+          when "false"
+            lazar.activities[compound] << false
+          else 
+            halt 404, "0 values not allowed in training dataset. log10 is calculated internally." if value.to_f == 0
+            lazar.activities[compound] << value.to_f
+            lazar.prediction_algorithm = "Neighbors.local_svm_regression"
+          end
+        end
+      end
     end
 
     lazar.metadata[DC.title] = "lazar model for #{URI.decode(File.basename(prediction_feature))}"

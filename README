@@ -6,7 +6,8 @@ OpenTox Algorithm
   - fminer
   - lazar
 
-REST operations:
+REST operations
+---------------
 
 Get a list of all algorithms  GET   /       -                       URIs of algorithms        200
 Get a representation of the   GET   /fminer -                       fminer representation     200,404
@@ -19,11 +20,13 @@ Create lazar model            POST  /lazar  dataset_uri,            URI for laza
                                             prediction_feature, 
                                             feature_generation_uri  
 
-Supported MIME formats (http://chemical-mime.sourceforge.net/):
+Supported MIME formats (http://chemical-mime.sourceforge.net/)
+--------------------------------------------------------------
 
   * application/rdf+xml (default): read/write OWL-DL
 
-Examples:
+Examples
+--------
 
 Get the OWL-DL representation of fminer 
   curl http://webservices.in-silico.ch/algorithm/fminer
@@ -33,7 +36,7 @@ Get the OWL-DL representation of lazar
 
 Create fminer features
   curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} http://webservices.in-silico.ch/algorithm/fminer
-  (feaure_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
+  (feature_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
 
   Creates a dataset with fminer features (backbone refinement class representatives from supervised graph mining, see http://www.maunz.de/libfminer-doc/). These features can be used e.g. as structural alerts, as descriptors (fingerprints) for prediction models or for similarity calculations.
 
@@ -41,7 +44,10 @@ Create lazar model
   curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer http://webservices.in-silico.ch/test/algorithm/lazar
   (feaure_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
 
-More documentation: Source code (application.rb, fminer.rb, lazar.rb)
+API documentation
+-----------------
 
-Copyright (c) 2009 Christoph Helma. See LICENSE for details.
+http://rdoc.info/github/opentox/algorithm
+
+Copyright (c) 2009-2011 Christoph Helma, Martin Guetlein, Micha Rautenberg, Andreas Maunz, David Vorgrimmler, Denis Gebele. See LICENSE for details.
 
