@@ -1,7 +1,7 @@
 OpenTox Algorithm
 =================
 
-- An OpenTox REST Webservice (http://www.opentox.org)
+- An [OpenTox](http://www.opentox.org) REST Webservice 
 - Implements the OpenTox algorithm API for
     - fminer
     - lazar
@@ -20,8 +20,8 @@ REST operations
                                                 prediction_feature, 
                                                 feature_generation_uri  
 
-Supported MIME formats (http://chemical-mime.sourceforge.net/)
---------------------------------------------------------------
+Supported MIME formats 
+----------------------
 
 - application/rdf+xml (default): read/write OWL-DL
 - application/x-yaml: read/write YAML
@@ -51,10 +51,8 @@ Creates a dataset with fminer features (backbone refinement class representative
 
 (feaure_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
 
-API documentation
------------------
-
-http://rdoc.info/github/opentox/algorithm
+[API documentation](http://rdoc.info/github/opentox/algorithm)
+--------------------------------------------------------------
 
 Copyright (c) 2009-2011 Christoph Helma, Martin Guetlein, Micha Rautenberg, Andreas Maunz, David Vorgrimmler, Denis Gebele. See LICENSE for details.
 
