@@ -41,15 +41,15 @@ Examples
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} http://webservices.in-silico.ch/algorithm/fminer
 
-    (feature_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
+(feature_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
 
-    Creates a dataset with fminer features (backbone refinement class representatives from supervised graph mining, see http://www.maunz.de/libfminer-doc/). These features can be used e.g. as structural alerts, as descriptors (fingerprints) for prediction models or for similarity calculations.
+Creates a dataset with fminer features (backbone refinement class representatives from supervised graph mining, see http://www.maunz.de/libfminer-doc/). These features can be used e.g. as structural alerts, as descriptors (fingerprints) for prediction models or for similarity calculations.
 
 ### Create lazar model
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer http://webservices.in-silico.ch/test/algorithm/lazar
 
-    (feaure_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
+(feaure_uri specifies the dependent variable, e.g. http://www.epa.gov/NCCT/dsstox/CentralFieldDef.html#ActivityOutcome_CPDBAS_Hamster)
 
 API documentation
 -----------------
