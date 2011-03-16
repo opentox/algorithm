@@ -9,7 +9,6 @@ get '/lazar/?' do
     DC.title => 'lazar',
     DC.creator => "helma@in-silico.ch, andreas@maunz.de",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    OT.isA => OTA.ClassificationLazySingleTarget,
     OT.parameters => [
       { DC.description => "Dataset URI with the dependent variable", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "Feature URI for dependent variable. Optional for datasets with only a single feature.", OT.paramScope => "optional", DC.title => "prediction_feature" },
@@ -111,10 +110,12 @@ post '/lazar/?' do
           end
         end
       end
+    end
       
+    training_activities.data_entries.each do |compound,entry| 
 			lazar.activities[compound] = [] unless lazar.activities[compound]
-      unless training_activities.data_entries[compound][params[:prediction_feature]].empty?
-        training_activities.data_entries[compound][params[:prediction_feature]].each do |value|
+      unless entry[params[:prediction_feature]].empty?
+        entry[params[:prediction_feature]].each do |value|
           case value.to_s
           when "true"
             lazar.activities[compound] << true
@@ -134,7 +135,11 @@ post '/lazar/?' do
     lazar.metadata[OT.dependentVariables] = params[:prediction_feature]
     lazar.metadata[OT.trainingDataset] = dataset_uri
 		lazar.metadata[OT.featureDataset] = feature_dataset_uri
-    lazar.metadata[OT.isA] = OTA.ClassificationLazySingleTarget
+    if training_activities.feature_type.to_s == "classification"
+      lazar.metadata[OT.isA] = OTA.ClassificationLazySingleTarget
+    elsif training_activities.feature_type.to_s == "regression"
+      lazar.metadata[OT.isA] = OTA.RegressionLazySingleTarget
+    end
 
     lazar.metadata[OT.parameters] = [
       {DC.title => "dataset_uri", OT.paramValue => dataset_uri},
