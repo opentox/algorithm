@@ -69,7 +69,7 @@ Please click [here](http://bbrc.maunz.de#usage) for more guidance on usage.
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} http://webservices.in-silico.ch/algorithm/fminer/last
 
 feature_uri specifies the dependent variable from the dataset.   
-Please click [here](http://last.maunz.de#usage) for guidance for more guidance on usage.
+Please click [here](http://last-pm.maunz.de#usage) for guidance for more guidance on usage.
 
 * * * 
 
