@@ -81,7 +81,7 @@ post '/fminer/bbrc/?' do
 
   @@bbrc.SetMinfreq(minfreq)
   @@bbrc.SetType(1) if params[:feature_type] == "paths"
-  @@bbrc.SetBackbone(params[:backbone]) if params[:backbone]
+  @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
   @@bbrc.SetChisqSig(params[:min_chisq_significance]) if params[:min_chisq_significance]
   @@bbrc.SetConsoleOut(false)
 
