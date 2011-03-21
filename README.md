@@ -57,17 +57,19 @@ The following creates datasets with backbone refinement class representatives or
 feature_uri specifies the dependent variable from the dataset.
 backbone=false reduces BBRC mining to frequent and correlated subtree mining (much more descriptors are produced).
 
-### Create [BBRC](http://bbrc.maunz.de) features
+### Create [BBRC](http://bbrc.maunz.de) features, recommended for large and very large datasets.
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} http://webservices.in-silico.ch/algorithm/fminer/bbrc
 
-feature_uri specifies the dependent variable from the dataset.
+feature_uri specifies the dependent variable from the dataset.   
+Please click [here](http://bbrc.maunz.de#usage) for more guidance on usage.
 
-### Create [LAST-PM](http://last-pm.maunz.de) descriptors
+### Create [LAST-PM](http://last-pm.maunz.de) descriptors, recommended for small to medium-sized datasets.
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} http://webservices.in-silico.ch/algorithm/fminer/last
 
-feature_uri specifies the dependent variable from the dataset.
+feature_uri specifies the dependent variable from the dataset.   
+Please click [here](http://last.maunz.de#usage) for guidance for more guidance on usage.
 
 * * * 
 
