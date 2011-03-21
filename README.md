@@ -18,15 +18,16 @@ REST operations
      last algorithm
     Get a representation of the   GET   /lazar        -                       lazar representation      200,404
      lazar algorithm
-     Create bbrc features          POST  /fminer/bbrc dataset_uri,            URI for feature dataset   200,400,404,500
-                                                      feature_uri,
-                                                      min_frequency
-     Create last features          POST  /fminer/last dataset_uri,            URI for feature dataset   200,400,404,500
-                                                      feature_uri,
-                                                      min_frequency
-     Create lazar model            POST  /lazar       dataset_uri,            URI for lazar model       200,400,404,500
-                                                      prediction_feature,
-                                                      feature_generation_uri
+    Create bbrc features          POST  /fminer/bbrc          dataset_uri,                                URI for feature dataset   200,400,404,500
+                                                                                               feature_uri,
+                                                                                               [min_frequency=5 per-mil],
+                                                                                               [backbone]
+    Create last features            POST  /fminer/last           dataset_uri,                                URI for feature dataset   200,400,404,500
+                                                                                               feature_uri,
+                                                                                               [min_frequency=8 %],
+     Create lazar model            POST  /lazar                    dataset_uri,                                URI for lazar model       200,400,404,500
+                                                                                              prediction_feature,
+                                                                                              feature_generation_uri
 
 Supported MIME formats
 ----------------------
@@ -44,6 +45,13 @@ Examples
 ### Get the OWL-DL representation of lazar
 
     curl http://webservices.in-silico.ch/algorithm/lazar
+
+### Create the full set of frequent and significant subtrees
+
+    curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} -d "backbone=false" http://webservices.in-silico.ch/algorithm/fminer/bbrc
+
+feature_uri specifies the dependent variable from the dataset.
+backbone=false reduces BBRC mining to frequent and correlated subtree mining (much more descriptors are produced).
 
 ### Create [BBRC](http://bbrc.maunz.de) features
 
