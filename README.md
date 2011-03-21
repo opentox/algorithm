@@ -9,25 +9,25 @@ OpenTox Algorithm
 REST operations
 ---------------
 
-    Get a list of all algorithms  GET   /             -                       URIs of algorithms        200
-    Get a representation of the   GET   /fminer/      -                       fminer representation     200,404
+    Get a list of all algorithms  GET   /               -                           URIs of algorithms        200
+    Get a representation of the   GET   /fminer/        -                           fminer representation     200,404
      fminer algorithms
-    Get a representation of the   GET   /fminer/bbrc  -                       bbrc representation       200,404
+    Get a representation of the   GET   /fminer/bbrc    -                           bbrc representation       200,404
     bbrc algorithm
-    Get a representation of the   GET   /fminer/last  -                       last representation       200,404
+    Get a representation of the   GET   /fminer/last    -                           last representation       200,404
      last algorithm
-    Get a representation of the   GET   /lazar        -                       lazar representation      200,404
+    Get a representation of the   GET   /lazar          -                           lazar representation      200,404
      lazar algorithm
-    Create bbrc features          POST  /fminer/bbrc          dataset_uri,                                URI for feature dataset   200,400,404,500
-                                                                                               feature_uri,
-                                                                                               [min_frequency=5 per-mil],
-                                                                                               [backbone]
-    Create last features            POST  /fminer/last           dataset_uri,                                URI for feature dataset   200,400,404,500
-                                                                                               feature_uri,
-                                                                                               [min_frequency=8 %],
-     Create lazar model            POST  /lazar                    dataset_uri,                                URI for lazar model       200,400,404,500
-                                                                                              prediction_feature,
-                                                                                              feature_generation_uri
+    Create bbrc features          POST  /fminer/bbrc    dataset_uri,                URI for feature dataset   200,400,404,500
+                                                        feature_uri,
+                                                        [min_frequency=5 per-mil],
+                                                        [backbone=true]
+    Create last features          POST  /fminer/last    dataset_uri,                URI for feature dataset   200,400,404,500
+                                                        feature_uri,
+                                                        [min_frequency=8 %],
+    Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
+                                                        prediction_feature,
+                                                        feature_generation_uri
 
 Supported MIME formats
 ----------------------
@@ -46,6 +46,10 @@ Examples
 
     curl http://webservices.in-silico.ch/algorithm/lazar
 
+* * * 
+
+The following creates datasets with backbone refinement class representatives or latent structure patterns, using supervised graph mining, see http://cs.maunz.de. These features can be used e.g. as structural alerts, as descriptors (fingerprints) for prediction models or for similarity calculations.
+
 ### Create the full set of frequent and significant subtrees
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} -d "backbone=false" http://webservices.in-silico.ch/algorithm/fminer/bbrc
@@ -59,13 +63,13 @@ backbone=false reduces BBRC mining to frequent and correlated subtree mining (mu
 
 feature_uri specifies the dependent variable from the dataset.
 
-### Create [LAST-PM](http://last-pm.maunz.de) features
+### Create [LAST-PM](http://last-pm.maunz.de) descriptors
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} http://webservices.in-silico.ch/algorithm/fminer/last
 
 feature_uri specifies the dependent variable from the dataset.
 
-Creates a dataset with fminer features (backbone refinement class representatives from supervised graph mining, see http://www.maunz.de/libfminer-doc/). These features can be used e.g. as structural alerts, as descriptors (fingerprints) for prediction models or for similarity calculations.
+* * * 
 
 ### Create lazar model
 
