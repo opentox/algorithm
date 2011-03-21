@@ -79,13 +79,14 @@ post '/fminer/bbrc/?' do
     minfreq = 2 unless minfreq > 2
   end
 
-  @@bbrc.SetMinfreq(minfreq)
-  @@bbrc.SetType(1) if params[:feature_type] == "paths"
-  @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
-  @@bbrc.SetChisqSig(params[:min_chisq_significance]) if params[:min_chisq_significance]
-  @@bbrc.SetConsoleOut(false)
-
   task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
+
+    @@bbrc.Reset
+    @@bbrc.SetMinfreq(minfreq)
+    @@bbrc.SetType(1) if params[:feature_type] == "paths"
+    @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
+    @@bbrc.SetChisqSig(params[:min_chisq_significance]) if params[:min_chisq_significance]
+    @@bbrc.SetConsoleOut(false)
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
@@ -105,7 +106,6 @@ post '/fminer/bbrc/?' do
     nr_inactive=0
     all_activities = Hash.new# DV: for effect calculation in regression part
 
-    @@bbrc.Reset
     training_dataset.data_entries.each do |compound,entry|
       begin
         smiles = OpenTox::Compound.new(compound.to_s).to_smiles
@@ -236,12 +236,13 @@ post '/fminer/last/?' do
     minfreq = 2 unless minfreq > 2
   end
 
-  @@last.SetMinfreq(minfreq)
-  @@last.SetType(1) if params[:feature_type] == "paths"
-  @@last.SetMaxHops(params[:hops]) if params[:hops]
-  @@last.SetConsoleOut(false)
-
   task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
+
+    @@last.Reset
+    @@last.SetMinfreq(minfreq)
+    @@last.SetType(1) if params[:feature_type] == "paths"
+    @@last.SetMaxHops(params[:hops]) if params[:hops]
+    @@last.SetConsoleOut(false)
 
     feature_dataset = OpenTox::Dataset.new
     feature_dataset.add_metadata({
@@ -262,7 +263,6 @@ post '/fminer/last/?' do
     nr_inactive=0
     all_activities = Hash.new# DV: for effect calculation in regression part
 
-    @@last.Reset
     training_dataset.data_entries.each do |compound,entry|
       begin
         smiles = OpenTox::Compound.new(compound.to_s).to_smiles
