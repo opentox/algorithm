@@ -1,6 +1,7 @@
 ENV['FMINER_SMARTS'] = 'true'
 ENV['FMINER_NO_AROMATIC'] = 'true'
 ENV['FMINER_PVALUES'] = 'true'
+ENV['FMINER_SILENT'] = 'true'
 
 @@bbrc = Bbrc::Bbrc.new 
 @@last = Last::Last.new 
@@ -118,29 +119,31 @@ post '/fminer/bbrc/?' do
         next
       end
       entry.each do |feature,values|
-        values.each do |value|
-          if value.nil? 
-            LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
-          else
-            case value.to_s
-            when "true"
-              nr_active += 1
-              activity = 1
-            when "false"
-              nr_inactive += 1
-              activity = 0
+        if feature == prediction_feature
+          values.each do |value|
+            if value.nil? 
+              LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
             else
-              activity = value.to_f
-              @@bbrc.SetRegression(true)
-            end
-            begin
-              @@bbrc.AddCompound(smiles,id)
-              @@bbrc.AddActivity(activity, id)
-              all_activities[id]=activity # DV: insert global information
-              compounds[id] = compound
-              id += 1
-            rescue
-              LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
+              case value.to_s
+              when "true"
+                nr_active += 1
+                activity = 1
+              when "false"
+                nr_inactive += 1
+                activity = 0
+              else
+                activity = value.to_f
+                @@bbrc.SetRegression(true)
+              end
+              begin
+                @@bbrc.AddCompound(smiles,id)
+                @@bbrc.AddActivity(activity, id)
+                all_activities[id]=activity # DV: insert global information
+                compounds[id] = compound
+                id += 1
+              rescue
+                LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
+              end
             end
           end
         end
@@ -275,30 +278,32 @@ post '/fminer/last/?' do
         next
       end
       entry.each do |feature,values|
-        values.each do |value|
-          if value.nil? 
-            LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
-          else
-            case value.to_s
-            when "true"
-              nr_active += 1
-              activity = 1
-            when "false"
-              nr_inactive += 1
-              activity = 0
+        if feature == prediction_feature
+          values.each do |value|
+            if value.nil? 
+              LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
             else
-              activity = value.to_f
-              @@last.SetRegression(true)
-            end
-            begin
-              @@last.AddCompound(smiles,id)
-              @@last.AddActivity(activity, id)
-              all_activities[id]=activity # DV: insert global information
-              compounds[id] = compound
-              smi[id] = smiles # AM LAST: changed this to store SMILES.
-              id += 1
-            rescue
-              LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
+              case value.to_s
+              when "true"
+                nr_active += 1
+                activity = 1
+              when "false"
+                nr_inactive += 1
+                activity = 0
+              else
+                activity = value.to_f
+                @@last.SetRegression(true)
+              end
+              begin
+                @@last.AddCompound(smiles,id)
+                @@last.AddActivity(activity, id)
+                all_activities[id]=activity # DV: insert global information
+                compounds[id] = compound
+                smi[id] = smiles # AM LAST: changed this to store SMILES.
+                id += 1
+              rescue
+                LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
+              end
             end
           end
         end
