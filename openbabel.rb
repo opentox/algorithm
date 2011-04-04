@@ -44,7 +44,7 @@ get '/openbabel/:property' do
       DC.title => params[:property],
       DC.creator => "helma@in-silico.ch",
       DC.description => description,
-      OT.isA => OTA.DescriptorCalculation,
+      RDF.type => [OTA.DescriptorCalculation],
     }
     response['Content-Type'] = 'application/rdf+xml'
     algorithm.to_rdfxml
