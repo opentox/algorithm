@@ -39,7 +39,7 @@ post '/lazar/?' do
   unless params[:prediction_feature] # try to read prediction_feature from dataset
     halt 404, "#{training_activities.features.size} features in dataset #{dataset_uri}. Please provide a  prediction_feature parameter." unless training_activities.features.size == 1
     prediction_feature = OpenTox::Feature.find(training_activities.features.keys.first,@subjectid)
-    #params[:prediction_feature] = prediction_feature
+    params[:prediction_feature] = prediction_feature.uri # pass to feature mining service
   end
 
   feature_generation_uri = @@feature_generation_default unless feature_generation_uri = params[:feature_generation_uri]
@@ -77,12 +77,12 @@ post '/lazar/?' do
 		halt 404, "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
     # sorted features for index lookups
-    lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression"
+    lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
 
     training_features.data_entries.each do |compound,entry|
       lazar.fingerprints[compound] = [] unless lazar.fingerprints[compound]
       entry.keys.each do |feature|
-        if feature_generation_uri.match(/fminer/)
+        if lazar.feature_calculation_algorithm == "Substructure.match"
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
             lazar.fingerprints[compound] << smarts
@@ -109,13 +109,13 @@ post '/lazar/?' do
             else
               LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
             end
-            lazar.prediction_algorithm = "Neighbors.local_svm_regression"
           end
         end
       end
     end
       
     @training_classes = training_activities.feature_classes(prediction_feature.uri) if prediction_feature.feature_type == "classification"
+    lazar.prediction_algorithm = "Neighbors.local_svm_regression" if  prediction_feature.feature_type == "regression"
 
     training_activities.data_entries.each do |compound,entry| 
 			lazar.activities[compound] = [] unless lazar.activities[compound]
