@@ -55,7 +55,7 @@ post '/lazar/?' do
 		if params[:feature_dataset_uri]
       feature_dataset_uri = params[:feature_dataset_uri]
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
-      case training_features.feature_type
+      case training_features.feature_type(@subjectid)
       when "classification"
         lazar.similarity_algorithm = "Similarity.tanimoto"
       when "regression"
@@ -77,7 +77,7 @@ post '/lazar/?' do
 		halt 404, "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
     # sorted features for index lookups
-    lazar.features = training_features.features.sort if training_features.feature_type == "regression"
+    lazar.features = training_features.features.sort if training_features.feature_type(@subjectid) == "regression"
 
     training_features.data_entries.each do |compound,entry|
       lazar.fingerprints[compound] = [] unless lazar.fingerprints[compound]
@@ -91,7 +91,7 @@ post '/lazar/?' do
             lazar.effects[smarts] = training_features.features[feature][OT.effect]
           end
         else
-          case training_features.feature_type
+          case training_features.feature_type(@subjectid)
           when "classification"
             # fingerprints are sets
             if entry[feature].flatten.size == 1
@@ -135,9 +135,9 @@ post '/lazar/?' do
     lazar.metadata[OT.dependentVariables] = params[:prediction_feature]
     lazar.metadata[OT.trainingDataset] = dataset_uri
 		lazar.metadata[OT.featureDataset] = feature_dataset_uri
-    if training_activities.feature_type.to_s == "classification"
+    if training_activities.feature_type(@subjectid).to_s == "classification"
       lazar.metadata[OT.isA] = OTA.ClassificationLazySingleTarget
-    elsif training_activities.feature_type.to_s == "regression"
+    elsif training_activities.feature_type(@subjectid).to_s == "regression"
       lazar.metadata[OT.isA] = OTA.RegressionLazySingleTarget
     end
 
