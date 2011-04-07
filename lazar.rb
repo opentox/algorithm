@@ -78,7 +78,7 @@ post '/lazar/?' do
 
     # sorted features for index lookups
 
-    lazar.features = training_features.features.sort if prediction_feature.feature_type(@subjectid) == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
+    lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
 
     training_features.data_entries.each do |compound,entry|
       lazar.fingerprints[compound] = [] unless lazar.fingerprints[compound]
@@ -149,9 +149,9 @@ post '/lazar/?' do
     lazar.metadata[OT.trainingDataset] = dataset_uri
 		lazar.metadata[OT.featureDataset] = feature_dataset_uri
 
-    if prediction_feature.feature_type(@subjectid) == "classification"
+    if prediction_feature.feature_type == "classification"
       lazar.metadata[RDF.type] = [OTA.ClassificationLazySingleTarget]
-    elsif prediction_feature.feature_type(@subjectid) == "regression"
+    elsif prediction_feature.feature_type == "regression"
       lazar.metadata[RDF.type] = [OTA.RegressionLazySingleTarget]
     end
 
