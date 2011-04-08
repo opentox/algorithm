@@ -70,7 +70,7 @@ post '/fminer/bbrc/?' do
 
   halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
   halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
-  prediction_feature = OpenTox::Feature.find params[:prediction_feature]
+  prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
   training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", @subjectid
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
@@ -90,7 +90,7 @@ post '/fminer/bbrc/?' do
     if prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true)
     else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri)
+      @training_classes = training_dataset.feature_classes(prediction_feature.uri, @subjectid)
     end
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)

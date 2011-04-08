@@ -115,7 +115,7 @@ post '/lazar/?' do
       end
     end
       
-    @training_classes = training_activities.feature_classes(prediction_feature.uri) if prediction_feature.feature_type == "classification"
+    @training_classes = training_activities.feature_classes(prediction_feature.uri, @subjectid) if prediction_feature.feature_type == "classification"
     lazar.prediction_algorithm = "Neighbors.local_svm_regression" if  prediction_feature.feature_type == "regression"
 
     training_activities.data_entries.each do |compound,entry| 
