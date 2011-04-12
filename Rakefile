@@ -41,6 +41,7 @@ namespace "fminer" do
   task :update do
     puts `git submodule update --init`
     Dir.chdir('libfminer/libbbrc')
+    puts `git checkout master`
     puts `git checkout Makefile`
     puts `git pull`
     puts `./configure`
@@ -52,6 +53,7 @@ namespace "fminer" do
     end
     puts `make ruby`
     Dir.chdir('../liblast')
+    puts `git checkout master`
     puts `git checkout Makefile`
     puts `git pull`
     puts `./configure`
