@@ -242,7 +242,7 @@ post '/fminer/last/?' do
 
   halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
   halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
-  prediction_feature = OpenTox::Feature.find params[:prediction_feature]
+  prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
   training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid
   training_dataset.load_all(@subjectid)
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
