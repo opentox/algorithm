@@ -74,8 +74,11 @@ post '/fminer/bbrc/?' do
   training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", @subjectid
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
-  unless minfreq = params[:min_frequency]
-    minfreq = 5*training_dataset.compounds.size/1000 # 8 promille according to Andreas suggestions
+  unless params[:min_frequency].nil? 
+    minfreq=params[:min_frequency].to_i
+    raise "Minimum frequency must be a number >0!" unless minfreq>0
+  else
+    minfreq = 5*training_dataset.compounds.size/1000 # AM sugg. 8-10 per mil
     minfreq = 2 unless minfreq > 2
   end
 
@@ -247,8 +250,11 @@ post '/fminer/last/?' do
   training_dataset.load_all(@subjectid)
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
-  unless minfreq = params[:min_frequency]
-    minfreq = 8*training_dataset.compounds.size/100 # 8% according to Andreas suggestions
+  unless params[:min_frequency].nil? 
+    minfreq=params[:min_frequency].to_i
+    raise "Minimum frequency must be a number >0!" unless minfreq>0
+  else
+    minfreq = 8*training_dataset.compounds.size/100 # AM sugg. 5-10%
     minfreq = 2 unless minfreq > 2
   end
 
