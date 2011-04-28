@@ -328,8 +328,8 @@ post '/fminer/last/?' do
                 activity = value.to_f
               end
               begin
-                @@bbrc.AddCompound(smiles,id)
-                @@bbrc.AddActivity(activity, id)
+                @@last.AddCompound(smiles,id)
+                @@last.AddActivity(activity, id)
                 all_activities[id]=activity # DV: insert global information
                 compounds[id] = compound
                 id += 1
