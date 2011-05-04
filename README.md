@@ -21,10 +21,14 @@ REST operations
     Create bbrc features          POST  /fminer/bbrc    dataset_uri,                URI for feature dataset   200,400,404,500
                                                         feature_uri,
                                                         [min_frequency=5 per-mil],
-                                                        [backbone=true]
+                                                        [feature_type=trees],
+                                                        [backbone=true],
+                                                        [min_chisq_significance=0.95]
     Create last features          POST  /fminer/last    dataset_uri,                URI for feature dataset   200,400,404,500
                                                         feature_uri,
                                                         [min_frequency=8 %],
+                                                        [feature_type=trees],
+                                                        [max_hops=25],
     Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
                                                         prediction_feature,
                                                         feature_generation_uri
@@ -37,6 +41,8 @@ Supported MIME formats
 
 Examples
 --------
+
+NOTE: http://webservices.in-silico.ch hosts the stable version that might not have complete functionality yet. **Please try http://ot-test.in-silico.ch** for latest versions.
 
 ### Get the OWL-DL representation of fminer
 
