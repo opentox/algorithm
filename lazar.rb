@@ -69,7 +69,8 @@ post '/lazar/?' do
         halt 404, "External feature generation services not yet supported"
       end
       params[:subjectid] = @subjectid
-      if training_features.feature_type(@subjectid) == "regression" && feature_generation_uri.match(/fminer/) 
+      prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
+      if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
         params[:feature_type] = "paths"
       end
       feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params).to_s
