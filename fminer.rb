@@ -88,7 +88,7 @@ post '/fminer/bbrc/?' do
     @@bbrc.SetMinfreq(minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
     @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
-    @@bbrc.SetChisqSig(params[:min_chisq_significance]) if params[:min_chisq_significance]
+    @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
     @@bbrc.SetConsoleOut(false)
     if prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true)
@@ -266,7 +266,7 @@ post '/fminer/last/?' do
     @@last.SetMaxHops(params[:hops]) if params[:hops]
     @@last.SetConsoleOut(false)
     if prediction_feature.feature_type == "regression"
-      @@bbrc.SetRegression(true)
+      @@last.SetRegression(true)
     else
       @training_classes = training_dataset.feature_classes(prediction_feature.uri)
     end
@@ -359,7 +359,7 @@ post '/fminer/last/?' do
     end
 
     lu = LU.new                             # AM LAST: uses last-utils here
-    dom=lu.read(xml)                        # AM LAST: parse GraphML (needs hpricot, @ch: to be included in wrapper!)
+    dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
     instances=lu.match_rb(smi,smarts)       # AM LAST: creates instantiations
     instances.each do |smarts, ids|
