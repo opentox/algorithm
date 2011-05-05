@@ -149,7 +149,7 @@ post '/fminer/bbrc/?' do
                   LOGGER.warn "Unknown class \"#{value.to_s}\"."
                 end
               elsif prediction_feature.feature_type == "regression"
-                activity = value.to_f
+                activity = Math.log10(value.to_f)
               end
               begin
                 @@bbrc.AddCompound(smiles,id)
