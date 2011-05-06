@@ -73,6 +73,7 @@ post '/lazar/?' do
       if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
         params[:feature_type] = "paths"
       end
+      prediction_feature = prediction_feature.uri  #hotfix this will change in future version see development branch 2011/04/06 mr
       feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params).to_s
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
     end
