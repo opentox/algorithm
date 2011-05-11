@@ -270,7 +270,7 @@ post '/fminer/last/?' do
     smi = [] # AM LAST: needed for matching the patterns back
     nr_active=0
     nr_inactive=0
-    all_activities = Hash.new# DV: for effect calculation in regression part
+    all_activities = Hash.new #DV: for effect calculation (class and regr)
 
     training_dataset.data_entries.each do |compound,entry|
       begin
@@ -315,9 +315,6 @@ post '/fminer/last/?' do
         end
       end
     end
-
-    g_array=all_activities.values # DV: calculation of global median for effect calculation
-    g_median=OpenTox::Algorithm.median(g_array)
     
     raise "No compounds in dataset #{training_dataset.uri}" if compounds.size==0
 
@@ -349,7 +346,7 @@ post '/fminer/last/?' do
           OT.isA => OT.Substructure,
           OT.hasSource => feature_dataset.uri,
           OT.smarts => smarts,
-          OT.pValue => p_value.to_f,
+          OT.pValue => p_value.to_f.abs,
           OT.effect => effect,
           OT.parameters => [
             { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
