@@ -125,6 +125,18 @@ post '/fminer/bbrc/?' do
         LOGGER.warn "Cannot find smiles for #{compound.to_s}."
         next
       end
+
+      # AM: take log if appropriate
+      take_logs=true
+      entry.each do |feature,values|
+         values.each do |value|
+            if prediction_feature.feature_type == "regression"
+               if (! value.nil?) && (value.to_f < 0)
+                 take_logs=false
+               end
+            end
+         end
+      end
       entry.each do |feature,values|
         if feature == prediction_feature.uri
           values.each do |value|
@@ -149,7 +161,7 @@ post '/fminer/bbrc/?' do
                   LOGGER.warn "Unknown class \"#{value.to_s}\"."
                 end
               elsif prediction_feature.feature_type == "regression"
-                activity = Math.log10(value.to_f)
+                activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
               begin
                 @@bbrc.AddCompound(smiles,id)
