@@ -122,6 +122,9 @@ post '/lazar/?' do
     @training_classes = training_activities.feature_classes(prediction_feature.uri, @subjectid) if prediction_feature.feature_type == "classification"
     lazar.prediction_algorithm = "Neighbors.local_svm_regression" if  prediction_feature.feature_type == "regression"
 
+    # AM: allow prediction_algorithm override by user for classification AND regression
+    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
+
     training_activities.data_entries.each do |compound,entry| 
 			lazar.activities[compound] = [] unless lazar.activities[compound]
       unless entry[prediction_feature.uri].empty?
