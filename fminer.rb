@@ -23,7 +23,7 @@ get "/fminer/bbrc/?" do
     DC.title => 'fminer backbone refinement class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    RDF.type => [OTA.PatternMiningSupervised],
+    RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
     { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
@@ -44,7 +44,7 @@ get "/fminer/last/?" do
     DC.title => 'fminer latent structure class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    RDF.type => [OTA.PatternMiningSupervised],
+    RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
     { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
@@ -220,7 +220,7 @@ post '/fminer/bbrc/?' do
           features << smarts
           metadata = {
             OT.hasSource => url_for('/fminer/bbrc', :full),
-            RDF.type => [OT.Substructure],
+            RDF.type => [OT.Feature, OT.Substructure],
             OT.smarts => smarts,
             OT.pValue => p_value.to_f,
             OT.effect => effect,
@@ -354,7 +354,6 @@ post '/fminer/last/?' do
         end
       end
     end
-
     
     raise "No compounds in dataset #{training_dataset.uri}" if compounds.size==0
 
@@ -383,7 +382,7 @@ post '/fminer/last/?' do
       unless features.include? smarts
         features << smarts
         metadata = {
-          RDF.type => [OT.Substructure],
+          RDF.type => [OT.Feature, OT.Substructure],
           OT.hasSource => feature_dataset.uri,
           OT.smarts => smarts,
           OT.pValue => p_value.to_f.abs,
