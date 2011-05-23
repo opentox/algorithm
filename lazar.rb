@@ -141,9 +141,9 @@ post '/lazar/?' do
     lazar.metadata[OT.trainingDataset] = dataset_uri
 		lazar.metadata[OT.featureDataset] = feature_dataset_uri
     if training_activities.feature_type.to_s == "classification"
-      lazar.metadata[OT.isA] = OTA.ClassificationLazySingleTarget
+      lazar.metadata[RDF.type] = [OT.Model, OTA.ClassificationLazySingleTarget]
     elsif training_activities.feature_type.to_s == "regression"
-      lazar.metadata[OT.isA] = OTA.RegressionLazySingleTarget
+      lazar.metadata[RDF.type] = [OT.Model, OTA.RegressionLazySingleTarget]
     end
 
     lazar.metadata[OT.parameters] = [
