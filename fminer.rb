@@ -23,7 +23,7 @@ get "/fminer/bbrc/?" do
     DC.title => 'fminer backbone refinement class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    OT.isA => OTA.PatternMiningSupervised,
+    RDF.type => [OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
     { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
@@ -44,7 +44,7 @@ get "/fminer/last/?" do
     DC.title => 'fminer latent structure class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    OT.isA => OTA.PatternMiningSupervised,
+    RDF.type => [OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
     { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
@@ -70,8 +70,7 @@ post '/fminer/bbrc/?' do
 
   halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
   halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
-  prediction_feature = params[:prediction_feature]
-
+  prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
   training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", @subjectid
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
@@ -89,8 +88,13 @@ post '/fminer/bbrc/?' do
     @@bbrc.SetMinfreq(minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
     @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
-    @@bbrc.SetChisqSig(params[:min_chisq_significance]) if params[:min_chisq_significance]
+    @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
     @@bbrc.SetConsoleOut(false)
+    if prediction_feature.feature_type == "regression"
+      @@bbrc.SetRegression(true)
+    else
+      @training_classes = training_dataset.feature_classes(prediction_feature.uri, @subjectid)
+    end
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
@@ -121,22 +125,43 @@ post '/fminer/bbrc/?' do
         LOGGER.warn "Cannot find smiles for #{compound.to_s}."
         next
       end
+
+      # AM: take log if appropriate
+      take_logs=true
       entry.each do |feature,values|
-        if feature == prediction_feature
+         values.each do |value|
+            if prediction_feature.feature_type == "regression"
+               if (! value.nil?) && (value.to_f < 0)
+                 take_logs=false
+               end
+            end
+         end
+      end
+      entry.each do |feature,values|
+        if feature == prediction_feature.uri
           values.each do |value|
             if value.nil? 
               LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
             else
-              case value.to_s
-              when "true"
-                nr_active += 1
-                activity = 1
-              when "false"
-                nr_inactive += 1
-                activity = 0
-              else
-                activity = value.to_f
-                @@bbrc.SetRegression(true)
+              if prediction_feature.feature_type == "classification"
+                case value.to_s
+                when "true"
+                  nr_active += 1
+                  activity = 1
+                when "false"
+                  nr_inactive += 1
+                  activity = 0
+                when /#{@training_classes.last}/
+                  nr_active += 1
+                  activity = 1
+                when /#{@training_classes.first}/
+                  nr_inactive += 1
+                  activity = 0
+                else
+                  LOGGER.warn "Unknown class \"#{value.to_s}\"."
+                end
+              elsif prediction_feature.feature_type == "regression"
+                activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
               begin
                 @@bbrc.AddCompound(smiles,id)
@@ -195,7 +220,7 @@ post '/fminer/bbrc/?' do
           features << smarts
           metadata = {
             OT.hasSource => url_for('/fminer/bbrc', :full),
-            OT.isA => OT.Substructure,
+            RDF.type => [OT.Substructure],
             OT.smarts => smarts,
             OT.pValue => p_value.to_f,
             OT.effect => effect,
@@ -232,7 +257,7 @@ post '/fminer/last/?' do
 
   halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
   halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
-  prediction_feature = params[:prediction_feature]
+  prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
   training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid
   training_dataset.load_all(@subjectid)
   halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
@@ -252,8 +277,13 @@ post '/fminer/last/?' do
     @@last.SetType(1) if params[:feature_type] == "paths"
     @@last.SetMaxHops(params[:hops]) if params[:hops]
     @@last.SetConsoleOut(false)
+    if prediction_feature.feature_type == "regression"
+      @@last.SetRegression(true)
+    else
+      @training_classes = training_dataset.feature_classes(prediction_feature.uri)
+    end
 
-    feature_dataset = OpenTox::Dataset.new
+    feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
       DC.title => "LAST representatives for " + training_dataset.metadata[DC.title].to_s,
       DC.creator => url_for('/fminer/last',:full),
@@ -284,28 +314,37 @@ post '/fminer/last/?' do
         next
       end
       entry.each do |feature,values|
-        if feature == prediction_feature
+        if feature == prediction_feature.uri
           values.each do |value|
             if value.nil? 
               LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
             else
-              case value.to_s
-              when "true"
-                nr_active += 1
-                activity = 1
-              when "false"
-                nr_inactive += 1
-                activity = 0
-              else
+              if prediction_feature.feature_type == "classification"
+                case value.to_s
+                when "true"
+                  nr_active += 1
+                  activity = 1
+                when "false"
+                  nr_inactive += 1
+                  activity = 0
+                when /#{@training_classes.last}/
+                  nr_active += 1
+                  activity = 1
+                when /#{@training_classes.first}/
+                  nr_inactive += 1
+                  activity = 0
+                else
+                  LOGGER.warn "Unknown class \"#{value.to_s}."
+                end
+              elsif prediction_feature.feature_type == "regression"
                 activity = value.to_f
-                @@last.SetRegression(true)
               end
               begin
                 @@last.AddCompound(smiles,id)
                 @@last.AddActivity(activity, id)
                 all_activities[id]=activity # DV: insert global information
                 compounds[id] = compound
-                smi[id] = smiles # AM LAST: changed this to store SMILES.
+		smi[id] = smiles # AM LAST: changed this to store SMILES.
                 id += 1
               rescue
                 LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
@@ -315,7 +354,7 @@ post '/fminer/last/?' do
         end
       end
     end
-    
+
     raise "No compounds in dataset #{training_dataset.uri}" if compounds.size==0
 
     # run @@last
@@ -330,7 +369,7 @@ post '/fminer/last/?' do
     end
 
     lu = LU.new                             # AM LAST: uses last-utils here
-    dom=lu.read(xml)                        # AM LAST: parse GraphML (needs hpricot, @ch: to be included in wrapper!)
+    dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
     instances=lu.match_rb(smi,smarts)       # AM LAST: creates instantiations
     instances.each do |smarts, ids|
@@ -343,7 +382,7 @@ post '/fminer/last/?' do
       unless features.include? smarts
         features << smarts
         metadata = {
-          OT.isA => OT.Substructure,
+          RDF.type => [OT.Substructure],
           OT.hasSource => feature_dataset.uri,
           OT.smarts => smarts,
           OT.pValue => p_value.to_f.abs,
