@@ -84,17 +84,18 @@ post '/fminer/bbrc/?' do
 
   task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
 
+    puts params.to_yaml
     @@bbrc.Reset
+    if prediction_feature.feature_type == "regression"
+      @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
+    else
+      @training_classes = training_dataset.feature_classes(prediction_feature.uri, @subjectid)
+    end
     @@bbrc.SetMinfreq(minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
     @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
     @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
     @@bbrc.SetConsoleOut(false)
-    if prediction_feature.feature_type == "regression"
-      @@bbrc.SetRegression(true)
-    else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri, @subjectid)
-    end
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
@@ -131,7 +132,7 @@ post '/fminer/bbrc/?' do
       entry.each do |feature,values|
          values.each do |value|
             if prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f < 0)
+               if (! value.nil?) && (value.to_f < 1)
                  take_logs=false
                end
             end
@@ -273,15 +274,16 @@ post '/fminer/last/?' do
   task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
 
     @@last.Reset
+    if prediction_feature.feature_type == "regression"
+      @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
+    else
+      @training_classes = training_dataset.feature_classes(prediction_feature.uri)
+    end
     @@last.SetMinfreq(minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
     @@last.SetMaxHops(params[:hops]) if params[:hops]
     @@last.SetConsoleOut(false)
-    if prediction_feature.feature_type == "regression"
-      @@last.SetRegression(true)
-    else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri)
-    end
+
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
