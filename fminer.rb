@@ -110,7 +110,6 @@ post '/fminer/bbrc/?' do
 
   task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
 
-    puts params.to_yaml
     @@bbrc.Reset
     if prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
