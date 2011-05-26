@@ -89,7 +89,7 @@ post '/fminer/bbrc/?' do
     if prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri, @subjectid)
+      @training_classes = training_dataset.accept_values(prediction_feature.uri)
     end
     @@bbrc.SetMinfreq(minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -277,7 +277,7 @@ post '/fminer/last/?' do
     if prediction_feature.feature_type == "regression"
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri)
+      @training_classes = training_dataset.accept_values(prediction_feature.uri)
     end
     @@last.SetMinfreq(minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
