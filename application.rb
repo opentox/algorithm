@@ -22,6 +22,13 @@ end
 #
 # @return [text/uri-list] algorithm URIs
 get '/?' do
-	response['Content-Type'] = 'text/uri-list'
-	[ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html list
+  else
+    content_type 'text/uri-list'
+    list
+  end
 end

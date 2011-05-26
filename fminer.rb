@@ -10,14 +10,20 @@ ENV['FMINER_SILENT'] = 'true'
 #
 # @return [text/uri-list] URIs of fminer algorithms
 get '/fminer/?' do
-  response['Content-Type'] = 'text/uri-list'
-  [ url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+  list = [ url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html list
+  else
+    content_type 'text/uri-list'
+    list
+  end
 end
 
 # Get RDF/XML representation of fminer bbrc algorithm
 # @return [application/rdf+xml] OWL-DL representation of fminer bbrc algorithm
 get "/fminer/bbrc/?" do
-	response['Content-Type'] = 'application/rdf+xml'
   algorithm = OpenTox::Algorithm::Generic.new(url_for('/fminer/bbrc',:full))
   algorithm.metadata = {
     DC.title => 'fminer backbone refinement class representatives',
@@ -33,7 +39,17 @@ get "/fminer/bbrc/?" do
     { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
     ]
   }
-  algorithm.to_rdfxml
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html algorithm.to_yaml
+  when /application\/x-yaml/
+    content_type "application/x-yaml"
+    algorithm.to_yaml
+  else
+    response['Content-Type'] = 'application/rdf+xml'  
+    algorithm.to_rdfxml
+  end
 end
 
 # Get RDF/XML representation of fminer last algorithm
@@ -53,7 +69,17 @@ get "/fminer/last/?" do
     { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
     ]
   }
-  algorithm.to_rdfxml
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html algorithm.to_yaml
+  when /application\/x-yaml/
+    content_type "application/x-yaml"
+    algorithm.to_yaml
+  else
+    response['Content-Type'] = 'application/rdf+xml'  
+    algorithm.to_rdfxml
+  end
 end
 
 # Run bbrc algorithm on dataset

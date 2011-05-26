@@ -3,7 +3,6 @@
 # Get RDF/XML representation of the lazar algorithm
 # @return [application/rdf+xml] OWL-DL representation of the lazar algorithm
 get '/lazar/?' do
-	response['Content-Type'] = 'application/rdf+xml'
   algorithm = OpenTox::Algorithm::Generic.new(url_for('/lazar',:full))
   algorithm.metadata = {
     DC.title => 'lazar',
@@ -17,7 +16,17 @@ get '/lazar/?' do
       { DC.description => "Further parameters for the feaature generation service", OT.paramScope => "optional" }
     ]
   }
-  algorithm.to_rdfxml
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html algorithm.to_yaml
+  when /application\/x-yaml/
+    content_type "application/x-yaml"
+    algorithm.to_yaml
+  else
+    response['Content-Type'] = 'application/rdf+xml'  
+    algorithm.to_rdfxml
+  end
 end
 
 # Create a lazar prediction model
