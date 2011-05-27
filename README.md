@@ -32,6 +32,16 @@ REST operations
     Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
                                                         prediction_feature,
                                                         feature_generation_uri
+                                                        prediction_algorithm
+                                                        local_svm_kernel
+
+Synopsis
+--------
+
+- prediction\_algorithm: one of weighted\_majority\_vote,  local\_svm\_classification, local\_svm\_regression.
+- local\_svm\_kernel: one of weighted\_tanimoto, propositionalized
+
+Note: prediction\_algorithm and local\_svm\_kernel are only evaluated where applicable (e.g. the latter only when the former is set to loca\_svm\_\*). No error message is returned if switches are not applicable.
 
 Supported MIME formats
 ----------------------
@@ -82,6 +92,12 @@ Please click [here](http://last-pm.maunz.de#usage) for guidance for more guidanc
 ### Create lazar model
 
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer http://webservices.in-silico.ch/test/algorithm/lazar
+
+Creates a standard Lazar model.
+
+    curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer http://webservices.in-silico.ch/test/algorithm/lazar -d prediction_algorithm=local_svm_classification -d local_svm_kernel=propositionalized
+
+Creates an SVM model for classification with a propositionalized RBF kernel.
 
 feature_uri specifies the dependent variable from the dataset
 
