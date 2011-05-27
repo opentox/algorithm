@@ -38,10 +38,11 @@ REST operations
 Synopsis
 --------
 
-- prediction\_algorithm: one of weighted\_majority\_vote,  local\_svm\_classification, local\_svm\_regression.
-- local\_svm\_kernel: one of weighted\_tanimoto, propositionalized
+- prediction\_algorithm: one of "weighted\_majority\_vote" (default for classification),  "local\_svm\_classification", "local\_svm\_regression (default for regression)". "weighted\_majority\_vote"  is not applicable for regression.
+- local\_svm\_kernel: one of "weighted\_tanimoto", "propositionalized". local\_svm\_kernel is not appplicable when prediction\_algorithm="weighted\_majority\_vote".
 
-Note: prediction\_algorithm and local\_svm\_kernel are only evaluated where applicable (e.g. the latter only when the former is set to loca\_svm\_\*). No error message is returned if switches are not applicable.
+See http://www.maunz.de/wordpress/opentox/2011/lazar-models-and-how-to-trigger-them for a graphical overview.
+
 
 Supported MIME formats
 ----------------------
