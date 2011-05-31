@@ -114,6 +114,8 @@ post '/fminer/bbrc/?' do
     if prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
+      raise "no accept values for dataset '"+training_dataset.uri.to_s+"' and feature '"+prediction_feature.uri.to_s+
+        "'" unless training_dataset.accept_values(prediction_feature.uri)
       @training_classes = training_dataset.accept_values(prediction_feature.uri).sort
     end
     @@bbrc.SetMinfreq(minfreq)
@@ -142,16 +144,17 @@ post '/fminer/bbrc/?' do
 
     training_dataset.data_entries.each do |compound,entry|
       begin
-        smiles = OpenTox::Compound.new(compound.to_s).to_smiles
+        # fix: ambit does not support inchi, directly request smiles
+        smiles = OpenTox::Compound.smiles(compound.to_s)
       rescue
         LOGGER.warn "No resource for #{compound.to_s}"
         next
       end
       if smiles == '' or smiles.nil?
-        LOGGER.warn "Cannot find smiles for #{compound.to_s}."
+        LOGGER.warn "Cannot find smiles for #{compound.to_s}"
         next
       end
-
+      
       # AM: take log if appropriate
       take_logs=true
       entry.each do |feature,values|
