@@ -41,22 +41,22 @@ post '/lazar/?' do
   halt 404, "No dataset_uri parameter." unless params[:dataset_uri]
 	dataset_uri = params[:dataset_uri]
 
-  halt 404, "Dataset #{dataset_uri} not found." unless training_activities = OpenTox::Dataset.new(dataset_uri)
-  training_activities.load_all(@subjectid)
-
-  prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid)
-  unless params[:prediction_feature] # try to read prediction_feature from dataset
-    halt 404, "#{training_activities.features.size} features in dataset #{dataset_uri}. Please provide a  prediction_feature parameter." unless training_activities.features.size == 1
-    prediction_feature = OpenTox::Feature.find(training_activities.features.keys.first,@subjectid)
-    params[:prediction_feature] = prediction_feature.uri # pass to feature mining service
-  end
-
-  feature_generation_uri = @@feature_generation_default unless feature_generation_uri = params[:feature_generation_uri]
-
-	halt 404, "No feature #{prediction_feature.uri} in dataset #{params[:dataset_uri]}. (features: "+
-    training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
-
   task = OpenTox::Task.create("Create lazar model",url_for('/lazar',:full)) do |task|
+
+    raise OpenTox::NotFoundError.new "Dataset #{dataset_uri} not found." unless training_activities = OpenTox::Dataset.new(dataset_uri)
+    training_activities.load_all(@subjectid)
+
+    prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid)
+    unless params[:prediction_feature] # try to read prediction_feature from dataset
+    raise OpenTox::NotFoundError.new "#{training_activities.features.size} features in dataset #{dataset_uri}. Please provide a  prediction_feature parameter." unless training_activities.features.size == 1
+      prediction_feature = OpenTox::Feature.find(training_activities.features.keys.first,@subjectid)
+      params[:prediction_feature] = prediction_feature.uri # pass to feature mining service
+    end
+
+    feature_generation_uri = @@feature_generation_default unless feature_generation_uri = params[:feature_generation_uri]
+
+    raise OpenTox::NotFoundError.new "No feature #{prediction_feature.uri} in dataset #{params[:dataset_uri]}. (features: "+
+      training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
 
 		lazar = OpenTox::Model::Lazar.new
     lazar.min_sim = params[:min_sim] if params[:min_sim] 
@@ -127,9 +127,13 @@ post '/lazar/?' do
         end
       end
     end
-      
-    @training_classes = training_activities.accept_values(prediction_feature.uri) if prediction_feature.feature_type == "classification"
-    lazar.prediction_algorithm = "Neighbors.local_svm_regression" if  prediction_feature.feature_type == "regression"
+
+    if prediction_feature.feature_type == "classification"
+      @training_classes = training_activities.accept_values(prediction_feature.uri).sort
+      lazar.value_map = { true => @training_classes.last, false => @training_classes.first }
+    elsif  prediction_feature.feature_type == "regression"
+      lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
+    end
 
     # AM: allow prediction_algorithm override by user for classification AND regression
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
@@ -161,7 +165,6 @@ post '/lazar/?' do
     end
 
     lazar.metadata[DC.title] = "lazar model for #{URI.decode(File.basename(prediction_feature.uri))}"
-    # TODO: fix dependentVariable
     lazar.metadata[OT.dependentVariables] = prediction_feature.uri
     lazar.metadata[OT.trainingDataset] = dataset_uri
 		lazar.metadata[OT.featureDataset] = feature_dataset_uri
