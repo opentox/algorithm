@@ -157,8 +157,12 @@ post '/lazar/?' do
               LOGGER.warn "Unknown class \"#{value.to_s}\"."
             end
           elsif prediction_feature.feature_type == "regression"
-            halt 404, "0 values not allowed in training dataset. log10 is calculated internally." if value.to_f == 0
-            lazar.activities[compound] << value.to_f
+            #never use halt in tasks, do not raise exception when, print warning instead
+            if value.to_f==0
+              LOGGER.warn "0 values not allowed in training dataset. log10 is calculated internally. skipping compound"
+            else
+              lazar.activities[compound] << value.to_f
+            end
           end
         end
       end
