@@ -94,11 +94,11 @@ end
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do 
 
-  halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-  halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
+  raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
+  raise OpenTox::NotFoundError.new "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
   prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
   training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", @subjectid
-  halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
+  raise OpenTox::NotFoundError.new "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
   unless params[:min_frequency].nil? 
     minfreq=params[:min_frequency].to_i
@@ -268,7 +268,7 @@ post '/fminer/bbrc/?' do
     feature_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
 #end
@@ -284,12 +284,12 @@ end
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
 
-  halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-  halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
+  raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
+  raise OpenTox::NotFoundError.new "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
   prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
   training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid
   training_dataset.load_all(@subjectid)
-  halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
+  raise OpenTox::NotFoundError.new "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
   unless params[:min_frequency].nil? 
     minfreq=params[:min_frequency].to_i
@@ -430,6 +430,6 @@ post '/fminer/last/?' do
     feature_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end

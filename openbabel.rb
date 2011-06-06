@@ -143,6 +143,6 @@ post '/openbabel' do
     result_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
