@@ -37,8 +37,9 @@ end
 # @return [text/uri-list] Task URI 
 post '/lazar/?' do 
 
+  LOGGER.debug "building lazar model with params: "+params.inspect
   params[:subjectid] = @subjectid
-  halt 404, "No dataset_uri parameter." unless params[:dataset_uri]
+  raise OpenTox::NotFoundError.new "No dataset_uri parameter." unless params[:dataset_uri]
 	dataset_uri = params[:dataset_uri]
 
   task = OpenTox::Task.create("Create lazar model",url_for('/lazar',:full)) do |task|
@@ -75,7 +76,7 @@ post '/lazar/?' do
       if feature_generation_uri.match(/fminer/)
         lazar.feature_calculation_algorithm = "Substructure.match"
       else
-        halt 404, "External feature generation services not yet supported"
+        raise OpenTox::NotFoundError.new "External feature generation services not yet supported"
       end
       params[:subjectid] = @subjectid
       prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
@@ -87,7 +88,7 @@ post '/lazar/?' do
     end
 
     training_features.load_all(@subjectid)
-		halt 404, "Dataset #{feature_dataset_uri} not found." if training_features.nil?
+		raise OpenTox::NotFoundError.new "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
     # sorted features for index lookups
 

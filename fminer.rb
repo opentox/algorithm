@@ -334,7 +334,7 @@ post '/fminer/last/?' do
 
     training_dataset.data_entries.each do |compound,entry|
       begin
-        smiles = OpenTox::Compound.new(compound.to_s).to_smiles
+        smiles = OpenTox::Compound.smiles(compound.to_s)
       rescue
         LOGGER.warn "No resource for #{compound.to_s}"
         next
