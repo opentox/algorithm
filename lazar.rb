@@ -131,7 +131,9 @@ post '/lazar/?' do
 
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
-      lazar.value_map = { true => @training_classes.last, false => @training_classes.first }
+      @training_classes.each_with_index { |c,i|
+        lazar.value_map[i] = c
+      }
     elsif  prediction_feature.feature_type == "regression"
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
@@ -145,18 +147,7 @@ post '/lazar/?' do
       unless entry[prediction_feature.uri].empty?
         entry[prediction_feature.uri].each do |value|
           if prediction_feature.feature_type == "classification"
-            case value.to_s
-            when "true"
-              lazar.activities[compound] << true
-            when "false"
-              lazar.activities[compound] << false
-            when /#{@training_classes.last}/
-              lazar.activities[compound] << true
-            when /#{@training_classes.first}/
-              lazar.activities[compound] << false
-            else
-              LOGGER.warn "Unknown class \"#{value.to_s}\"."
-            end
+            lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
           elsif prediction_feature.feature_type == "regression"
             #never use halt in tasks, do not raise exception when, print warning instead
             if value.to_f==0
