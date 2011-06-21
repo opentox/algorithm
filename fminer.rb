@@ -173,7 +173,7 @@ post '/fminer/bbrc/?' do
               LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                activity= value.to_f 
+                activity= params[:value_map].invert[value].to_f 
                 nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
                 nr_total+=1
              elsif prediction_feature.feature_type == "regression"

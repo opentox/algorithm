@@ -53,7 +53,7 @@ post '/lazar/?' do
       prediction_feature = OpenTox::Feature.find(training_activities.features.keys.first,@subjectid)
       params[:prediction_feature] = prediction_feature.uri # pass to feature mining service
     end
-
+    
     feature_generation_uri = @@feature_generation_default unless feature_generation_uri = params[:feature_generation_uri]
 
     raise OpenTox::NotFoundError.new "No feature #{prediction_feature.uri} in dataset #{params[:dataset_uri]}. (features: "+
@@ -61,6 +61,18 @@ post '/lazar/?' do
 
 		lazar = OpenTox::Model::Lazar.new
     lazar.min_sim = params[:min_sim] if params[:min_sim] 
+
+
+    if prediction_feature.feature_type == "classification"
+      @training_classes = training_activities.accept_values(prediction_feature.uri).sort
+      @training_classes.each_with_index { |c,i|
+        lazar.value_map[i] = c
+        params[:value_map] = lazar.value_map
+      }
+    elsif  prediction_feature.feature_type == "regression"
+      lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
+    end
+
 
 		if params[:feature_dataset_uri]
       feature_dataset_uri = params[:feature_dataset_uri]
@@ -127,15 +139,6 @@ post '/lazar/?' do
           end
         end
       end
-    end
-
-    if prediction_feature.feature_type == "classification"
-      @training_classes = training_activities.accept_values(prediction_feature.uri).sort
-      @training_classes.each_with_index { |c,i|
-        lazar.value_map[i] = c
-      }
-    elsif  prediction_feature.feature_type == "regression"
-      lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
 
     # AM: allow prediction_algorithm override by user for classification AND regression
