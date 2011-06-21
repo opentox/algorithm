@@ -141,6 +141,7 @@ post '/lazar/?' do
     # AM: allow prediction_algorithm override by user for classification AND regression
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
     lazar.prop_kernel = true if params[:local_svm_kernel] == "propositionalized"
+    lazar.balanced = true if params[:balanced] == "true"
 
     training_activities.data_entries.each do |compound,entry| 
 			lazar.activities[compound] = [] unless lazar.activities[compound]
