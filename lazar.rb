@@ -66,7 +66,7 @@ post '/lazar/?' do
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
       @training_classes.each_with_index { |c,i|
-        lazar.value_map[i] = c
+        lazar.value_map[i+1] = c # don't use '0': we must take the weighted mean later.
         params[:value_map] = lazar.value_map
       }
     elsif  prediction_feature.feature_type == "regression"
