@@ -117,6 +117,9 @@ post '/fminer/bbrc/?' do
       raise "no accept values for dataset '"+training_dataset.uri.to_s+"' and feature '"+prediction_feature.uri.to_s+
         "'" unless training_dataset.accept_values(prediction_feature.uri)
       @training_classes = training_dataset.accept_values(prediction_feature.uri).sort
+      puts @training_classes.to_yaml
+      @value_map=Hash.new
+      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
     @@bbrc.SetMinfreq(minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -138,8 +141,8 @@ post '/fminer/bbrc/?' do
 
     id = 1 # fminer start id is not 0
     compounds = []
-    nr_active=0
-    nr_inactive=0
+    nr_classes={}
+    nr_total=0
     all_activities = Hash.new# DV: for effect calculation in regression part
 
     training_dataset.data_entries.each do |compound,entry|
@@ -166,30 +169,19 @@ post '/fminer/bbrc/?' do
             end
          end
       end
+      
+      @value_map=params[:value_map] unless params[:value_map].nil?
       entry.each do |feature,values|
         if feature == prediction_feature.uri
           values.each do |value|
             if value.nil? 
-              LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
+              LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                case value.to_s
-                when "true"
-                  nr_active += 1
-                  activity = 1
-                when "false"
-                  nr_inactive += 1
-                  activity = 0
-                when /#{@training_classes.last}/
-                  nr_active += 1
-                  activity = 1
-                when /#{@training_classes.first}/
-                  nr_inactive += 1
-                  activity = 0
-                else
-                  LOGGER.warn "Unknown class \"#{value.to_s}\"."
-                end
-              elsif prediction_feature.feature_type == "regression"
+                activity= @value_map.invert[value].to_f 
+                nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
+                nr_total+=1
+             elsif prediction_feature.feature_type == "regression"
                 activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
               begin
@@ -223,14 +215,22 @@ post '/fminer/bbrc/?' do
         p_value = f[1]
 
         if (!@@bbrc.GetRegression) 
-          ids = f[2] + f[3]
-          if f[2].size.to_f/ids.size > nr_active.to_f/(nr_active+nr_inactive)
-            effect = 'activating'
-          else
-            effect = 'deactivating'
-          end
+          id_arrs = f[2..-1].flatten
+          max=nil
+          max_value=0
+          f[2..-1].reverse.each_with_index { |id,i| # fminer outputs occurrences sorted reverse by activity.
+            actual = id.size.to_f/id_arrs.size
+            expected = nr_classes[i].to_f/nr_total
+            if actual > expected
+              if ((actual - expected) / actual) > max_value
+                max_value = (actual - expected) / actual # 'Schleppzeiger'
+                max = i
+              end
+            end
+          }
+          effect = @value_map[f[2..-1].size-max].to_s
         else #regression part
-          ids = f[2]
+          id_arrs = f[2]
           # DV: effect calculation
           f_arr=Array.new
           f[2].each do |id|
@@ -261,7 +261,7 @@ post '/fminer/bbrc/?' do
           feature_dataset.add_feature feature_uri, metadata
           #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
         end
-        ids.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+        id_arrs.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
       end
     end
     feature_dataset.save(@subjectid) 
@@ -306,6 +306,8 @@ post '/fminer/last/?' do
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
       @training_classes = training_dataset.accept_values(prediction_feature.uri)
+      @value_map=Hash.new
+      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
     @@last.SetMinfreq(minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
@@ -328,8 +330,8 @@ post '/fminer/last/?' do
     id = 1 # fminer start id is not 0
     compounds = []
     smi = [] # AM LAST: needed for matching the patterns back
-    nr_active=0
-    nr_inactive=0
+    nr_classes = []
+    nr_total=0
     all_activities = Hash.new #DV: for effect calculation (class and regr)
 
     training_dataset.data_entries.each do |compound,entry|
@@ -343,38 +345,40 @@ post '/fminer/last/?' do
         LOGGER.warn "Cannot find smiles for #{compound.to_s}."
         next
       end
+
+      # AM: take log if appropriate
+      #take_logs=true
+      #entry.each do |feature,values|
+      #   values.each do |value|
+      #      if prediction_feature.feature_type == "regression"
+      #         if (! value.nil?) && (value.to_f <= 0)
+      #           take_logs=false
+      #         end
+      #      end
+      #   end
+      #end
+
+      @value_map=params[:value_map] unless params[:value_map].nil?
       entry.each do |feature,values|
         if feature == prediction_feature.uri
           values.each do |value|
             if value.nil? 
-              LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
+              LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                case value.to_s
-                when "true"
-                  nr_active += 1
-                  activity = 1
-                when "false"
-                  nr_inactive += 1
-                  activity = 0
-                when /#{@training_classes.last}/
-                  nr_active += 1
-                  activity = 1
-                when /#{@training_classes.first}/
-                  nr_inactive += 1
-                  activity = 0
-                else
-                  LOGGER.warn "Unknown class \"#{value.to_s}."
-                end
+                activity= @value_map.invert[value].to_f
+                nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
+                nr_total+=1
               elsif prediction_feature.feature_type == "regression"
-                activity = value.to_f
+                #activity= take_logs ? Math.log10(value.to_f) : value.to_f
+		activity = value.to_f
               end
               begin
                 @@last.AddCompound(smiles,id)
                 @@last.AddActivity(activity, id)
                 all_activities[id]=activity # DV: insert global information
                 compounds[id] = compound
-		smi[id] = smiles # AM LAST: changed this to store SMILES.
+                smi[id] = smiles # AM LAST: changed this to store SMILES.
                 id += 1
               rescue
                 LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
@@ -404,10 +408,13 @@ post '/fminer/last/?' do
     instances=lu.match_rb(smi,smarts)       # AM LAST: creates instantiations
     instances.each do |smarts, ids|
       feat_hash = Hash[*(all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
-      @@last.GetRegression() ? p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f : p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
-
-
-      effect = (p_value > 0) ? "activating" : "deactivating"
+      if @@last.GetRegression() 
+        p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
+        effect = (p_value > 0) ? "activating" : "deactivating"
+      else
+        p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f
+        effect = "unknown"
+      end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
       unless features.include? smarts
         features << smarts
