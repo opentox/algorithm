@@ -160,7 +160,7 @@ post '/fminer/bbrc/?' do
       entry.each do |feature,values|
          values.each do |value|
             if prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f <= 0)
+               if (! value.nil?) && (value.to_f < 1)
                  take_logs=false
                end
             end
@@ -340,16 +340,16 @@ post '/fminer/last/?' do
       end
 
       # AM: take log if appropriate
-      take_logs=true
-      entry.each do |feature,values|
-         values.each do |value|
-            if prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f <= 0)
-                 take_logs=false
-               end
-            end
-         end
-      end
+      #take_logs=true
+      #entry.each do |feature,values|
+      #   values.each do |value|
+      #      if prediction_feature.feature_type == "regression"
+      #         if (! value.nil?) && (value.to_f <= 0)
+      #           take_logs=false
+      #         end
+      #      end
+      #   end
+      #end
 
       entry.each do |feature,values|
         if feature == prediction_feature.uri
@@ -362,7 +362,8 @@ post '/fminer/last/?' do
                 nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
                 nr_total+=1
               elsif prediction_feature.feature_type == "regression"
-                activity= take_logs ? Math.log10(value.to_f) : value.to_f
+                #activity= take_logs ? Math.log10(value.to_f) : value.to_f
+		activity = value.to_f
               end
               begin
                 @@last.AddCompound(smiles,id)
