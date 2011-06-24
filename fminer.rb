@@ -117,6 +117,9 @@ post '/fminer/bbrc/?' do
       raise "no accept values for dataset '"+training_dataset.uri.to_s+"' and feature '"+prediction_feature.uri.to_s+
         "'" unless training_dataset.accept_values(prediction_feature.uri)
       @training_classes = training_dataset.accept_values(prediction_feature.uri).sort
+      puts @training_classes.to_yaml
+      @value_map=Hash.new
+      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
     @@bbrc.SetMinfreq(minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -166,6 +169,8 @@ post '/fminer/bbrc/?' do
             end
          end
       end
+      
+      @value_map=params[:value_map] unless params[:value_map].nil?
       entry.each do |feature,values|
         if feature == prediction_feature.uri
           values.each do |value|
@@ -173,7 +178,7 @@ post '/fminer/bbrc/?' do
               LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                activity= params[:value_map].invert[value].to_f 
+                activity= @value_map.invert[value].to_f 
                 nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
                 nr_total+=1
              elsif prediction_feature.feature_type == "regression"
@@ -223,7 +228,7 @@ post '/fminer/bbrc/?' do
               end
             end
           }
-          effect = max.to_s
+          effect = @value_map[f[2..-1].size-max].to_s
         else #regression part
           id_arrs = f[2]
           # DV: effect calculation
@@ -301,6 +306,8 @@ post '/fminer/last/?' do
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
       @training_classes = training_dataset.accept_values(prediction_feature.uri)
+      @value_map=Hash.new
+      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
     @@last.SetMinfreq(minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
@@ -351,6 +358,7 @@ post '/fminer/last/?' do
       #   end
       #end
 
+      @value_map=params[:value_map] unless params[:value_map].nil?
       entry.each do |feature,values|
         if feature == prediction_feature.uri
           values.each do |value|
@@ -358,7 +366,7 @@ post '/fminer/last/?' do
               LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                activity= value.to_f
+                activity= @value_map.invert[value].to_f
                 nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
                 nr_total+=1
               elsif prediction_feature.feature_type == "regression"
