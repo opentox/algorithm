@@ -117,7 +117,6 @@ post '/fminer/bbrc/?' do
       raise "no accept values for dataset '"+training_dataset.uri.to_s+"' and feature '"+prediction_feature.uri.to_s+
         "'" unless training_dataset.accept_values(prediction_feature.uri)
       @training_classes = training_dataset.accept_values(prediction_feature.uri).sort
-      puts @training_classes.to_yaml
       @value_map=Hash.new
       @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
@@ -228,7 +227,7 @@ post '/fminer/bbrc/?' do
               end
             end
           }
-          effect = @value_map[f[2..-1].size-max].to_s
+          effect = @value_map[(f[2..-1].size-max).to_s].to_s
         else #regression part
           id_arrs = f[2]
           # DV: effect calculation
