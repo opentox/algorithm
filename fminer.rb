@@ -234,6 +234,7 @@ post '/fminer/bbrc/?' do
           # DV: effect calculation
           f_arr=Array.new
           f[2].each do |id|
+            id=id.keys[0] # extract id from hit count hash
             f_arr.push(all_activities[id]) 
           end 
           f_median=OpenTox::Algorithm.median(f_arr)
