@@ -2,6 +2,7 @@ ENV['FMINER_SMARTS'] = 'true'
 ENV['FMINER_NO_AROMATIC'] = 'true'
 ENV['FMINER_PVALUES'] = 'true'
 ENV['FMINER_SILENT'] = 'true'
+ENV['FMINER_NR_HITS'] = 'true'
 
 @@bbrc = Bbrc::Bbrc.new 
 @@last = Last::Last.new 
@@ -260,7 +261,11 @@ post '/fminer/bbrc/?' do
           feature_dataset.add_feature feature_uri, metadata
           #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
         end
-        id_arrs.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+        id_arrs.each { |id_count_hash|
+          id=id_count_hash.keys[0].to_i
+          count=id_count_hash.values[0].to_i
+          feature_dataset.add(compounds[id], feature_uri, true)
+        }
       end
     end
     feature_dataset.save(@subjectid) 
@@ -405,6 +410,7 @@ post '/fminer/last/?' do
     dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
     instances=lu.match_rb(smi,smarts)       # AM LAST: creates instantiations
+
     instances.each do |smarts, ids|
       feat_hash = Hash[*(all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
       if @@last.GetRegression() 
