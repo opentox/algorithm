@@ -264,7 +264,11 @@ post '/fminer/bbrc/?' do
         id_arrs.each { |id_count_hash|
           id=id_count_hash.keys[0].to_i
           count=id_count_hash.values[0].to_i
-          feature_dataset.add(compounds[id], feature_uri, true)
+          if params[:nr_hits] 
+            feature_dataset.add(compounds[id], feature_uri, count)
+          else
+            feature_dataset.add(compounds[id], feature_uri, true)
+          end
         }
       end
     end
@@ -409,9 +413,10 @@ post '/fminer/last/?' do
     lu = LU.new                             # AM LAST: uses last-utils here
     dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
-    instances=lu.match_rb(smi,smarts)       # AM LAST: creates instantiations
+    params[:nr_hits].nil? ? nr_hits=true : nr_hits=false
+    matches,counts=lu.match_rb(smi,smarts,nr_hits)       # AM LAST: creates instantiations
 
-    instances.each do |smarts, ids|
+    matches.each do |smarts, ids|
       feat_hash = Hash[*(all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
       if @@last.GetRegression() 
         p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
@@ -436,7 +441,11 @@ post '/fminer/last/?' do
         } 
         feature_dataset.add_feature feature_uri, metadata
       end
-      ids.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+      if params[:nr_hits] 
+        ids.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+      else
+        ids.each_with_index { |id,i| feature_dataset.add(compounds[id], feature_uri, counts[id][i])}
+      end
     end
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
