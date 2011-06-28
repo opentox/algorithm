@@ -140,8 +140,9 @@ post '/fminer/bbrc/?' do
 
     id = 1 # fminer start id is not 0
     compounds = []
-    nr_classes={}
-    nr_total=0
+    db_class_sizes=Array.new# AM effect calc
+    #nr_classes={}
+    #nr_total=0
     all_activities = Hash.new# DV: for effect calculation in regression part
 
     training_dataset.data_entries.each do |compound,entry|
@@ -177,9 +178,10 @@ post '/fminer/bbrc/?' do
               LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                activity= @value_map.invert[value].to_f 
-                nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
-                nr_total+=1
+                activity= @value_map.invert[value].to_i - 1 # activities are mapped to 1..n
+                db_class_sizes[activity].nil? ? db_class_sizes[activity]=1 : db_class_sizes[activity]+=1 # AM effect calc
+                #nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
+                #nr_total+=1
              elsif prediction_feature.feature_type == "regression"
                 activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
@@ -215,19 +217,8 @@ post '/fminer/bbrc/?' do
 
         if (!@@bbrc.GetRegression) 
           id_arrs = f[2..-1].flatten
-          max=nil
-          max_value=0
-          f[2..-1].reverse.each_with_index { |id,i| # fminer outputs occurrences sorted reverse by activity.
-            actual = id.size.to_f/id_arrs.size
-            expected = nr_classes[i].to_f/nr_total
-            if actual > expected
-              if ((actual - expected) / actual) > max_value
-                max_value = (actual - expected) / actual # 'Schleppzeiger'
-                max = i
-              end
-            end
-          }
-          effect = @value_map[(f[2..-1].size-max).to_s].to_s
+          max = OpenTox::Algorithm.effect(f[2..-1].reverse, db_class_sizes)
+          effect = @value_map[(f[2..-1].size-max)].to_s
         else #regression part
           id_arrs = f[2]
           # DV: effect calculation
@@ -432,7 +423,7 @@ post '/fminer/last/?' do
           RDF.type => [OT.Feature, OT.Substructure],
           OT.hasSource => feature_dataset.uri,
           OT.smarts => smarts,
-          OT.pValue => p_value.to_f.abs,
+          OT.pValue => p_value.abs,
           OT.effect => effect,
           OT.parameters => [
             { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
