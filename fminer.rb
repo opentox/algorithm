@@ -140,10 +140,8 @@ post '/fminer/bbrc/?' do
 
     id = 1 # fminer start id is not 0
     compounds = []
-    db_class_sizes=Array.new# AM effect calc
-    #nr_classes={}
-    #nr_total=0
-    all_activities = Hash.new# DV: for effect calculation in regression part
+    db_class_sizes = Array.new # AM: effect
+    all_activities = Hash.new # DV: for effect calculation in regression part
 
     training_dataset.data_entries.each do |compound,entry|
       begin
@@ -179,9 +177,7 @@ post '/fminer/bbrc/?' do
             else
               if prediction_feature.feature_type == "classification"
                 activity= @value_map.invert[value].to_i - 1 # activities are mapped to 1..n
-                db_class_sizes[activity].nil? ? db_class_sizes[activity]=1 : db_class_sizes[activity]+=1 # AM effect calc
-                #nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
-                #nr_total+=1
+                db_class_sizes[activity].nil? ? db_class_sizes[activity]=1 : db_class_sizes[activity]+=1 # AM effect
              elsif prediction_feature.feature_type == "regression"
                 activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
@@ -329,9 +325,11 @@ post '/fminer/last/?' do
     id = 1 # fminer start id is not 0
     compounds = []
     smi = [] # AM LAST: needed for matching the patterns back
-    nr_classes = []
-    nr_total=0
-    all_activities = Hash.new #DV: for effect calculation (class and regr)
+
+    #nr_classes = []
+    #nr_total=0
+    db_class_sizes = Array.new # AM: effect
+    all_activities = Hash.new # DV: for effect calculation (class and regr)
 
     training_dataset.data_entries.each do |compound,entry|
       begin
@@ -366,8 +364,9 @@ post '/fminer/last/?' do
             else
               if prediction_feature.feature_type == "classification"
                 activity= @value_map.invert[value].to_f
-                nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
-                nr_total+=1
+                db_class_sizes[activity.to_i-1].nil? ? db_class_sizes[activity.to_i-1]=1 : db_class_sizes[activity.to_i-1]+=1
+                #nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
+                #nr_total+=1
               elsif prediction_feature.feature_type == "regression"
                 #activity= take_logs ? Math.log10(value.to_f) : value.to_f
 		activity = value.to_f
@@ -414,7 +413,11 @@ post '/fminer/last/?' do
         effect = (p_value > 0) ? "activating" : "deactivating"
       else
         p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f
-        effect = "unknown"
+        g=Array.new
+        @value_map.each { |y,act| g[y-1]=Array.new }
+        feat_hash.each  { |x,y|   g[y-1].push(x)   }
+        max = OpenTox::Algorithm.effect(g, db_class_sizes)
+        effect = @value_map[(g.size-max)].to_s
       end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
       unless features.include? smarts
