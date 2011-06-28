@@ -88,10 +88,11 @@ end
 # @param [String] dataset_uri URI of the training dataset
 # @param [String] prediction_feature URI of the prediction feature (i.e. dependent variable)
 # @param [optional] parameters BBRC parameters, accepted parameters are
-#   - minfreq  Minimum frequency (default 5)
+#   - min_frequency  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
 #   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
 #   - min_chisq_significance Significance threshold (between 0 and 1)
+#   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do 
 
@@ -273,9 +274,10 @@ end
 # @param [String] dataset_uri URI of the training dataset
 # @param [String] prediction_feature URI of the prediction feature (i.e. dependent variable)
 # @param [optional] parameters LAST parameters, accepted parameters are
-#   - minfreq  Minimum frequency (default 5)
+#   - min_frequency freq  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
 #   - hops Maximum number of hops
+#   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
 
