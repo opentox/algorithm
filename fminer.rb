@@ -105,7 +105,7 @@ post '/fminer/bbrc/?' do
     minfreq=params[:min_frequency].to_i
     raise "Minimum frequency must be a number >0!" unless minfreq>0
   else
-    minfreq=OpenTox::Algorithm.min_frequency(5) # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
+    minfreq=OpenTox::Algorithm.min_frequency(training_dataset,5) # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
   end
 
   task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
@@ -302,7 +302,7 @@ post '/fminer/last/?' do
     minfreq=params[:min_frequency].to_i
     raise "Minimum frequency must be a number >0!" unless minfreq>0
   else
-    minfreq=OpenTox::Algorithm.min_frequency(80) # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
+    minfreq=OpenTox::Algorithm.min_frequency(training_dataset,80) # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
   end
 
   task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
