@@ -105,8 +105,7 @@ post '/fminer/bbrc/?' do
     minfreq=params[:min_frequency].to_i
     raise "Minimum frequency must be a number >0!" unless minfreq>0
   else
-    minfreq = 5*training_dataset.compounds.size/1000 # AM sugg. 8-10 per mil
-    minfreq = 2 unless minfreq > 2
+    minfreq=OpenTox::Algorithm.min_frequency(5) # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
   end
 
   task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
@@ -296,16 +295,14 @@ post '/fminer/last/?' do
   raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
   raise OpenTox::NotFoundError.new "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
   prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
-  training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid
-  training_dataset.load_all(@subjectid)
+  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", @subjectid
   raise OpenTox::NotFoundError.new "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
 
   unless params[:min_frequency].nil? 
     minfreq=params[:min_frequency].to_i
     raise "Minimum frequency must be a number >0!" unless minfreq>0
   else
-    minfreq = 8*training_dataset.compounds.size/100 # AM sugg. 5-10%
-    minfreq = 2 unless minfreq > 2
+    minfreq=OpenTox::Algorithm.min_frequency(80) # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
   end
 
   task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
@@ -314,7 +311,9 @@ post '/fminer/last/?' do
     if prediction_feature.feature_type == "regression"
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
-      @training_classes = training_dataset.accept_values(prediction_feature.uri)
+      raise "no accept values for dataset '"+training_dataset.uri.to_s+"' and feature '"+prediction_feature.uri.to_s+
+        "'" unless training_dataset.accept_values(prediction_feature.uri)
+      @training_classes = training_dataset.accept_values(prediction_feature.uri).sort
       @value_map=Hash.new
       @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
