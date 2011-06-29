@@ -128,65 +128,13 @@ post '/fminer/bbrc/?' do
     })
     feature_dataset.save(@subjectid)
 
-    id = 1 # fminer start id is not 0
     fminer.compounds = []
     fminer.db_class_sizes = Array.new # AM: effect
     fminer.all_activities = Hash.new # DV: for effect calculation in regression part
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
-
-    fminer.training_dataset.data_entries.each do |compound,entry|
-      begin
-        smiles = OpenTox::Compound.smiles(compound.to_s)
-      rescue
-        LOGGER.warn "No resource for #{compound.to_s}"
-        next
-      end
-      if smiles == '' or smiles.nil?
-        LOGGER.warn "Cannot find smiles for #{compound.to_s}."
-        next
-      end
-      
-      # AM: take log if appropriate
-      take_logs=true
-      entry.each do |feature,values|
-         values.each do |value|
-            if fminer.prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f <= 0)
-                 take_logs=false
-               end
-            end
-         end
-      end
-      
-      @value_map=params[:value_map] unless params[:value_map].nil?
-      entry.each do |feature,values|
-        if feature == fminer.prediction_feature.uri
-          values.each do |value|
-            if value.nil? 
-              LOGGER.warn "No #{feature} activity for #{compound.to_s}."
-            else
-              if fminer.prediction_feature.feature_type == "classification"
-                activity= @value_map.invert[value].to_i # activities are mapped to 1..n
-                fminer.db_class_sizes[activity-1].nil? ? fminer.db_class_sizes[activity-1]=1 : fminer.db_class_sizes[activity-1]+=1 # AM effect
-              elsif fminer.prediction_feature.feature_type == "regression"
-                activity= take_logs ? Math.log10(value.to_f) : value.to_f 
-              end
-              begin
-                @@bbrc.AddCompound(smiles,id)
-                @@bbrc.AddActivity(activity, id)
-                fminer.all_activities[id]=activity # DV: insert global information
-                fminer.compounds[id] = compound
-                fminer.smi[id] = smiles
-                id += 1
-              rescue
-                LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
-              end
-            end
-          end
-        end
-      end
-    end
+    # Add data to fminer
+    fminer.add_fminer_data(@@bbrc, params, @value_map)
 
     g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=OpenTox::Algorithm.median(g_array)
@@ -304,64 +252,13 @@ post '/fminer/last/?' do
     })
     feature_dataset.save(@subjectid)
 
-    id = 1 # fminer start id is not 0
     fminer.compounds = []
     fminer.db_class_sizes = Array.new # AM: effect
     fminer.all_activities = Hash.new # DV: for effect calculation (class and regr)
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
-    fminer.training_dataset.data_entries.each do |compound,entry|
-      begin
-        smiles = OpenTox::Compound.smiles(compound.to_s)
-      rescue
-        LOGGER.warn "No resource for #{compound.to_s}"
-        next
-      end
-      if smiles == '' or smiles.nil?
-        LOGGER.warn "Cannot find smiles for #{compound.to_s}."
-        next
-      end
-
-      # AM: take log if appropriate
-      take_logs=true
-      entry.each do |feature,values|
-         values.each do |value|
-            if fminer.prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f <= 0)
-                 take_logs=false
-               end
-            end
-         end
-      end
-
-      @value_map=params[:value_map] unless params[:value_map].nil?
-      entry.each do |feature,values|
-        if feature == fminer.prediction_feature.uri
-          values.each do |value|
-            if value.nil? 
-              LOGGER.warn "No #{feature} activity for #{compound.to_s}."
-            else
-              if fminer.prediction_feature.feature_type == "classification"
-                activity= @value_map.invert[value].to_i
-                fminer.db_class_sizes[activity-1].nil? ? fminer.db_class_sizes[activity-1]=1 : fminer.db_class_sizes[activity-1]+=1
-              elsif fminer.prediction_feature.feature_type == "regression"
-                activity= take_logs ? Math.log10(value.to_f) : value.to_f
-              end
-              begin
-                @@last.AddCompound(smiles,id)
-                @@last.AddActivity(activity, id)
-                fminer.all_activities[id]=activity # DV: insert global information
-                fminer.compounds[id] = compound
-                fminer.smi[id] = smiles # AM LAST: changed this to store SMILES.
-                id += 1
-              rescue
-                LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
-              end
-            end
-          end
-        end
-      end
-    end
+    # Add data to fminer
+    fminer.add_fminer_data(@@last, params, @value_map)
     
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
