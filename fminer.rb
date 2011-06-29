@@ -177,8 +177,8 @@ post '/fminer/bbrc/?' do
               LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if prediction_feature.feature_type == "classification"
-                activity= @value_map.invert[value].to_i - 1 # activities are mapped to 1..n
-                db_class_sizes[activity].nil? ? db_class_sizes[activity]=1 : db_class_sizes[activity]+=1 # AM effect
+                activity= @value_map.invert[value].to_i # activities are mapped to 1..n
+                db_class_sizes[activity-1].nil? ? db_class_sizes[activity-1]=1 : db_class_sizes[activity-1]+=1 # AM effect
              elsif prediction_feature.feature_type == "regression"
                 activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
@@ -367,11 +367,9 @@ post '/fminer/last/?' do
               if prediction_feature.feature_type == "classification"
                 activity= @value_map.invert[value].to_f
                 db_class_sizes[activity.to_i-1].nil? ? db_class_sizes[activity.to_i-1]=1 : db_class_sizes[activity.to_i-1]+=1
-                #nr_classes[activity].nil? ? nr_classes[activity]=0 : nr_classes[activity]+=1
-                #nr_total+=1
               elsif prediction_feature.feature_type == "regression"
                 #activity= take_logs ? Math.log10(value.to_f) : value.to_f
-		activity = value.to_f
+            		activity = value.to_f
               end
               begin
                 @@last.AddCompound(smiles,id)
