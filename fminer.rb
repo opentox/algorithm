@@ -129,9 +129,10 @@ post '/fminer/bbrc/?' do
     feature_dataset.save(@subjectid)
 
     id = 1 # fminer start id is not 0
-    compounds = []
-    db_class_sizes = Array.new # AM: effect
-    all_activities = Hash.new # DV: for effect calculation in regression part
+    fminer.compounds = []
+    fminer.db_class_sizes = Array.new # AM: effect
+    fminer.all_activities = Hash.new # DV: for effect calculation in regression part
+    fminer.smi = [] # AM LAST: needed for matching the patterns back
 
 
     fminer.training_dataset.data_entries.each do |compound,entry|
@@ -142,7 +143,7 @@ post '/fminer/bbrc/?' do
         next
       end
       if smiles == '' or smiles.nil?
-        LOGGER.warn "Cannot find smiles for #{compound.to_s}"
+        LOGGER.warn "Cannot find smiles for #{compound.to_s}."
         next
       end
       
@@ -151,7 +152,7 @@ post '/fminer/bbrc/?' do
       entry.each do |feature,values|
          values.each do |value|
             if fminer.prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f < 1)
+               if (! value.nil?) && (value.to_f <= 0)
                  take_logs=false
                end
             end
@@ -167,17 +168,16 @@ post '/fminer/bbrc/?' do
             else
               if fminer.prediction_feature.feature_type == "classification"
                 activity= @value_map.invert[value].to_i # activities are mapped to 1..n
-                db_class_sizes[activity-1].nil? ? db_class_sizes[activity-1]=1 : db_class_sizes[activity-1]+=1 # AM effect
-             elsif fminer.prediction_feature.feature_type == "regression"
-
+                fminer.db_class_sizes[activity-1].nil? ? fminer.db_class_sizes[activity-1]=1 : fminer.db_class_sizes[activity-1]+=1 # AM effect
+              elsif fminer.prediction_feature.feature_type == "regression"
                 activity= take_logs ? Math.log10(value.to_f) : value.to_f 
               end
               begin
                 @@bbrc.AddCompound(smiles,id)
                 @@bbrc.AddActivity(activity, id)
-                all_activities[id]=activity # DV: insert global information
-                compounds[id] = compound
-
+                fminer.all_activities[id]=activity # DV: insert global information
+                fminer.compounds[id] = compound
+                fminer.smi[id] = smiles
                 id += 1
               rescue
                 LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
@@ -188,10 +188,10 @@ post '/fminer/bbrc/?' do
       end
     end
 
-    g_array=all_activities.values # DV: calculation of global median for effect calculation
+    g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=OpenTox::Algorithm.median(g_array)
     
-    raise "No compounds in dataset #{fminer.training_dataset.uri}" if compounds.size==0
+    raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
     features = Set.new
     # run @@bbrc
@@ -205,7 +205,7 @@ post '/fminer/bbrc/?' do
 
         if (!@@bbrc.GetRegression) 
           id_arrs = f[2..-1].flatten
-          max = OpenTox::Algorithm.effect(f[2..-1].reverse, db_class_sizes)
+          max = OpenTox::Algorithm.effect(f[2..-1].reverse, fminer.db_class_sizes)
           effect = @value_map[(f[2..-1].size-max)].to_s
         else #regression part
           id_arrs = f[2]
@@ -213,7 +213,7 @@ post '/fminer/bbrc/?' do
           f_arr=Array.new
           f[2].each do |id|
             id=id.keys[0] # extract id from hit count hash
-            f_arr.push(all_activities[id]) 
+            f_arr.push(fminer.all_activities[id]) 
           end 
           f_median=OpenTox::Algorithm.median(f_arr)
           if g_median >= f_median 
@@ -244,9 +244,9 @@ post '/fminer/bbrc/?' do
           id=id_count_hash.keys[0].to_i
           count=id_count_hash.values[0].to_i
           if params[:nr_hits] 
-            feature_dataset.add(compounds[id], feature_uri, count)
+            feature_dataset.add(fminer.compounds[id], feature_uri, count)
           else
-            feature_dataset.add(compounds[id], feature_uri, true)
+            feature_dataset.add(fminer.compounds[id], feature_uri, true)
           end
         }
       end
@@ -305,10 +305,10 @@ post '/fminer/last/?' do
     feature_dataset.save(@subjectid)
 
     id = 1 # fminer start id is not 0
-    compounds = []
-    db_class_sizes = Array.new # AM: effect
-    all_activities = Hash.new # DV: for effect calculation (class and regr)
-    smi = [] # AM LAST: needed for matching the patterns back
+    fminer.compounds = []
+    fminer.db_class_sizes = Array.new # AM: effect
+    fminer.all_activities = Hash.new # DV: for effect calculation (class and regr)
+    fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     fminer.training_dataset.data_entries.each do |compound,entry|
       begin
@@ -323,16 +323,16 @@ post '/fminer/last/?' do
       end
 
       # AM: take log if appropriate
-      #take_logs=true
-      #entry.each do |feature,values|
-      #   values.each do |value|
-      #      if fminer.prediction_feature.feature_type == "regression"
-      #         if (! value.nil?) && (value.to_f <= 0)
-      #           take_logs=false
-      #         end
-      #      end
-      #   end
-      #end
+      take_logs=true
+      entry.each do |feature,values|
+         values.each do |value|
+            if fminer.prediction_feature.feature_type == "regression"
+               if (! value.nil?) && (value.to_f <= 0)
+                 take_logs=false
+               end
+            end
+         end
+      end
 
       @value_map=params[:value_map] unless params[:value_map].nil?
       entry.each do |feature,values|
@@ -342,18 +342,17 @@ post '/fminer/last/?' do
               LOGGER.warn "No #{feature} activity for #{compound.to_s}."
             else
               if fminer.prediction_feature.feature_type == "classification"
-                activity= @value_map.invert[value].to_f
-                db_class_sizes[activity.to_i-1].nil? ? db_class_sizes[activity.to_i-1]=1 : db_class_sizes[activity.to_i-1]+=1
+                activity= @value_map.invert[value].to_i
+                fminer.db_class_sizes[activity-1].nil? ? fminer.db_class_sizes[activity-1]=1 : fminer.db_class_sizes[activity-1]+=1
               elsif fminer.prediction_feature.feature_type == "regression"
-                #activity= take_logs ? Math.log10(value.to_f) : value.to_f
-            		activity = value.to_f
+                activity= take_logs ? Math.log10(value.to_f) : value.to_f
               end
               begin
                 @@last.AddCompound(smiles,id)
                 @@last.AddActivity(activity, id)
-                all_activities[id]=activity # DV: insert global information
-                compounds[id] = compound
-                smi[id] = smiles # AM LAST: changed this to store SMILES.
+                fminer.all_activities[id]=activity # DV: insert global information
+                fminer.compounds[id] = compound
+                fminer.smi[id] = smiles # AM LAST: changed this to store SMILES.
                 id += 1
               rescue
                 LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
@@ -364,7 +363,7 @@ post '/fminer/last/?' do
       end
     end
     
-    raise "No compounds in dataset #{fminer.training_dataset.uri}" if compounds.size==0
+    raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
     # run @@last
     features = Set.new
@@ -381,19 +380,19 @@ post '/fminer/last/?' do
     dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
     params[:nr_hits].nil? ? hit_count=false: hit_count=true
-    matches, counts = lu.match_rb(smi,smarts,hit_count)       # AM LAST: creates instantiations
+    matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
 
     matches.each do |smarts, ids|
-      feat_hash = Hash[*(all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
+      feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
       if @@last.GetRegression() 
-        p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
+        p_value = @@last.KSTest(fminer.all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
         effect = (p_value > 0) ? "activating" : "deactivating"
       else
-        p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f
+        p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
         g=Array.new
         @value_map.each { |y,act| g[y-1]=Array.new }
         feat_hash.each  { |x,y|   g[y-1].push(x)   }
-        max = OpenTox::Algorithm.effect(g, db_class_sizes)
+        max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes)
         effect = @value_map[(g.size-max)].to_s
       end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
@@ -413,9 +412,9 @@ post '/fminer/last/?' do
         feature_dataset.add_feature feature_uri, metadata
       end
       if !hit_count
-        ids.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+        ids.each { |id| feature_dataset.add(fminer.compounds[id], feature_uri, true)}
       else
-        ids.each_with_index { |id,i| feature_dataset.add(compounds[id], feature_uri, counts[smarts][i])} 
+        ids.each_with_index { |id,i| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][i])} 
       end
     end
     feature_dataset.save(@subjectid) 
