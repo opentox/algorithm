@@ -29,7 +29,6 @@ REST operations
                                                         feature_uri,
                                                         [min_frequency=8 %],
                                                         [feature_type=trees],
-                                                        [max_hops=25],
                                                         [nr_hits=false]
     Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
                                                         prediction_feature,
