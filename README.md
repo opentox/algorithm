@@ -23,12 +23,14 @@ REST operations
                                                         [min_frequency=5 per-mil],
                                                         [feature_type=trees],
                                                         [backbone=true],
-                                                        [min_chisq_significance=0.95]
+                                                        [min_chisq_significance=0.95],
+                                                        [nr_hits=false]
     Create last features          POST  /fminer/last    dataset_uri,                URI for feature dataset   200,400,404,500
                                                         feature_uri,
                                                         [min_frequency=8 %],
                                                         [feature_type=trees],
                                                         [max_hops=25],
+                                                        [nr_hits=false]
     Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
                                                         prediction_feature,
                                                         feature_generation_uri
@@ -79,6 +81,7 @@ backbone=false reduces BBRC mining to frequent and correlated subtree mining (mu
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} http://webservices.in-silico.ch/algorithm/fminer/bbrc
 
 feature_uri specifies the dependent variable from the dataset.   
+Adding -d nr_hits=true produces frequency counts per pattern and molecule.
 Please click [here](http://bbrc.maunz.de#usage) for more guidance on usage.
 
 ### Create [LAST-PM](http://last-pm.maunz.de) descriptors, recommended for small to medium-sized datasets.
@@ -86,6 +89,7 @@ Please click [here](http://bbrc.maunz.de#usage) for more guidance on usage.
     curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d min_frequency={min_frequency} http://webservices.in-silico.ch/algorithm/fminer/last
 
 feature_uri specifies the dependent variable from the dataset.   
+Adding -d nr_hits=true produces frequency counts per pattern and molecule.
 Please click [here](http://last-pm.maunz.de#usage) for guidance for more guidance on usage.
 
 * * * 
