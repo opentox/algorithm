@@ -154,11 +154,7 @@ post '/lazar/?' do
             lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
           elsif prediction_feature.feature_type == "regression"
             #never use halt in tasks, do not raise exception when, print warning instead
-            if value.to_f==0
-              LOGGER.warn "0 values not allowed in training dataset. log10 is calculated internally. skipping compound"
-            else
-              lazar.activities[compound] << value.to_f
-            end
+            lazar.activities[compound] << value.to_f
           end
         end
       end
