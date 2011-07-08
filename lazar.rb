@@ -146,6 +146,22 @@ post '/lazar/?' do
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.balanced = true if params[:balanced] == "true"
 
+    # AM: Transformation of Data
+    transform_acts = []
+    if prediction_feature.feature_type == "regression"
+      training_activities.data_entries.each do |compound,entry| 
+        unless entry[prediction_feature.uri].empty?
+          entry[prediction_feature.uri].each do |value|
+            transform_acts << value.to_f
+          end
+        end
+      end
+    end
+    inverter = OpenTox::Algorithm::Transform::Inverter.new(transform_acts)
+    transform_acts = inverter.value
+    lazar.transform = inverter
+
+    transform_counts=0
     training_activities.data_entries.each do |compound,entry| 
 			lazar.activities[compound] = [] unless lazar.activities[compound]
       unless entry[prediction_feature.uri].empty?
@@ -154,8 +170,9 @@ post '/lazar/?' do
             lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
           elsif prediction_feature.feature_type == "regression"
             #never use halt in tasks, do not raise exception when, print warning instead
-            lazar.activities[compound] << value.to_f
+            lazar.activities[compound] << transform_acts[transform_counts].to_s
           end
+          transform_counts+=1
         end
       end
     end
