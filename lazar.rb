@@ -157,8 +157,8 @@ post '/lazar/?' do
         end
       end
     end
-    inverter = OpenTox::Algorithm::Transform::Inverter.new(transform_acts)
-    transform_acts = inverter.value
+    inverter = OpenTox::Algorithm::Transform::Log10.new(transform_acts)
+    transform_acts = inverter.values
     lazar.transform = inverter
 
     transform_counts=0
