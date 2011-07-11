@@ -60,7 +60,8 @@ post '/lazar/?' do
       training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
 
 		lazar = OpenTox::Model::Lazar.new
-    lazar.min_sim = params[:min_sim] if params[:min_sim] 
+    lazar.min_sim = params[:min_sim] if params[:min_sim]
+    lazar.nr_hits = true if params[:nr_hits] 
 
 
     if prediction_feature.feature_type == "classification"
@@ -107,12 +108,21 @@ post '/lazar/?' do
     lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
 
     training_features.data_entries.each do |compound,entry|
-      lazar.fingerprints[compound] = [] unless lazar.fingerprints[compound]
+      lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
       entry.keys.each do |feature|
         if lazar.feature_calculation_algorithm == "Substructure.match"
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
-            lazar.fingerprints[compound] << smarts
+            if nr_hits = true
+              lazar.fingerprints[compound][smarts] = entry[feature].flatten.first
+            else
+              lazar.fingerprints[compound][smarts] = 1
+            end
+            #LOGGER.debug "dv ------------ frequencies --------- feature: '#{feature}'; compound: '#{compound}' smarts: '#{smarts}'; entry.first:'#{entry[feature].flatten.first}"
+            #unless entry[feature].flatten.first == true
+            #  lazar.frequencies[smarts] = [] unless lazar.frequencies[smarts]
+            #  lazar.frequencies[smarts] << {compound => entry[feature].flatten.first}
+            #end
             unless lazar.features.include? smarts
               lazar.features << smarts
               lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
