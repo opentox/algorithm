@@ -72,7 +72,7 @@ post '/lazar/?' do
     elsif  prediction_feature.feature_type == "regression"
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
-
+    task.progress 10
 
 		if params[:feature_dataset_uri]
       feature_dataset_uri = params[:feature_dataset_uri]
@@ -95,7 +95,7 @@ post '/lazar/?' do
       if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
         params[:feature_type] = "paths"
       end
-      feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params).to_s
+      feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params, OpenTox::SubTask.new(task,10,70)).to_s
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
     end
 
@@ -140,6 +140,7 @@ post '/lazar/?' do
         end
       end
     end
+    task.progress 80
 
     # AM: allow prediction_algorithm override by user for classification AND regression
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
@@ -163,6 +164,7 @@ post '/lazar/?' do
         end
       end
     end
+    task.progress 90
 
     lazar.metadata[DC.title] = "lazar model for #{URI.decode(File.basename(prediction_feature.uri))}"
     lazar.metadata[OT.dependentVariables] = prediction_feature.uri

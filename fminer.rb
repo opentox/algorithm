@@ -99,7 +99,7 @@ post '/fminer/bbrc/?' do
   fminer=OpenTox::Algorithm::Fminer.new
   fminer.check_params(params,5)
 
-  task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
+  task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do |task|
     @@bbrc.Reset
     if fminer.prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
@@ -140,12 +140,14 @@ post '/fminer/bbrc/?' do
     g_median=OpenTox::Algorithm.median(g_array)
     
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
-
+    task.progress 10
+    step_width = 80 / @@bbrc.GetNoRootNodes().to_f
     features = Set.new
+    
     # run @@bbrc
     (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
-
       results = @@bbrc.MineRoot(j)
+      task.progress 10+step_width*(j+1)
       results.each do |result|
         f = YAML.load(result)[0]
         smarts = f[0]
@@ -223,7 +225,7 @@ post '/fminer/last/?' do
   fminer=OpenTox::Algorithm::Fminer.new
   fminer.check_params(params,80)
 
-  task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
+  task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do |task|
     @@last.Reset
     if fminer.prediction_feature.feature_type == "regression"
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
@@ -265,9 +267,12 @@ post '/fminer/last/?' do
     # run @@last
     features = Set.new
     xml = ""
+    task.progress 10
+    step_width = 80 / @@last.GetNoRootNodes().to_f
 
     (0 .. @@last.GetNoRootNodes()-1).each do |j|
       results = @@last.MineRoot(j)
+      task.progress 10+step_width*(j+1)
       results.each do |result|
         xml << result
       end
