@@ -157,9 +157,9 @@ post '/lazar/?' do
         end
       end
     end
-    inverter = OpenTox::Algorithm::Transform::Log10.new(transform_acts)
-    transform_acts = inverter.values
-    lazar.transform = inverter
+    transformer = OpenTox::Algorithm::Transform::Log10.new(transform_acts)
+    transform_acts = transformer.values
+    lazar.transform = { :class => transformer.class, :offset => transformer.offset }
 
     transform_counts=0
     training_activities.data_entries.each do |compound,entry| 
