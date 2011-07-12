@@ -155,8 +155,8 @@ post '/fminer/bbrc/?' do
 
         if (!@@bbrc.GetRegression) 
           id_arrs = f[2..-1].flatten
-          max = OpenTox::Algorithm.effect(f[2..-1].reverse, fminer.db_class_sizes)
-          effect = @value_map[(f[2..-1].size-max)].to_s
+          max = OpenTox::Algorithm.effect(f[2..-1], fminer.db_class_sizes)
+          effect = f[2..-1].size-max
         else #regression part
           id_arrs = f[2]
           # DV: effect calculation
@@ -295,7 +295,7 @@ post '/fminer/last/?' do
         @value_map.each { |y,act| g[y-1]=Array.new }
         feat_hash.each  { |x,y|   g[y-1].push(x)   }
         max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes)
-        effect = @value_map[(g.size-max)].to_s
+        effect = g.size-max
       end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
       unless features.include? smarts
