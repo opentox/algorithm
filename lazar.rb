@@ -144,6 +144,9 @@ post '/lazar/?' do
 
     # AM: allow settings override by user
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
+    if prediction_feature.feature_type == "regression" 
+      lazar.transform["class"] = "Log10" if lazar.transform["class"] == "NOP"
+    end
     lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.balanced = true if params[:balanced] == "true"
