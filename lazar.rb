@@ -149,7 +149,6 @@ post '/lazar/?' do
     end
     lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
-    lazar.balanced = true if params[:balanced] == "true"
 
     # AM: Feed Data using Transformations
     if prediction_feature.feature_type == "regression"
