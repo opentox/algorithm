@@ -141,38 +141,42 @@ post '/lazar/?' do
       end
     end
 
-    # AM: allow prediction_algorithm override by user for classification AND regression
+    # AM: allow settings override by user
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
+    lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.balanced = true if params[:balanced] == "true"
 
-    # AM: Transformation of Data
-    transform_acts = []
+    # AM: Feed Data using Transformations
     if prediction_feature.feature_type == "regression"
+      transformed_acts = []
       training_activities.data_entries.each do |compound,entry| 
         unless entry[prediction_feature.uri].empty?
           entry[prediction_feature.uri].each do |value|
-            transform_acts << value.to_f
+            transformed_acts << value.to_f
           end
         end
       end
-    end
-    transformer = OpenTox::Algorithm::Transform::Log10.new(transform_acts)
-    transform_acts = transformer.values
-    lazar.transform = { :class => transformer.class.to_s, :offset => transformer.offset }
-
-    transform_counts=0
-    training_activities.data_entries.each do |compound,entry| 
-			lazar.activities[compound] = [] unless lazar.activities[compound]
-      unless entry[prediction_feature.uri].empty?
-        entry[prediction_feature.uri].each do |value|
-          if prediction_feature.feature_type == "classification"
-            lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
-          elsif prediction_feature.feature_type == "regression"
-            #never use halt in tasks, do not raise exception when, print warning instead
-            lazar.activities[compound] << transform_acts[transform_counts].to_s
+      transfomer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transform_acts)"
+      transformed_acts = transformer.values
+      lazar.transform["offset"] = transformer.offset 
+      t_count=0
+      training_activities.data_entries.each do |compound,entry| 
+        lazar.activities[compound] = [] unless lazar.activities[compound]
+        unless entry[prediction_feature.uri].empty?
+          entry[prediction_feature.uri].each do |value|
+            lazar.activities[compound] << transformed_acts[t_count].to_s
+            t_count+=1
           end
-          transform_counts+=1
+        end
+      end
+    elsif prediction_feature.feature_type == "classification"
+      training_activities.data_entries.each do |compound,entry| 
+        lazar.activities[compound] = [] unless lazar.activities[compound]
+        unless entry[prediction_feature.uri].empty?
+          entry[prediction_feature.uri].each do |value|
+            lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
+          end
         end
       end
     end
