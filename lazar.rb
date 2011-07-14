@@ -158,7 +158,7 @@ post '/lazar/?' do
           end
         end
       end
-      transfomer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transform_acts)"
+      transformer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transformed_acts)"
       transformed_acts = transformer.values
       lazar.transform["offset"] = transformer.offset 
       t_count=0
