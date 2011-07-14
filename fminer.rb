@@ -99,7 +99,7 @@ post '/fminer/bbrc/?' do
   fminer=OpenTox::Algorithm::Fminer.new
   fminer.check_params(params,5)
 
-  task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
+  task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do |task|
     @@bbrc.Reset
     if fminer.prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
@@ -140,12 +140,14 @@ post '/fminer/bbrc/?' do
     g_median=OpenTox::Algorithm.median(g_array)
     
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
-
+    task.progress 10
+    step_width = 80 / @@bbrc.GetNoRootNodes().to_f
     features = Set.new
+    
     # run @@bbrc
     (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
-
       results = @@bbrc.MineRoot(j)
+      task.progress 10+step_width*(j+1)
       results.each do |result|
         f = YAML.load(result)[0]
         smarts = f[0]
@@ -153,8 +155,8 @@ post '/fminer/bbrc/?' do
 
         if (!@@bbrc.GetRegression) 
           id_arrs = f[2..-1].flatten
-          max = OpenTox::Algorithm.effect(f[2..-1].reverse, fminer.db_class_sizes)
-          effect = @value_map[(f[2..-1].size-max)].to_s
+          max = OpenTox::Algorithm.effect(f[2..-1], fminer.db_class_sizes)
+          effect = f[2..-1].size-max
         else #regression part
           id_arrs = f[2]
           # DV: effect calculation
@@ -223,7 +225,7 @@ post '/fminer/last/?' do
   fminer=OpenTox::Algorithm::Fminer.new
   fminer.check_params(params,80)
 
-  task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
+  task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do |task|
     @@last.Reset
     if fminer.prediction_feature.feature_type == "regression"
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
@@ -265,9 +267,12 @@ post '/fminer/last/?' do
     # run @@last
     features = Set.new
     xml = ""
+    task.progress 10
+    step_width = 80 / @@last.GetNoRootNodes().to_f
 
     (0 .. @@last.GetNoRootNodes()-1).each do |j|
       results = @@last.MineRoot(j)
+      task.progress 10+step_width*(j+1)
       results.each do |result|
         xml << result
       end
@@ -290,7 +295,7 @@ post '/fminer/last/?' do
         @value_map.each { |y,act| g[y-1]=Array.new }
         feat_hash.each  { |x,y|   g[y-1].push(x)   }
         max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes)
-        effect = @value_map[(g.size-max)].to_s
+        effect = g.size-max
       end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
       unless features.include? smarts
