@@ -155,11 +155,7 @@ post '/lazar/?' do
     if prediction_feature.feature_type == "regression"
       transformed_acts = []
       training_activities.data_entries.each do |compound,entry| 
-        unless entry[prediction_feature.uri].empty?
-          entry[prediction_feature.uri].each do |value|
-            transformed_acts << value.to_f
-          end
-        end
+        transformed_acts.concat entry[prediction_feature.uri] unless entry[prediction_feature.uri].empty?
       end
       transformer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transformed_acts)"
       transformed_acts = transformer.values
