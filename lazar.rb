@@ -61,8 +61,7 @@ post '/lazar/?' do
 
 		lazar = OpenTox::Model::Lazar.new
     lazar.min_sim = params[:min_sim] if params[:min_sim]
-    lazar.nr_hits = true if params[:nr_hits] 
-
+    lazar.nr_hits = params[:nr_hits] if params[:nr_hits] 
 
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
@@ -73,7 +72,7 @@ post '/lazar/?' do
     elsif  prediction_feature.feature_type == "regression"
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
-
+    task.progress 10
 
 		if params[:feature_dataset_uri]
       feature_dataset_uri = params[:feature_dataset_uri]
@@ -96,7 +95,7 @@ post '/lazar/?' do
       if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
         params[:feature_type] = "paths"
       end
-      feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params).to_s
+      feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params, OpenTox::SubTask.new(task,10,70)).to_s
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
     end
 
@@ -113,16 +112,12 @@ post '/lazar/?' do
         if lazar.feature_calculation_algorithm == "Substructure.match"
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
-            if nr_hits = true
+            #lazar.fingerprints[compound] << smarts
+            if params[:nr_hits] == "true"
               lazar.fingerprints[compound][smarts] = entry[feature].flatten.first
             else
               lazar.fingerprints[compound][smarts] = 1
             end
-            #LOGGER.debug "dv ------------ frequencies --------- feature: '#{feature}'; compound: '#{compound}' smarts: '#{smarts}'; entry.first:'#{entry[feature].flatten.first}"
-            #unless entry[feature].flatten.first == true
-            #  lazar.frequencies[smarts] = [] unless lazar.frequencies[smarts]
-            #  lazar.frequencies[smarts] << {compound => entry[feature].flatten.first}
-            #end
             unless lazar.features.include? smarts
               lazar.features << smarts
               lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
@@ -134,7 +129,8 @@ post '/lazar/?' do
           when "classification"
             # fingerprints are sets
             if entry[feature].flatten.size == 1
-              lazar.fingerprints[compound] << feature if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
+              #lazar.fingerprints[compound] << feature if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
+              lazar.fingerprints[compound][feature] = entry[feature].flatten.first if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
               lazar.features << feature unless lazar.features.include? feature
             else
               LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
@@ -143,6 +139,7 @@ post '/lazar/?' do
             # fingerprints are arrays
             if entry[feature].flatten.size == 1
               lazar.fingerprints[compound][lazar.features.index(feature)] = entry[feature].flatten.first
+              #lazar.fingerprints[compound][feature] = entry[feature].flatten.first
             else
               LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
             end
@@ -150,29 +147,46 @@ post '/lazar/?' do
         end
       end
     end
+    task.progress 80
 
-    # AM: allow prediction_algorithm override by user for classification AND regression
+    # AM: allow settings override by user
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
+    if prediction_feature.feature_type == "regression" 
+      lazar.transform["class"] = "Log10" if lazar.transform["class"] == "NOP"
+    end
+    lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
-    lazar.balanced = true if params[:balanced] == "true"
 
-    training_activities.data_entries.each do |compound,entry| 
-			lazar.activities[compound] = [] unless lazar.activities[compound]
-      unless entry[prediction_feature.uri].empty?
-        entry[prediction_feature.uri].each do |value|
-          if prediction_feature.feature_type == "classification"
+    # AM: Feed Data using Transformations
+    if prediction_feature.feature_type == "regression"
+      transformed_acts = []
+      training_activities.data_entries.each do |compound,entry| 
+        transformed_acts.concat entry[prediction_feature.uri] unless entry[prediction_feature.uri].empty?
+      end
+      transformer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transformed_acts)"
+      transformed_acts = transformer.values
+      lazar.transform["offset"] = transformer.offset 
+      t_count=0
+      training_activities.data_entries.each do |compound,entry| 
+        lazar.activities[compound] = [] unless lazar.activities[compound]
+        unless entry[prediction_feature.uri].empty?
+          entry[prediction_feature.uri].each do |value|
+            lazar.activities[compound] << transformed_acts[t_count].to_s
+            t_count+=1
+          end
+        end
+      end
+    elsif prediction_feature.feature_type == "classification"
+      training_activities.data_entries.each do |compound,entry| 
+        lazar.activities[compound] = [] unless lazar.activities[compound]
+        unless entry[prediction_feature.uri].empty?
+          entry[prediction_feature.uri].each do |value|
             lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
-          elsif prediction_feature.feature_type == "regression"
-            #never use halt in tasks, do not raise exception when, print warning instead
-            if value.to_f==0
-              LOGGER.warn "0 values not allowed in training dataset. log10 is calculated internally. skipping compound"
-            else
-              lazar.activities[compound] << value.to_f
-            end
           end
         end
       end
     end
+    task.progress 90
 
     lazar.metadata[DC.title] = "lazar model for #{URI.decode(File.basename(prediction_feature.uri))}"
     lazar.metadata[OT.dependentVariables] = prediction_feature.uri
