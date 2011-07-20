@@ -61,7 +61,7 @@ post '/lazar/?' do
 
 		lazar = OpenTox::Model::Lazar.new
     lazar.min_sim = params[:min_sim] if params[:min_sim]
-    lazar.nr_hits = params[:nr_hits] if params[:nr_hits] 
+    lazar.nr_hits = true if params[:nr_hits] 
 
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
@@ -113,7 +113,7 @@ post '/lazar/?' do
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
             #lazar.fingerprints[compound] << smarts
-            if params[:nr_hits] == "true"
+            if params[:nr_hits]
               lazar.fingerprints[compound][smarts] = entry[feature].flatten.first
             else
               lazar.fingerprints[compound][smarts] = 1
