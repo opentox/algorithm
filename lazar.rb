@@ -60,8 +60,8 @@ post '/lazar/?' do
       training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
 
 		lazar = OpenTox::Model::Lazar.new
-    lazar.min_sim = params[:min_sim] if params[:min_sim] 
-
+    lazar.min_sim = params[:min_sim] if params[:min_sim]
+    lazar.nr_hits = params[:nr_hits] if params[:nr_hits] 
 
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
@@ -107,12 +107,17 @@ post '/lazar/?' do
     lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
 
     training_features.data_entries.each do |compound,entry|
-      lazar.fingerprints[compound] = [] unless lazar.fingerprints[compound]
+      lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
       entry.keys.each do |feature|
         if lazar.feature_calculation_algorithm == "Substructure.match"
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
-            lazar.fingerprints[compound] << smarts
+            #lazar.fingerprints[compound] << smarts
+            if params[:nr_hits] == "true"
+              lazar.fingerprints[compound][smarts] = entry[feature].flatten.first
+            else
+              lazar.fingerprints[compound][smarts] = 1
+            end
             unless lazar.features.include? smarts
               lazar.features << smarts
               lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
@@ -124,7 +129,8 @@ post '/lazar/?' do
           when "classification"
             # fingerprints are sets
             if entry[feature].flatten.size == 1
-              lazar.fingerprints[compound] << feature if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
+              #lazar.fingerprints[compound] << feature if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
+              lazar.fingerprints[compound][feature] = entry[feature].flatten.first if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
               lazar.features << feature unless lazar.features.include? feature
             else
               LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
@@ -133,6 +139,7 @@ post '/lazar/?' do
             # fingerprints are arrays
             if entry[feature].flatten.size == 1
               lazar.fingerprints[compound][lazar.features.index(feature)] = entry[feature].flatten.first
+              #lazar.fingerprints[compound][feature] = entry[feature].flatten.first
             else
               LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
             end
