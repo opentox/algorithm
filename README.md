@@ -103,15 +103,9 @@ Please click [here](http://last-pm.maunz.de#usage) for guidance for more guidanc
 
 ### Create lazar model
 
-    curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer http://webservices.in-silico.ch/test/algorithm/lazar
-
 Creates a standard Lazar model.
 
-    curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer http://webservices.in-silico.ch/test/algorithm/lazar -d prediction_algorithm=local_svm_classification -d local_svm_kernel=propositionalized
-
-Creates an SVM model for classification with a propositionalized RBF kernel.
-
-feature_uri specifies the dependent variable from the dataset
+    curl -X POST -d dataset_uri={datset_uri} -d prediction_feature={feature_uri} -d feature_generation_uri=http://webservices.in-silico.ch/algorithm/fminer/bbrc http://webservices.in-silico.ch/test/algorithm/lazar 
 
 [API documentation](http://rdoc.info/github/opentox/algorithm)
 --------------------------------------------------------------
