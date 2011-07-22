@@ -196,7 +196,7 @@ post '/fminer/bbrc/?' do
           if params[:nr_hits] == "true"
             feature_dataset.add(fminer.compounds[id], feature_uri, count)
           else
-            feature_dataset.add(fminer.compounds[id], feature_uri, true)
+            feature_dataset.add(fminer.compounds[id], feature_uri, 1)
           end
         }
       end
