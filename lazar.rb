@@ -60,8 +60,8 @@ post '/lazar/?' do
       training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
 
 		lazar = OpenTox::Model::Lazar.new
-    lazar.min_sim = params[:min_sim] if params[:min_sim]
-    lazar.nr_hits = true if params[:nr_hits] 
+    lazar.min_sim = params[:min_sim].to_f if params[:min_sim]
+    lazar.nr_hits = true if params[:nr_hits] == "true"
 
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
@@ -156,6 +156,8 @@ post '/lazar/?' do
     end
     lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
+    lazar.conf_stdev = false
+    lazar.conf_stdev = true if params[:conf_stdev] == "true"
 
     # AM: Feed Data using Transformations
     if prediction_feature.feature_type == "regression"
