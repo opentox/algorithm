@@ -137,7 +137,7 @@ post '/fminer/bbrc/?' do
     fminer.add_fminer_data(@@bbrc, params, @value_map)
 
     g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
-    g_median=OpenTox::Algorithm.median(g_array)
+    g_median=g_array.to_scale.median
     
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
     task.progress 10
@@ -165,7 +165,7 @@ post '/fminer/bbrc/?' do
             id=id.keys[0] # extract id from hit count hash
             f_arr.push(fminer.all_activities[id]) 
           end 
-          f_median=OpenTox::Algorithm.median(f_arr)
+          f_median=f_arr.to_scale.median
           if g_median >= f_median 
             effect = 'activating'
           else
