@@ -97,7 +97,7 @@ end
 post '/fminer/bbrc/?' do 
 
   fminer=OpenTox::Algorithm::Fminer.new
-  fminer.check_params(params,5)
+  fminer.check_params(params,5,@subjectid)
 
   task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do |task|
     @@bbrc.Reset
@@ -223,7 +223,7 @@ end
 post '/fminer/last/?' do
 
   fminer=OpenTox::Algorithm::Fminer.new
-  fminer.check_params(params,80)
+  fminer.check_params(params,80,@subjectid)
 
   task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do |task|
     @@last.Reset
