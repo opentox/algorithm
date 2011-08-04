@@ -2,6 +2,7 @@ ENV['FMINER_SMARTS'] = 'true'
 ENV['FMINER_NO_AROMATIC'] = 'true'
 ENV['FMINER_PVALUES'] = 'true'
 ENV['FMINER_SILENT'] = 'true'
+ENV['FMINER_NR_HITS'] = 'true'
 
 @@bbrc = Bbrc::Bbrc.new 
 @@last = Last::Last.new 
@@ -10,20 +11,26 @@ ENV['FMINER_SILENT'] = 'true'
 #
 # @return [text/uri-list] URIs of fminer algorithms
 get '/fminer/?' do
-  response['Content-Type'] = 'text/uri-list'
-  [ url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+  list = [ url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html list
+  else
+    content_type 'text/uri-list'
+    list
+  end
 end
 
 # Get RDF/XML representation of fminer bbrc algorithm
 # @return [application/rdf+xml] OWL-DL representation of fminer bbrc algorithm
 get "/fminer/bbrc/?" do
-	response['Content-Type'] = 'application/rdf+xml'
   algorithm = OpenTox::Algorithm::Generic.new(url_for('/fminer/bbrc',:full))
   algorithm.metadata = {
     DC.title => 'fminer backbone refinement class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    RDF.type => [OTA.PatternMiningSupervised],
+    RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
     { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
@@ -33,7 +40,17 @@ get "/fminer/bbrc/?" do
     { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
     ]
   }
-  algorithm.to_rdfxml
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html algorithm.to_yaml
+  when /application\/x-yaml/
+    content_type "application/x-yaml"
+    algorithm.to_yaml
+  else
+    response['Content-Type'] = 'application/rdf+xml'  
+    algorithm.to_rdfxml
+  end
 end
 
 # Get RDF/XML representation of fminer last algorithm
@@ -44,7 +61,7 @@ get "/fminer/last/?" do
     DC.title => 'fminer latent structure class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    RDF.type => [OTA.PatternMiningSupervised],
+    RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
     { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
@@ -53,7 +70,17 @@ get "/fminer/last/?" do
     { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
     ]
   }
-  algorithm.to_rdfxml
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html algorithm.to_yaml
+  when /application\/x-yaml/
+    content_type "application/x-yaml"
+    algorithm.to_yaml
+  else
+    response['Content-Type'] = 'application/rdf+xml'  
+    algorithm.to_rdfxml
+  end
 end
 
 # Run bbrc algorithm on dataset
@@ -61,36 +88,29 @@ end
 # @param [String] dataset_uri URI of the training dataset
 # @param [String] prediction_feature URI of the prediction feature (i.e. dependent variable)
 # @param [optional] parameters BBRC parameters, accepted parameters are
-#   - minfreq  Minimum frequency (default 5)
+#   - min_frequency  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
 #   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
 #   - min_chisq_significance Significance threshold (between 0 and 1)
+#   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do 
 
-  halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-  halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
-  prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
-  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", @subjectid
-  halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
+  fminer=OpenTox::Algorithm::Fminer.new
+  fminer.check_params(params,5,@subjectid)
 
-  unless params[:min_frequency].nil? 
-    minfreq=params[:min_frequency].to_i
-    raise "Minimum frequency must be a number >0!" unless minfreq>0
-  else
-    minfreq = 5*training_dataset.compounds.size/1000 # AM sugg. 8-10 per mil
-    minfreq = 2 unless minfreq > 2
-  end
-
-  task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do 
-
+  task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do |task|
     @@bbrc.Reset
-    if prediction_feature.feature_type == "regression"
+    if fminer.prediction_feature.feature_type == "regression"
       @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri, @subjectid)
+      raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
+        "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
+      @training_classes = fminer.training_dataset.accept_values(fminer.prediction_feature.uri).sort
+      @value_map=Hash.new
+      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
-    @@bbrc.SetMinfreq(minfreq)
+    @@bbrc.SetMinfreq(fminer.minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
     @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
     @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
@@ -98,7 +118,7 @@ post '/fminer/bbrc/?' do
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
-      DC.title => "BBRC representatives for " + training_dataset.metadata[DC.title].to_s,
+      DC.title => "BBRC representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
       DC.creator => url_for('/fminer/bbrc',:full),
       OT.hasSource => url_for('/fminer/bbrc', :full),
       OT.parameters => [
@@ -108,106 +128,44 @@ post '/fminer/bbrc/?' do
     })
     feature_dataset.save(@subjectid)
 
-    id = 1 # fminer start id is not 0
-    compounds = []
-    nr_active=0
-    nr_inactive=0
-    all_activities = Hash.new# DV: for effect calculation in regression part
+    fminer.compounds = []
+    fminer.db_class_sizes = Array.new # AM: effect
+    fminer.all_activities = Hash.new # DV: for effect calculation in regression part
+    fminer.smi = [] # AM LAST: needed for matching the patterns back
 
-    training_dataset.data_entries.each do |compound,entry|
-      begin
-        smiles = OpenTox::Compound.new(compound.to_s).to_smiles
-      rescue
-        LOGGER.warn "No resource for #{compound.to_s}"
-        next
-      end
-      if smiles == '' or smiles.nil?
-        LOGGER.warn "Cannot find smiles for #{compound.to_s}."
-        next
-      end
+    # Add data to fminer
+    fminer.add_fminer_data(@@bbrc, params, @value_map)
 
-      # AM: take log if appropriate
-      take_logs=true
-      entry.each do |feature,values|
-         values.each do |value|
-            if prediction_feature.feature_type == "regression"
-               if (! value.nil?) && (value.to_f < 1)
-                 take_logs=false
-               end
-            end
-         end
-      end
-      entry.each do |feature,values|
-        if feature == prediction_feature.uri
-          values.each do |value|
-            if value.nil? 
-              LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
-            else
-              if prediction_feature.feature_type == "classification"
-                case value.to_s
-                when "true"
-                  nr_active += 1
-                  activity = 1
-                when "false"
-                  nr_inactive += 1
-                  activity = 0
-                when /#{@training_classes.last}/
-                  nr_active += 1
-                  activity = 1
-                when /#{@training_classes.first}/
-                  nr_inactive += 1
-                  activity = 0
-                else
-                  LOGGER.warn "Unknown class \"#{value.to_s}\"."
-                end
-              elsif prediction_feature.feature_type == "regression"
-                activity= take_logs ? Math.log10(value.to_f) : value.to_f 
-              end
-              begin
-                @@bbrc.AddCompound(smiles,id)
-                @@bbrc.AddActivity(activity, id)
-                all_activities[id]=activity # DV: insert global information
-                compounds[id] = compound
-                id += 1
-              rescue
-                LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
-              end
-            end
-          end
-        end
-      end
-    end
-
-    g_array=all_activities.values # DV: calculation of global median for effect calculation
-    g_median=OpenTox::Algorithm.median(g_array)
+    g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
+    g_median=g_array.to_scale.median
     
-    raise "No compounds in dataset #{training_dataset.uri}" if compounds.size==0
-
+    raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
+    task.progress 10
+    step_width = 80 / @@bbrc.GetNoRootNodes().to_f
     features = Set.new
+    
     # run @@bbrc
     (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
-
       results = @@bbrc.MineRoot(j)
+      task.progress 10+step_width*(j+1)
       results.each do |result|
         f = YAML.load(result)[0]
         smarts = f[0]
         p_value = f[1]
 
         if (!@@bbrc.GetRegression) 
-          ids = f[2] + f[3]
-          if f[2].size.to_f/ids.size > nr_active.to_f/(nr_active+nr_inactive)
-            effect = 'activating'
-          else
-            effect = 'deactivating'
-          end
+          id_arrs = f[2..-1].flatten
+          max = OpenTox::Algorithm.effect(f[2..-1], fminer.db_class_sizes)
+          effect = f[2..-1].size-max
         else #regression part
-          ids = f[2]
+          id_arrs = f[2]
           # DV: effect calculation
           f_arr=Array.new
           f[2].each do |id|
-            f_arr.push(all_activities[id]) 
+            id=id.keys[0] # extract id from hit count hash
+            f_arr.push(fminer.all_activities[id]) 
           end 
-          f_median=OpenTox::Algorithm.median(f_arr)
+          f_median=f_arr.to_scale.median
           if g_median >= f_median 
             effect = 'activating'
           else
@@ -220,7 +178,7 @@ post '/fminer/bbrc/?' do
           features << smarts
           metadata = {
             OT.hasSource => url_for('/fminer/bbrc', :full),
-            RDF.type => [OT.Substructure],
+            RDF.type => [OT.Feature, OT.Substructure],
             OT.smarts => smarts,
             OT.pValue => p_value.to_f,
             OT.effect => effect,
@@ -232,14 +190,22 @@ post '/fminer/bbrc/?' do
           feature_dataset.add_feature feature_uri, metadata
           #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
         end
-        ids.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+        id_arrs.each { |id_count_hash|
+          id=id_count_hash.keys[0].to_i
+          count=id_count_hash.values[0].to_i
+          if params[:nr_hits] == "true"
+            feature_dataset.add(fminer.compounds[id], feature_uri, count)
+          else
+            feature_dataset.add(fminer.compounds[id], feature_uri, 1)
+          end
+        }
       end
     end
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
 #end
@@ -249,36 +215,28 @@ end
 # @param [String] dataset_uri URI of the training dataset
 # @param [String] prediction_feature URI of the prediction feature (i.e. dependent variable)
 # @param [optional] parameters LAST parameters, accepted parameters are
-#   - minfreq  Minimum frequency (default 5)
+#   - min_frequency freq  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
 #   - hops Maximum number of hops
+#   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
 
-  halt 404, "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-  halt 404, "Please submit a prediction_feature." unless params[:prediction_feature] and  !params[:prediction_feature].nil?
-  prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
-  training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid
-  training_dataset.load_all(@subjectid)
-  halt 404, "No feature #{params[:prediction_feature]} in dataset #{params[:dataset_uri]}" unless training_dataset.features and training_dataset.features.include?(params[:prediction_feature])
+  fminer=OpenTox::Algorithm::Fminer.new
+  fminer.check_params(params,80,@subjectid)
 
-  unless params[:min_frequency].nil? 
-    minfreq=params[:min_frequency].to_i
-    raise "Minimum frequency must be a number >0!" unless minfreq>0
-  else
-    minfreq = 8*training_dataset.compounds.size/100 # AM sugg. 5-10%
-    minfreq = 2 unless minfreq > 2
-  end
-
-  task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do 
-
+  task = OpenTox::Task.create("Mining LAST features", url_for('/fminer',:full)) do |task|
     @@last.Reset
-    if prediction_feature.feature_type == "regression"
+    if fminer.prediction_feature.feature_type == "regression"
       @@last.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
     else
-      @training_classes = training_dataset.feature_classes(prediction_feature.uri)
+      raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
+        "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
+      @training_classes = fminer.training_dataset.accept_values(fminer.prediction_feature.uri).sort
+      @value_map=Hash.new
+      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
     end
-    @@last.SetMinfreq(minfreq)
+    @@last.SetMinfreq(fminer.minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
     @@last.SetMaxHops(params[:hops]) if params[:hops]
     @@last.SetConsoleOut(false)
@@ -286,7 +244,7 @@ post '/fminer/last/?' do
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
-      DC.title => "LAST representatives for " + training_dataset.metadata[DC.title].to_s,
+      DC.title => "LAST representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
       DC.creator => url_for('/fminer/last',:full),
       OT.hasSource => url_for('/fminer/last', :full),
       OT.parameters => [
@@ -296,74 +254,25 @@ post '/fminer/last/?' do
     })
     feature_dataset.save(@subjectid)
 
-    id = 1 # fminer start id is not 0
-    compounds = []
-    smi = [] # AM LAST: needed for matching the patterns back
-    nr_active=0
-    nr_inactive=0
-    all_activities = Hash.new #DV: for effect calculation (class and regr)
+    fminer.compounds = []
+    fminer.db_class_sizes = Array.new # AM: effect
+    fminer.all_activities = Hash.new # DV: for effect calculation (class and regr)
+    fminer.smi = [] # AM LAST: needed for matching the patterns back
 
-    training_dataset.data_entries.each do |compound,entry|
-      begin
-        smiles = OpenTox::Compound.new(compound.to_s).to_smiles
-      rescue
-        LOGGER.warn "No resource for #{compound.to_s}"
-        next
-      end
-      if smiles == '' or smiles.nil?
-        LOGGER.warn "Cannot find smiles for #{compound.to_s}."
-        next
-      end
-      entry.each do |feature,values|
-        if feature == prediction_feature.uri
-          values.each do |value|
-            if value.nil? 
-              LOGGER.warn "No #{feature} activiity for #{compound.to_s}."
-            else
-              if prediction_feature.feature_type == "classification"
-                case value.to_s
-                when "true"
-                  nr_active += 1
-                  activity = 1
-                when "false"
-                  nr_inactive += 1
-                  activity = 0
-                when /#{@training_classes.last}/
-                  nr_active += 1
-                  activity = 1
-                when /#{@training_classes.first}/
-                  nr_inactive += 1
-                  activity = 0
-                else
-                  LOGGER.warn "Unknown class \"#{value.to_s}."
-                end
-              elsif prediction_feature.feature_type == "regression"
-                activity = value.to_f
-              end
-              begin
-                @@last.AddCompound(smiles,id)
-                @@last.AddActivity(activity, id)
-                all_activities[id]=activity # DV: insert global information
-                compounds[id] = compound
-		smi[id] = smiles # AM LAST: changed this to store SMILES.
-                id += 1
-              rescue
-                LOGGER.warn "Could not add " + smiles + "\t" + value.to_s + " to fminer"
-              end
-            end
-          end
-        end
-      end
-    end
-
-    raise "No compounds in dataset #{training_dataset.uri}" if compounds.size==0
+    # Add data to fminer
+    fminer.add_fminer_data(@@last, params, @value_map)
+    
+    raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
     # run @@last
     features = Set.new
     xml = ""
+    task.progress 10
+    step_width = 80 / @@last.GetNoRootNodes().to_f
 
     (0 .. @@last.GetNoRootNodes()-1).each do |j|
       results = @@last.MineRoot(j)
+      task.progress 10+step_width*(j+1)
       results.each do |result|
         xml << result
       end
@@ -372,21 +281,30 @@ post '/fminer/last/?' do
     lu = LU.new                             # AM LAST: uses last-utils here
     dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
-    instances=lu.match_rb(smi,smarts)       # AM LAST: creates instantiations
-    instances.each do |smarts, ids|
-      feat_hash = Hash[*(all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
-      @@last.GetRegression() ? p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f : p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
+    params[:nr_hits] != "true" ? hit_count=false: hit_count=true
+    matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
 
-
-      effect = (p_value > 0) ? "activating" : "deactivating"
+    matches.each do |smarts, ids|
+      feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
+      if @@last.GetRegression() 
+        p_value = @@last.KSTest(fminer.all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
+        effect = (p_value > 0) ? "activating" : "deactivating"
+      else
+        p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
+        g=Array.new
+        @value_map.each { |y,act| g[y-1]=Array.new }
+        feat_hash.each  { |x,y|   g[y-1].push(x)   }
+        max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes)
+        effect = g.size-max
+      end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
       unless features.include? smarts
         features << smarts
         metadata = {
-          RDF.type => [OT.Substructure],
+          RDF.type => [OT.Feature, OT.Substructure],
           OT.hasSource => feature_dataset.uri,
           OT.smarts => smarts,
-          OT.pValue => p_value.to_f.abs,
+          OT.pValue => p_value.abs,
           OT.effect => effect,
           OT.parameters => [
             { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
@@ -395,12 +313,16 @@ post '/fminer/last/?' do
         } 
         feature_dataset.add_feature feature_uri, metadata
       end
-      ids.each { |id| feature_dataset.add(compounds[id], feature_uri, true)}
+      if !hit_count
+        ids.each { |id| feature_dataset.add(fminer.compounds[id], feature_uri, true)}
+      else
+        ids.each_with_index { |id,i| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][i])} 
+      end
     end
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end

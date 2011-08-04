@@ -49,7 +49,7 @@ get '/openbabel/:property' do
     response['Content-Type'] = 'application/rdf+xml'
     algorithm.to_rdfxml
   else
-    halt 404, "Unknown OpenBabel descriptor #{params[:property]}."
+    raise OpenTox::NotFoundError.new "Unknown OpenBabel descriptor #{params[:property]}."
   end
 end
 
@@ -89,7 +89,7 @@ post '/openbabel/:property' do
     descriptor = OpenBabel::OBDescriptor.find_type(params[:property])
     descriptor.predict(obmol).to_s
   else
-    halt 404, "Cannot calculate property #{params[:property]} with OpenBabel"
+    raise OpenTox::NotFoundError.new "Cannot calculate property #{params[:property]} with OpenBabel"
   end
 end
 
@@ -143,6 +143,6 @@ post '/openbabel' do
     result_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
