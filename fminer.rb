@@ -193,7 +193,7 @@ post '/fminer/bbrc/?' do
         id_arrs.each { |id_count_hash|
           id=id_count_hash.keys[0].to_i
           count=id_count_hash.values[0].to_i
-          if params[:nr_hits] == "true"
+          if params[:nr_hits]
             feature_dataset.add(fminer.compounds[id], feature_uri, count)
           else
             feature_dataset.add(fminer.compounds[id], feature_uri, 1)
@@ -281,7 +281,7 @@ post '/fminer/last/?' do
     lu = LU.new                             # AM LAST: uses last-utils here
     dom=lu.read(xml)                        # AM LAST: parse GraphML 
     smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
-    params[:nr_hits] != "true" ? hit_count=false: hit_count=true
+    params[:nr_hits] ? hit_count=true: hit_count=false
     matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
 
     matches.each do |smarts, ids|
@@ -314,7 +314,7 @@ post '/fminer/last/?' do
         feature_dataset.add_feature feature_uri, metadata
       end
       if !hit_count
-        ids.each { |id| feature_dataset.add(fminer.compounds[id], feature_uri, true)}
+        ids.each { |id| feature_dataset.add(fminer.compounds[id], feature_uri, 1)}
       else
         ids.each_with_index { |id,i| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][i])} 
       end
