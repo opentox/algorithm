@@ -75,11 +75,11 @@ post '/lazar/?' do
 
     if params[:nr_hits] == "false" # if nr_hits is set optional to true/false it will return as String (but should be True/FalseClass)
       lazar.nr_hits = false
-      params[:nr_hits] = false
+      #params[:nr_hits] = false
     elsif params[:nr_hits] == "true"
       lazar.nr_hits = true
     end
-    params[:nr_hits] = true if lazar.nr_hits
+    params[:nr_hits] = "true" if lazar.nr_hits
 
     task.progress 10
 
