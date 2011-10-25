@@ -30,6 +30,7 @@ get "/fminer/bbrc/?" do
     DC.title => 'fminer backbone refinement class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
+    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_bbrc",
     RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
@@ -61,6 +62,7 @@ get "/fminer/last/?" do
     DC.title => 'fminer latent structure class representatives',
     DC.creator => "andreas@maunz.de, helma@in-silico.ch",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
+    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_last",
     RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
     { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
