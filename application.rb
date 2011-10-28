@@ -26,7 +26,7 @@ get '/?' do
   case request.env['HTTP_ACCEPT']
   when /text\/html/
     content_type "text/html"
-    OpenTox.text_to_html list
+    OpenTox.text_to_html list,@subjectid
   else
     content_type 'text/uri-list'
     list
