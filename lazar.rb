@@ -63,6 +63,10 @@ post '/lazar/?' do
 		lazar = OpenTox::Model::Lazar.new
     lazar.min_sim = params[:min_sim].to_f if params[:min_sim]
     
+
+
+
+    # AM: Manage endpoint related variables.
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
       @training_classes.each_with_index { |c,i|
@@ -82,9 +86,23 @@ post '/lazar/?' do
     end
     params[:nr_hits] = "true" if lazar.nr_hits
 
+
+
+
+
+
     task.progress 10
 
-		if params[:feature_dataset_uri]
+
+
+
+    # 
+    # AM: features
+    # 
+    #
+
+    # READ OR CREATE
+    if params[:feature_dataset_uri]
       feature_dataset_uri = params[:feature_dataset_uri]
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
       case training_features.feature_type(@subjectid)
@@ -109,6 +127,9 @@ post '/lazar/?' do
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
     end
 
+
+
+    # WRITE IN MODEL
     training_features.load_all(@subjectid)
 		raise OpenTox::NotFoundError.new "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
@@ -119,6 +140,8 @@ post '/lazar/?' do
     training_features.data_entries.each do |compound,entry|
       lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
       entry.keys.each do |feature|
+
+        # CASE 1: Substructure
         if lazar.feature_calculation_algorithm == "Substructure.match"
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
@@ -134,6 +157,8 @@ post '/lazar/?' do
               lazar.effects[smarts] = training_features.features[feature][OT.effect]
             end
           end
+
+        # CASE 2: Others
         else
           case training_features.feature_type(@subjectid)
           when "classification"
@@ -159,6 +184,15 @@ post '/lazar/?' do
     end
     task.progress 80
 
+
+
+
+    # 
+    # AM: SETTINGS
+    # 
+    # 
+    # 
+
     # AM: allow settings override by user
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
     if prediction_feature.feature_type == "regression" 
@@ -168,6 +202,19 @@ post '/lazar/?' do
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.conf_stdev = false
     lazar.conf_stdev = true if params[:conf_stdev] == "true"
+
+
+
+
+
+
+
+
+    # 
+    # AM TRANSFORMATIONS
+    # 
+    # 
+    # 
 
     # AM: Feed Data using Transformations
     if prediction_feature.feature_type == "regression"
@@ -199,6 +246,14 @@ post '/lazar/?' do
       end
     end
     task.progress 90
+
+
+
+    # 
+    # AM: Metadata
+    # 
+    # 
+    # 
 
     lazar.metadata[DC.title] = "lazar model for #{URI.decode(File.basename(prediction_feature.uri))}"
     lazar.metadata[OT.dependentVariables] = prediction_feature.uri
