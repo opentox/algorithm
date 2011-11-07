@@ -80,7 +80,6 @@ post '/lazar/?' do
 
     if params[:nr_hits] == "false" # if nr_hits is set optional to true/false it will return as String (but should be True/FalseClass)
       lazar.nr_hits = false
-      #params[:nr_hits] = false
     elsif params[:nr_hits] == "true"
       lazar.nr_hits = true
     end
@@ -96,10 +95,12 @@ post '/lazar/?' do
 
 
 
+
     # 
     # AM: features
     # 
-    #
+    # 
+    # 
 
     # READ OR CREATE
     if params[:feature_dataset_uri]
@@ -187,6 +188,7 @@ post '/lazar/?' do
 
 
 
+
     # 
     # AM: SETTINGS
     # 
@@ -202,9 +204,6 @@ post '/lazar/?' do
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.conf_stdev = false
     lazar.conf_stdev = true if params[:conf_stdev] == "true"
-
-
-
 
 
 
@@ -246,6 +245,7 @@ post '/lazar/?' do
       end
     end
     task.progress 90
+
 
 
 
