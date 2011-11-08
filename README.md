@@ -37,7 +37,6 @@ REST operations
                                                         [local_svm_kernel=weighted_tanimoto]
                                                         [min_sim=0.3]
                                                         [nr_hits=false]
-                                                        [activity_transform=<Log10 (regression),NOP (classification)>]
                                                         [conf_stdev=false]
 
 Synopsis
@@ -47,7 +46,6 @@ Synopsis
 - local\_svm\_kernel: One of "weighted\_tanimoto", "propositionalized". local\_svm\_kernel is not appplicable when prediction\_algorithm="weighted\_majority\_vote".
 - min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1]. 
 - nr_hits: Whether for instantiated models (local\_svm\_kernel = "propositionalized" for prediction_algorithm="local\_svm\_classification" or "local\_svm\_regression", or for prediction_algorithm="local\_mlr\_prop") nominal features should be instantiated with their occurrence counts in the instances. For non-instantiated models (local\_svm\_kernel = "weighted\_tanimoto" for prediction_algorithm="local\_svm\_classification" or "local\_svm\_regression", or for prediction_algorithm="weighted\_majority\_vote") the neighbor-to-neighbor and neighbor-to-query similarity also integrates these counts, when the parameter is set. One of "true", "false". 
-- activity_transform: Normalizing transformations of the y-values (activities), applicable only to regression problems. One of "Log10", "Inverter", "NOP". "Log10" moves all values above zero and takes the log to base 10. "Inverter" moves all values above 1.0 and takes the inverted value. "NOP" is the identity transformation, which does nothing. Model predictions are output with reverse transformation applied.
 - conf_stdev: Whether confidence integrates distribution of neighbor activity values. When "true", the exp(-1.0*(standard deviation of neighbor activities)) is multiplied on the similarity. One of "true", "false".
 
 See http://www.maunz.de/wordpress/opentox/2011/lazar-models-and-how-to-trigger-them for a graphical overview.

@@ -197,10 +197,6 @@ post '/lazar/?' do
 
     # AM: allow settings override by user
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
-    if prediction_feature.feature_type == "regression" 
-      lazar.transform["class"] = "Log10" if lazar.transform["class"] == "NOP"
-    end
-    lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.conf_stdev = false
     lazar.conf_stdev = true if params[:conf_stdev] == "true"
@@ -210,27 +206,17 @@ post '/lazar/?' do
 
 
     # 
-    # AM TRANSFORMATIONS
+    # AM: Feed data
     # 
     # 
     # 
-
-    # AM: Feed Data using Transformations
+  
     if prediction_feature.feature_type == "regression"
-      transformed_acts = []
-      training_activities.data_entries.each do |compound,entry| 
-        transformed_acts.concat entry[prediction_feature.uri] unless entry[prediction_feature.uri].empty?
-      end
-      transformer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transformed_acts)"
-      transformed_acts = transformer.values
-      lazar.transform["offset"] = transformer.offset 
-      t_count=0
       training_activities.data_entries.each do |compound,entry| 
         lazar.activities[compound] = [] unless lazar.activities[compound]
         unless entry[prediction_feature.uri].empty?
           entry[prediction_feature.uri].each do |value|
-            lazar.activities[compound] << transformed_acts[t_count].to_s
-            t_count+=1
+            lazar.activities[compound] << value
           end
         end
       end
