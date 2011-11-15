@@ -33,13 +33,13 @@ get "/fminer/bbrc/?" do
     BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_bbrc",
     RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
-    { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-    { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
-    { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "minfreq" },
-    { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-    { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
-    { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
-    ]
+      { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
+      { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
+      { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "minfreq" },
+      { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
+      { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
+      { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
+  ]
   }
   case request.env['HTTP_ACCEPT']
   when /text\/html/
@@ -65,12 +65,12 @@ get "/fminer/last/?" do
     BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_last",
     RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
-    { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-    { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
-    { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "minfreq" },
-    { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-    { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
-    ]
+      { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
+      { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
+      { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "minfreq" },
+      { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
+      { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
+  ]
   }
   case request.env['HTTP_ACCEPT']
   when /text\/html/
@@ -126,7 +126,7 @@ post '/fminer/bbrc/?' do
       OT.parameters => [
         { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
         { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-      ]
+    ]
     })
     feature_dataset.save(@subjectid)
 
@@ -140,12 +140,12 @@ post '/fminer/bbrc/?' do
 
     g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=g_array.to_scale.median
-    
+
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
     task.progress 10
     step_width = 80 / @@bbrc.GetNoRootNodes().to_f
     features = Set.new
-    
+
     # run @@bbrc
     (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
       results = @@bbrc.MineRoot(j)
@@ -187,7 +187,7 @@ post '/fminer/bbrc/?' do
             OT.parameters => [
               { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
               { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-            ]
+          ]
           }
           feature_dataset.add_feature feature_uri, metadata
           #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
@@ -201,8 +201,13 @@ post '/fminer/bbrc/?' do
             feature_dataset.add(fminer.compounds[id], feature_uri, 1)
           end
         }
-      end
-    end
+
+      end # end of 
+    end   # feature parsing
+
+    # add feature values for non-present features
+    feature_dataset.complete_data_entries 
+
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
   end
@@ -252,7 +257,7 @@ post '/fminer/last/?' do
       OT.parameters => [
         { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
         { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-      ]
+    ]
     })
     feature_dataset.save(@subjectid)
 
@@ -263,7 +268,7 @@ post '/fminer/last/?' do
 
     # Add data to fminer
     fminer.add_fminer_data(@@last, params, @value_map)
-    
+
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
     # run @@last
@@ -311,7 +316,7 @@ post '/fminer/last/?' do
           OT.parameters => [
             { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
             { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-          ]
+        ]
         } 
         feature_dataset.add_feature feature_uri, metadata
       end
@@ -321,6 +326,10 @@ post '/fminer/last/?' do
         ids.each_with_index { |id,i| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][i])} 
       end
     end
+
+    # add feature values for non-present features
+    feature_dataset.complete_data_entries 
+
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
   end
