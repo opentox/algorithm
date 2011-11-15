@@ -205,8 +205,8 @@ post '/fminer/bbrc/?' do
       end # end of 
     end   # feature parsing
 
-    # add feature values for non-present features
-    feature_dataset.complete_data_entries 
+    # AM: add feature values for non-present features
+    # feature_dataset.complete_data_entries 
 
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
@@ -327,8 +327,8 @@ post '/fminer/last/?' do
       end
     end
 
-    # add feature values for non-present features
-    feature_dataset.complete_data_entries 
+    # AM: add feature values for non-present features
+    # feature_dataset.complete_data_entries 
 
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
