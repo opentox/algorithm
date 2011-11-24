@@ -200,6 +200,7 @@ post '/lazar/?' do
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
     lazar.conf_stdev = false
     lazar.conf_stdev = true if params[:conf_stdev] == "true"
+    lazar.pc_type = params[:pc_type] if params[:pc_type]
 
 
 
