@@ -62,8 +62,6 @@ post '/lazar/?' do
 
 		lazar = OpenTox::Model::Lazar.new
     lazar.min_sim = params[:min_sim].to_f if params[:min_sim]
-    
-
 
 
     # AM: Manage endpoint related variables.
@@ -85,13 +83,7 @@ post '/lazar/?' do
     end
     params[:nr_hits] = "true" if lazar.nr_hits
 
-
-
-
-
-
     task.progress 10
-
 
 
 
@@ -188,7 +180,6 @@ post '/lazar/?' do
 
 
 
-
     # 
     # AM: SETTINGS
     # 
@@ -201,7 +192,6 @@ post '/lazar/?' do
     lazar.conf_stdev = false
     lazar.conf_stdev = true if params[:conf_stdev] == "true"
     lazar.pc_type = params[:pc_type] if params[:pc_type]
-
 
 
 
