@@ -192,6 +192,7 @@ post '/lazar/?' do
     lazar.conf_stdev = false
     lazar.conf_stdev = true if params[:conf_stdev] == "true"
     lazar.pc_type = params[:pc_type] if params[:pc_type]
+    lazar.max_perc_neighbors = params[:max_perc_neighbors].to_i if params[:max_perc_neighbors]
 
 
 
