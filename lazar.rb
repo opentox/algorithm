@@ -75,13 +75,16 @@ post '/lazar/?' do
       }
     elsif  prediction_feature.feature_type == "regression"
       lazar.nr_hits = true
+      lazar.feature_calculation_algorithm = "Substructure.match_hits" 
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
 
     if params[:nr_hits] == "false" # if nr_hits is set optional to true/false it will return as String (but should be True/FalseClass)
       lazar.nr_hits = false
+      lazar.feature_calculation_algorithm = "Substructure.match"
     elsif params[:nr_hits] == "true"
       lazar.nr_hits = true
+      lazar.feature_calculation_algorithm = "Substructure.match_hits"
     end
     params[:nr_hits] = "true" if lazar.nr_hits
 
@@ -114,11 +117,11 @@ post '/lazar/?' do
       end
     else # create features
       params[:feature_generation_uri] = feature_generation_uri
-      if feature_generation_uri.match(/fminer/)
-        lazar.feature_calculation_algorithm = "Substructure.match"
-      else
-        raise OpenTox::NotFoundError.new "External feature generation services not yet supported"
-      end
+      #if feature_generation_uri.match(/fminer/)
+      #  lazar.feature_calculation_algorithm = "Substructure.match"
+      #else
+      #  raise OpenTox::NotFoundError.new "External feature generation services not yet supported"
+      #end
       params[:subjectid] = @subjectid
       prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
       if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
@@ -136,21 +139,21 @@ post '/lazar/?' do
 
     # sorted features for index lookups
 
-    lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
+    lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match" || "Substructure.match_hits"
 
     training_features.data_entries.each do |compound,entry|
       lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
       entry.keys.each do |feature|
 
         # CASE 1: Substructure
-        if lazar.feature_calculation_algorithm == "Substructure.match"
+        if lazar.feature_calculation_algorithm == "Substructure.match" || "Substructure.match_hits"
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
             #lazar.fingerprints[compound] << smarts
             if params[:nr_hits]
-              lazar.fingerprints[compound][smarts] = entry[feature].flatten.first
+              lazar.fingerprints[compound][smarts] = entry[feature].flatten.first * training_features.features[feature][OT.pValue]
             else
-              lazar.fingerprints[compound][smarts] = 1
+              lazar.fingerprints[compound][smarts] = 1 * training_features.features[feature][OT.pValue]
             end
             unless lazar.features.include? smarts
               lazar.features << smarts
