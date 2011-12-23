@@ -101,7 +101,7 @@ post '/lazar/?' do
       #lazar.nr_hits = true
       lazar.feature_calculation_algorithm = "Substructure.match_hits"
     end
-    params[:nr_hits] = "true" if lazar.feature_calculation_algorithm = "Substructure.match_hits" #not sure if this line in needed 
+    params[:nr_hits] = "true" if lazar.feature_calculation_algorithm == "Substructure.match_hits" #not sure if this line in needed 
 
     # Algorithm
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
