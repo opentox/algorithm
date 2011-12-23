@@ -80,7 +80,7 @@ post '/lazar/?' do
       }
     # Regression: SVM, Substructure.match_hits
     elsif  prediction_feature.feature_type == "regression"
-      lazar.nr_hits = true # AM: Brauchen wir die Variable noch? Kann man an feature_calculation_algorithm auch ablesen (n√chste Zeile)
+      #lazar.nr_hits = true # AM: Brauchen wir die Variable noch? Kann man an feature_calculation_algorithm auch ablesen (n√chste Zeile)
       lazar.feature_calculation_algorithm = "Substructure.match_hits" 
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
@@ -95,13 +95,13 @@ post '/lazar/?' do
 
     # Nr Hits
     if params[:nr_hits] == "false" # if nr_hits is set optional to true/false it will return as String (but should be True/FalseClass)
-      lazar.nr_hits = false
+      #lazar.nr_hits = false
       lazar.feature_calculation_algorithm = "Substructure.match"
     elsif params[:nr_hits] == "true"
-      lazar.nr_hits = true
+      #lazar.nr_hits = true
       lazar.feature_calculation_algorithm = "Substructure.match_hits"
     end
-    params[:nr_hits] = "true" if lazar.nr_hits 
+    params[:nr_hits] = "true" if lazar.feature_calculation_algorithm = "Substructure.match_hits" #not sure if this line in needed 
 
     # Algorithm
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
@@ -163,7 +163,7 @@ post '/lazar/?' do
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
             #lazar.fingerprints[compound] << smarts
-            if params[:nr_hits]
+            if lazar.feature_calculation_algorithm == "Substructure.match_hits"
               lazar.fingerprints[compound][smarts] = entry[feature].flatten.first * training_features.features[feature][OT.pValue]
             else
               lazar.fingerprints[compound][smarts] = 1 * training_features.features[feature][OT.pValue]
