@@ -108,11 +108,13 @@ post '/lazar/?' do
 
     # Propositionalization
     lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
+   
+    # PC type
+    lazar.pc_type = params[:pc_type] unless params[:pc_type].nil?
 
     # Conf_stdev
     lazar.conf_stdev = ( (params[:conf_stdev] == "true") ? true : false ) 
-
-
+ 
 
 
 
@@ -129,7 +131,7 @@ post '/lazar/?' do
 
     # Read Features
     if params[:feature_dataset_uri]
-      lazar.feature_calculation_algorithm = "" # TODO: Implement lookup in feature dataset
+      lazar.feature_calculation_algorithm = "Substructure.lookup"
       feature_dataset_uri = params[:feature_dataset_uri]
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
       if training_features.feature_type(@subjectid) == "regression"
