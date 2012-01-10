@@ -31,22 +31,23 @@ REST operations
                                                         [feature_type=trees],
                                                         [nr_hits=false]
     Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
-                                                        prediction_feature,
-                                                        feature_generation_uri
-                                                        prediction_algorithm
-                                                        [local_svm_kernel=weighted_tanimoto]
-                                                        [min_sim=0.3]
-                                                        [nr_hits=false]
-                                                        [conf_stdev=false]
+                                                        [prediction_feature],
+                                                        [feature_generation_uri],
+                                                        [prediction_algorithm],
+                                                        [feature_dataset_uri],
+                                                        [propositionalized=false],
+                                                        [pc_type=null],
+                                                        [nr_hits=false (class.), true (regr.)],
+                                                        [min_sim=0.3 (nominal), 0.6 (numeric features)]
 
 Synopsis
 --------
 
 - prediction\_algorithm: One of "weighted\_majority\_vote" (default for classification),  "local\_svm\_classification", "local\_svm\_regression (default for regression)", "local\_mlr\_prop". "weighted\_majority\_vote"  is not applicable for regression. "local\_mlr\_prop" is not applicable for classification.
-- local\_svm\_kernel: One of "weighted\_tanimoto", "propositionalized". local\_svm\_kernel is not appplicable when prediction\_algorithm="weighted\_majority\_vote".
-- min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1]. 
+- propositionalized: One of "true", "false". Not appplicable when prediction\_algorithm="weighted\_majority\_vote".
+- pc_type: Mandatory for feature dataset, one of [geometrical, topological, electronic, constitutional, hybrid, cpsa].
 - nr_hits: Whether for instantiated models (local\_svm\_kernel = "propositionalized" for prediction_algorithm="local\_svm\_classification" or "local\_svm\_regression", or for prediction_algorithm="local\_mlr\_prop") nominal features should be instantiated with their occurrence counts in the instances. For non-instantiated models (local\_svm\_kernel = "weighted\_tanimoto" for prediction_algorithm="local\_svm\_classification" or "local\_svm\_regression", or for prediction_algorithm="weighted\_majority\_vote") the neighbor-to-neighbor and neighbor-to-query similarity also integrates these counts, when the parameter is set. One of "true", "false". 
-- conf_stdev: Whether confidence integrates distribution of neighbor activity values. When "true", the exp(-1.0*(standard deviation of neighbor activities)) is multiplied on the similarity. One of "true", "false".
+- min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1]. 
 
 See http://www.maunz.de/wordpress/opentox/2011/lazar-models-and-how-to-trigger-them for a graphical overview.
 

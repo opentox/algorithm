@@ -12,9 +12,9 @@ get '/lazar/?' do
     OT.parameters => [
       { DC.description => "Dataset URI with the dependent variable", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "Feature URI for dependent variable. Optional for datasets with only a single feature.", OT.paramScope => "optional", DC.title => "prediction_feature" },
-      { DC.description => "URI of feature genration service. Default: #{@@feature_generation_default}", OT.paramScope => "optional", DC.title => "feature_generation_uri" },
+      { DC.description => "URI of feature generation service. Default: #{@@feature_generation_default}", OT.paramScope => "optional", DC.title => "feature_generation_uri" },
       { DC.description => "URI of feature dataset. If this parameter is set no feature generation algorithm will be called", OT.paramScope => "optional", DC.title => "feature_dataset_uri" },
-      { DC.description => "Further parameters for the feaature generation service", OT.paramScope => "optional" }
+      { DC.description => "Further parameters for the feature generation service", OT.paramScope => "optional" }
     ]
   }
   case request.env['HTTP_ACCEPT']
@@ -80,7 +80,6 @@ post '/lazar/?' do
       }
     # Regression: SVM, Substructure.match_hits
     elsif  prediction_feature.feature_type == "regression"
-      #lazar.nr_hits = true # AM: Brauchen wir die Variable noch? Kann man an feature_calculation_algorithm auch ablesen (nÃchste Zeile)
       lazar.feature_calculation_algorithm = "Substructure.match_hits" 
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
@@ -91,28 +90,28 @@ post '/lazar/?' do
     # # # USER VALUES
     
     # Min Sim
-    lazar.min_sim = params[:min_sim].to_f if params[:min_sim]
+    min_sim = params[:min_sim].to_f if params[:min_sim]
+    min_sim = 0.3 unless params[:min_sim]
 
     # Nr Hits
-    if params[:nr_hits] == "false" # if nr_hits is set optional to true/false it will return as String (but should be True/FalseClass)
-      #lazar.nr_hits = false
-      lazar.feature_calculation_algorithm = "Substructure.match"
-    elsif params[:nr_hits] == "true"
-      #lazar.nr_hits = true
+    nr_hits = false
+    if params[:nr_hits] == "true"
       lazar.feature_calculation_algorithm = "Substructure.match_hits"
+      nr_hits = true
     end
     params[:nr_hits] = "true" if lazar.feature_calculation_algorithm == "Substructure.match_hits" #not sure if this line in needed 
 
     # Algorithm
-    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
+    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
 
     # Propositionalization
-    lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
+    propositionalized = false
+    propositionalized = true if (params[:propositionalized] == "true" || params[:prediction_algorithm] == "local_mlr_prop")
    
     # PC type
-    lazar.pc_type = params[:pc_type] unless params[:pc_type].nil?
+    pc_type = params[:pc_type] unless params[:pc_type].nil?
 
-    # Conf_stdev
+    # Conf_stdev --- To be removed??
     lazar.conf_stdev = ( (params[:conf_stdev] == "true") ? true : false ) 
  
 
@@ -136,6 +135,8 @@ post '/lazar/?' do
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
       if training_features.feature_type(@subjectid) == "regression"
         lazar.similarity_algorithm = "Similarity.cosine"
+        min_sim = 0.6 unless params[:min_sim]
+        raise OpenTox::NotFoundError.new "No pc_type parameter." unless params[:pc_type]
       end
 
     # Create Features
@@ -234,7 +235,11 @@ post '/lazar/?' do
     lazar.metadata[OT.parameters] = [
       {DC.title => "dataset_uri", OT.paramValue => dataset_uri},
       {DC.title => "prediction_feature", OT.paramValue => prediction_feature.uri},
-      {DC.title => "feature_generation_uri", OT.paramValue => feature_generation_uri}
+      {DC.title => "feature_generation_uri", OT.paramValue => feature_generation_uri},
+      {DC.title => "propositionalized", OT.paramValue => propositionalized},
+      {DC.title => "pc_type", OT.paramValue => pc_type},
+      {DC.title => "nr_hits", OT.paramValue => nr_hits},
+      {DC.title => "min_sim", OT.paramValue => min_sim}
     ]
 		
 		model_uri = lazar.save(@subjectid)
