@@ -162,7 +162,7 @@ post '/lazar/?' do
       entry.keys.each do |feature|
 
         # CASE 1: Substructure
-        if lazar.feature_calculation_algorithm == "Substructure.match" || lazar.feature_calculation_algorithm == "Substructure.match_hits"
+        if ((lazar.feature_calculation_algorithm == "Substructure.match") || (lazar.feature_calculation_algorithm == "Substructure.match_hits"))
           if training_features.features[feature]
             smarts = training_features.features[feature][OT.smarts]
             #lazar.fingerprints[compound] << smarts
