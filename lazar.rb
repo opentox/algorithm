@@ -158,33 +158,38 @@ post '/lazar/?' do
 		raise OpenTox::NotFoundError.new "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
     training_features.data_entries.each do |compound,entry|
-      lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
-      entry.keys.each do |feature|
 
-        # CASE 1: Substructure
-        if lazar.feature_calculation_algorithm == "Substructure.match" || lazar.feature_calculation_algorithm == "Substructure.match_hits"
-          if training_features.features[feature]
-            smarts = training_features.features[feature][OT.smarts]
-            #lazar.fingerprints[compound] << smarts
-            if lazar.feature_calculation_algorithm == "Substructure.match_hits"
-              lazar.fingerprints[compound][smarts] = entry[feature].flatten.first * training_features.features[feature][OT.pValue]
-            else
-              lazar.fingerprints[compound][smarts] = 1 * training_features.features[feature][OT.pValue]
+      if training_activities.data_entries.has_key? compound
+
+        lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
+        entry.keys.each do |feature|
+
+          # CASE 1: Substructure
+          if lazar.feature_calculation_algorithm == "Substructure.match" || lazar.feature_calculation_algorithm == "Substructure.match_hits"
+            if training_features.features[feature]
+              smarts = training_features.features[feature][OT.smarts]
+              #lazar.fingerprints[compound] << smarts
+              if lazar.feature_calculation_algorithm == "Substructure.match_hits"
+                lazar.fingerprints[compound][smarts] = entry[feature].flatten.first * training_features.features[feature][OT.pValue]
+              else
+                lazar.fingerprints[compound][smarts] = 1 * training_features.features[feature][OT.pValue]
+              end
+              unless lazar.features.include? smarts
+                lazar.features << smarts
+                lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
+                lazar.effects[smarts] = training_features.features[feature][OT.effect]
+              end
             end
-            unless lazar.features.include? smarts
-              lazar.features << smarts
-              lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
-              lazar.effects[smarts] = training_features.features[feature][OT.effect]
-            end
+
+          # CASE 2: Others
+          elsif entry[feature].flatten.size == 1
+            lazar.fingerprints[compound][feature] = entry[feature].flatten.first
+            lazar.features << feature unless lazar.features.include? feature
+          else
+            LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
           end
-
-        # CASE 2: Others
-        elsif entry[feature].flatten.size == 1
-          lazar.fingerprints[compound][feature] = entry[feature].flatten.first
-          lazar.features << feature unless lazar.features.include? feature
-        else
-          LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
         end
+
       end
     end
     task.progress 80
