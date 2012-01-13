@@ -158,7 +158,6 @@ post '/lazar/?' do
 		raise OpenTox::NotFoundError.new "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
     training_features.data_entries.each do |compound,entry|
-
       if training_activities.data_entries.has_key? compound
 
         lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
