@@ -135,7 +135,7 @@ post '/lazar/?' do
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
       if training_features.feature_type(@subjectid) == "regression"
         lazar.similarity_algorithm = "Similarity.cosine"
-        min_sim = 0.6 unless params[:min_sim]
+        min_sim = 0.4 unless params[:min_sim]
         raise OpenTox::NotFoundError.new "No pc_type parameter." unless params[:pc_type]
       end
 
@@ -164,7 +164,7 @@ post '/lazar/?' do
         entry.keys.each do |feature|
 
           # CASE 1: Substructure
-          if lazar.feature_calculation_algorithm == "Substructure.match" || lazar.feature_calculation_algorithm == "Substructure.match_hits"
+          if (lazar.feature_calculation_algorithm == "Substructure.match") || (lazar.feature_calculation_algorithm == "Substructure.match_hits")
             if training_features.features[feature]
               smarts = training_features.features[feature][OT.smarts]
               #lazar.fingerprints[compound] << smarts
