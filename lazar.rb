@@ -106,7 +106,7 @@ post '/lazar/?' do
 
     # Propositionalization
     propositionalized = false
-    propositionalized = true if (params[:propositionalized] == "true" || params[:prediction_algorithm] == "local_mlr_prop")
+    propositionalized = true if (params[:propositionalized] != "false" && ( params[:prediction_algorithm] == "local_mlr_prop" || params[:prediction_algorithm].include? "local_svm" ) )
    
     # PC type
     pc_type = params[:pc_type] unless params[:pc_type].nil?
