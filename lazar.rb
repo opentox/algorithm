@@ -117,6 +117,10 @@ post '/lazar/?' do
     # PC type
     pc_type = params[:pc_type] unless params[:pc_type].nil?
 
+    # Min train performance
+    min_train_performance = params[:min_train_performance].to_f if params[:min_train_performance]
+    min_train_performance = 0.1 unless params[:min_train_performance]
+
     # Conf_stdev --- To be removed??
     lazar.conf_stdev = ( (params[:conf_stdev] == "true") ? true : false ) 
  
@@ -249,7 +253,9 @@ post '/lazar/?' do
       {DC.title => "propositionalized", OT.paramValue => propositionalized},
       {DC.title => "pc_type", OT.paramValue => pc_type},
       {DC.title => "nr_hits", OT.paramValue => nr_hits},
-      {DC.title => "min_sim", OT.paramValue => min_sim}
+      {DC.title => "min_sim", OT.paramValue => min_sim},
+      {DC.title => "min_train_performance", OT.paramValue => min_train_performance},
+
     ]
 		
 		model_uri = lazar.save(@subjectid)
