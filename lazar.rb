@@ -105,8 +105,7 @@ post '/lazar/?' do
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
 
     # Propositionalization
-    propositionalized = false
-    propositionalized = true if ( params[:propositionalized] != "false" && ( lazar.prediction_algorithm == "local_mlr_prop" || lazar.prediction_algorithm.include?("local_svm") )  )
+    propositionalized = true
    
     # PC type
     pc_type = params[:pc_type] unless params[:pc_type].nil?
@@ -114,10 +113,6 @@ post '/lazar/?' do
     # Min train performance
     min_train_performance = params[:min_train_performance].to_f if params[:min_train_performance]
     min_train_performance = 0.1 unless params[:min_train_performance]
-
-    # Conf_stdev --- To be removed??
-    lazar.conf_stdev = ( (params[:conf_stdev] == "true") ? true : false ) 
- 
 
 
 
