@@ -105,7 +105,7 @@ post '/lazar/?' do
     lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
 
     # Propositionalization
-    propositionalized = true
+    propositionalized = (lazar.prediction_algorithm=="Neighbors.weighted_majority_vote" ? false : true)
    
     # PC type
     pc_type = params[:pc_type] unless params[:pc_type].nil?
