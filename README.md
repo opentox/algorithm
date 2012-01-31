@@ -35,19 +35,19 @@ REST operations
                                                         [feature_generation_uri],
                                                         [prediction_algorithm],
                                                         [feature_dataset_uri],
-                                                        [propositionalized=false],
                                                         [pc_type=null],
-                                                        [nr_hits=false (class.), true (regr.)],
-                                                        [min_sim=0.3 (nominal), 0.6 (numeric features)]
+                                                        [nr_hits=false (class. using wt. maj. vote), true (else)],
+                                                        [min_sim=0.3 (nominal), 0.4 (numeric features)]
+                                                        [min_train_performance=0.1]
 
 Synopsis
 --------
 
-- prediction\_algorithm: One of "weighted\_majority\_vote" (default for classification),  "local\_svm\_classification", "local\_svm\_regression (default for regression)", "local\_mlr\_prop". "weighted\_majority\_vote"  is not applicable for regression. "local\_mlr\_prop" is not applicable for classification.
-- propositionalized: One of "true", "false". Not appplicable when prediction\_algorithm="weighted\_majority\_vote".
+- prediction\_algorithm: One of "weighted\_majority\_vote" (default for classification),  "local\_svm\_classification", "local\_svm\_regression" (default for regression). "weighted\_majority\_vote"  is not applicable for regression.
 - pc_type: Mandatory for feature dataset, one of [geometrical, topological, electronic, constitutional, hybrid, cpsa].
-- nr_hits: Whether for instantiated models (local\_svm\_kernel = "propositionalized" for prediction_algorithm="local\_svm\_classification" or "local\_svm\_regression", or for prediction_algorithm="local\_mlr\_prop") nominal features should be instantiated with their occurrence counts in the instances. For non-instantiated models (local\_svm\_kernel = "weighted\_tanimoto" for prediction_algorithm="local\_svm\_classification" or "local\_svm\_regression", or for prediction_algorithm="weighted\_majority\_vote") the neighbor-to-neighbor and neighbor-to-query similarity also integrates these counts, when the parameter is set. One of "true", "false". 
-- min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1]. 
+- nr_hits: Whether nominal features should be instantiated with their occurrence counts in the instances. One of "true", "false". 
+- min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1].
+- min_train_performance. The minimum training performance for "local\_svm\_classification" (Accuracy) and "local\_svm\_regression" (R-squared). Numeric value in [0,1].
 
 See http://www.maunz.de/wordpress/opentox/2011/lazar-models-and-how-to-trigger-them for a graphical overview.
 
