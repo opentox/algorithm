@@ -94,7 +94,7 @@ post '/fminer/:method/match?' do
   task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
     f_dataset = OpenTox::Dataset.find params[:feature_dataset_uri],@subjectid
     c_dataset = OpenTox::Dataset.find params[:dataset_uri],@subjectid
-    res_dataset = OpenTox::Dataset.create @subjectid
+    res_dataset = OpenTox::Dataset.create CONFIG[:services]["dataset"],@subjectid
     f_dataset.features.each do |f,m|
       res_dataset.add_feature(f,m)
     end
@@ -110,7 +110,7 @@ post '/fminer/:method/match?' do
         end
       end
     end
-    res_dataset.save
+    res_dataset.save @subjectid
     res_dataset.uri
   end
   return_task(task)
