@@ -93,16 +93,16 @@ post '/lazar/?' do
     min_sim = params[:min_sim].to_f if params[:min_sim]
     min_sim = 0.3 unless params[:min_sim]
 
+    # Algorithm
+    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
+
     # Nr Hits
     nr_hits = false
-    if params[:nr_hits] == "true"
+    if params[:nr_hits] == "true" || lazar.prediction_algorithm.include?("local_svm")
       lazar.feature_calculation_algorithm = "Substructure.match_hits"
       nr_hits = true
     end
     params[:nr_hits] = "true" if lazar.feature_calculation_algorithm == "Substructure.match_hits" #not sure if this line in needed 
-
-    # Algorithm
-    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
 
     # Propositionalization
     propositionalized = (lazar.prediction_algorithm=="Neighbors.weighted_majority_vote" ? false : true)
