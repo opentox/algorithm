@@ -9,36 +9,48 @@ OpenTox Algorithm
 REST operations
 ---------------
 
-    Get a list of all algorithms  GET   /               -                           URIs of algorithms        200
-    Get a representation of the   GET   /fminer/        -                           fminer representation     200,404
+    Get a list of all algorithms  GET   /                       -  URIs of algorithms                    200
+    Get a representation of the   GET   /fminer/                -  fminer representation                 200,404
      fminer algorithms
-    Get a representation of the   GET   /fminer/bbrc    -                           bbrc representation       200,404
+    Get a representation of the   GET   /fminer/bbrc            -  bbrc representation                   200,404
     bbrc algorithm
-    Get a representation of the   GET   /fminer/last    -                           last representation       200,404
+    Get a representation of the   GET   /fminer/last            -  last representation                   200,404
      last algorithm
-    Get a representation of the   GET   /lazar          -                           lazar representation      200,404
+    Get a representation of the   GET   /lazar                  -  lazar representation                  200,404
      lazar algorithm
-    Create bbrc features          POST  /fminer/bbrc    dataset_uri,                URI for feature dataset   200,400,404,500
-                                                        feature_uri,
-                                                        [min_frequency=5 per-mil],
-                                                        [feature_type=trees],
-                                                        [backbone=true],
-                                                        [min_chisq_significance=0.95],
-                                                        [nr_hits=false]
-    Create last features          POST  /fminer/last    dataset_uri,                URI for feature dataset   200,400,404,500
-                                                        feature_uri,
-                                                        [min_frequency=8 %],
-                                                        [feature_type=trees],
-                                                        [nr_hits=false]
-    Create lazar model            POST  /lazar          dataset_uri,                URI for lazar model       200,400,404,500
-                                                        [prediction_feature],
-                                                        [feature_generation_uri],
-                                                        [prediction_algorithm],
-                                                        [feature_dataset_uri],
-                                                        [pc_type=null],
-                                                        [nr_hits=false (class. using wt. maj. vote), true (else)],
-                                                        [min_sim=0.3 (nominal), 0.4 (numeric features)]
-                                                        [min_train_performance=0.1]
+    Get a representation of the   GET   /feature_selection      -  feature selection representation      200,404
+     feature selection algorithms
+    Get a representation of the   GET   /feature_selection/rfe  -  rfe representation                    200,404
+     rfe algorithm
+
+
+    Create bbrc features          POST  /fminer/bbrc            dataset_uri,                URI for feature dataset   200,400,404,500
+                                                                feature_uri,
+                                                                [min_frequency=5 per-mil],
+                                                                [feature_type=trees],
+                                                                [backbone=true],
+                                                                [min_chisq_significance=0.95],
+                                                                [nr_hits=false]
+    Create last features          POST  /fminer/last            dataset_uri,                URI for feature dataset   200,400,404,500
+                                                                feature_uri,
+                                                                [min_frequency=8 %],
+                                                                [feature_type=trees],
+                                                                [nr_hits=false]
+    Create lazar model            POST  /lazar                  dataset_uri,                URI for lazar model       200,400,404,500
+                                                                [prediction_feature],
+                                                                [feature_generation_uri],
+                                                                [prediction_algorithm],
+                                                                [feature_dataset_uri],
+                                                                [pc_type=null],
+                                                                [nr_hits=false (class. using wt. maj. vote), true (else)],
+                                                                [min_sim=0.3 (nominal), 0.4 (numeric features)]
+                                                                [min_train_performance=0.1]
+
+    Create selected features      POST /feature_selection/rfe   dataset_uri,                URI for dataset 200,400,404,500
+                                                                prediction_feature,
+                                                                feature_dataset_uri,
+                                                                [del_missing=false]
+
 
 Synopsis
 --------
@@ -48,6 +60,7 @@ Synopsis
 - nr_hits: Whether nominal features should be instantiated with their occurrence counts in the instances. One of "true", "false". 
 - min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1].
 - min_train_performance. The minimum training performance for "local\_svm\_classification" (Accuracy) and "local\_svm\_regression" (R-squared). Numeric value in [0,1].
+- del_missing: one of true, false
 
 See http://www.maunz.de/wordpress/opentox/2011/lazar-models-and-how-to-trigger-them for a graphical overview.
 
@@ -108,5 +121,10 @@ Creates a standard Lazar model.
 
 [API documentation](http://rdoc.info/github/opentox/algorithm)
 --------------------------------------------------------------
+
+* * *
+
+### Create a feature dataset of selected features
+    curl -X POST -d dataset_uri={dataset_uri} -d prediction_feature_uri={prediction_feature_uri} -d feature_dataset_uri={feature_dataset_uri} -d del_missing=true http://webservices.in-silico.ch/test/algorithm/feature_selection/rfe
 
 Copyright (c) 2009-2011 Christoph Helma, Martin Guetlein, Micha Rautenberg, Andreas Maunz, David Vorgrimmler, Denis Gebele. See LICENSE for details.
