@@ -85,6 +85,37 @@ get "/fminer/last/?" do
   end
 end
 
+# Creates same features for dataset <dataset_uri> that have been created
+# with fminer in dataset <feature_dataset_uri>
+# accept params[:nr_hits] as used in other fminer methods 
+post '/fminer/:method/match?' do 
+  raise OpenTox::BadRequestError.new "feature_dataset_uri not given" unless params[:feature_dataset_uri]
+  raise OpenTox::BadRequestError.new "dataset_uri not given" unless params[:dataset_uri] 
+  task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
+    f_dataset = OpenTox::Dataset.find params[:feature_dataset_uri],@subjectid
+    c_dataset = OpenTox::Dataset.find params[:dataset_uri],@subjectid
+    res_dataset = OpenTox::Dataset.create CONFIG[:services]["dataset"],@subjectid
+    f_dataset.features.each do |f,m|
+      res_dataset.add_feature(f,m)
+    end
+    c_dataset.compounds.each do |c|
+      res_dataset.add_compound(c)
+      comp = OpenTox::Compound.new(c)
+      f_dataset.features.each do |f,m|
+        if params[:nr_hits] == "true"
+          hits = comp.match_hits([m[OT.smarts]])
+          res_dataset.add(c,f,hits[m[OT.smarts]]) if hits[m[OT.smarts]]          
+        else
+          res_dataset.add(c,f,1) if comp.match?(m[OT.smarts])
+        end
+      end
+    end
+    res_dataset.save @subjectid
+    res_dataset.uri
+  end
+  return_task(task)
+end 
+
 # Run bbrc algorithm on dataset
 #
 # @param [String] dataset_uri URI of the training dataset
