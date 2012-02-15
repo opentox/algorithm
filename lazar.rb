@@ -8,7 +8,7 @@ get '/lazar/?' do
     DC.title => 'lazar',
     DC.creator => "helma@in-silico.ch, andreas@maunz.de",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
-    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#lazar",
+#    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#lazar",
     OT.parameters => [
       { DC.description => "Dataset URI with the dependent variable", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "Feature URI for dependent variable. Optional for datasets with only a single feature.", OT.paramScope => "optional", DC.title => "prediction_feature" },
