@@ -35,7 +35,7 @@ get "/fminer/bbrc/?" do
     OT.parameters => [
       { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
-      { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "minfreq" },
+      { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
       { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
       { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
@@ -67,7 +67,7 @@ get "/fminer/last/?" do
     OT.parameters => [
       { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
-      { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "minfreq" },
+      { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
       { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
   ]
