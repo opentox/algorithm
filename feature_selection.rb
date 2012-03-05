@@ -70,7 +70,15 @@ post '/feature_selection/rfe/?' do
 
   task = OpenTox::Task.create("Recursive Feature Elimination", url_for('/feature_selection',:full)) do |task|
     r_result_file = OpenTox::Algorithm::FeatureSelection.rfe( { :ds_csv_file => tf_ds.path, :prediction_feature => prediction_feature, :fds_csv_file => tf_fds.path, :del_missing => del_missing } )
-    r_result_uri = OpenTox::Dataset.create_from_csv_file(r_result_file).uri
+    
+    parser = OpenTox::Parser::Spreadsheets.new
+    ds = OpenTox::Dataset.new
+    ds.save
+    parser.dataset = ds
+    ds = parser.load_csv(File.open(r_result_file).read,false,true)
+    ds.save    
+    r_result_uri = ds.uri
+    #r_result_uri = OpenTox::Dataset.create_from_csv_file(r_result_file).uri
     begin
       tf_ds.close!; tf_fds.close! 
       File.unlink(r_result_file)
