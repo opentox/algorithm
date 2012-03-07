@@ -75,7 +75,7 @@ post '/feature_selection/rfe/?' do
     ds = OpenTox::Dataset.new
     ds.save
     parser.dataset = ds
-    ds = parser.load_csv(File.open(r_result_file).read,false,true)
+    ds = parser.load_csv(File.open(r_result_file).read,false,false,true)
     ds.save    
     r_result_uri = ds.uri
     #r_result_uri = OpenTox::Dataset.create_from_csv_file(r_result_file).uri
