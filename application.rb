@@ -11,6 +11,7 @@ require 'opentox-ruby'
 require 'openbabel.rb'
 require 'fminer.rb'
 require 'lazar.rb'
+require 'feature_selection.rb'
 
 set :lock, true
 
@@ -22,11 +23,11 @@ end
 #
 # @return [text/uri-list] algorithm URIs
 get '/?' do
-	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full) ].join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
   when /text\/html/
     content_type "text/html"
-    OpenTox.text_to_html list
+    OpenTox.text_to_html list,@subjectid
   else
     content_type 'text/uri-list'
     list

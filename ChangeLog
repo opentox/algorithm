@@ -1,0 +1,5 @@
+v3.1.0 2012-02-24
+		* lazar.rb: pc type parameter in model, cleaned all parameters,
+		propositionalized learning only for SVM, switch for minimal training
+		performance, removed conf_stdev
+		* fminer.rb: feature match service for datasets, also with number of hits

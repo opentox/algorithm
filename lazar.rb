@@ -8,12 +8,13 @@ get '/lazar/?' do
     DC.title => 'lazar',
     DC.creator => "helma@in-silico.ch, andreas@maunz.de",
     DC.contributor => "vorgrimmlerdavid@gmx.de",
+#    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#lazar",
     OT.parameters => [
       { DC.description => "Dataset URI with the dependent variable", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "Feature URI for dependent variable. Optional for datasets with only a single feature.", OT.paramScope => "optional", DC.title => "prediction_feature" },
-      { DC.description => "URI of feature genration service. Default: #{@@feature_generation_default}", OT.paramScope => "optional", DC.title => "feature_generation_uri" },
+      { DC.description => "URI of feature generation service. Default: #{@@feature_generation_default}", OT.paramScope => "optional", DC.title => "feature_generation_uri" },
       { DC.description => "URI of feature dataset. If this parameter is set no feature generation algorithm will be called", OT.paramScope => "optional", DC.title => "feature_dataset_uri" },
-      { DC.description => "Further parameters for the feaature generation service", OT.paramScope => "optional" }
+      { DC.description => "Further parameters for the feature generation service", OT.paramScope => "optional" }
     ]
   }
   case request.env['HTTP_ACCEPT']
@@ -44,61 +45,102 @@ post '/lazar/?' do
 
   task = OpenTox::Task.create("Create lazar model",url_for('/lazar',:full)) do |task|
 
+
+    # # # Dataset present, prediction feature present?
     raise OpenTox::NotFoundError.new "Dataset #{dataset_uri} not found." unless training_activities = OpenTox::Dataset.new(dataset_uri)
     training_activities.load_all(@subjectid)
 
+    # Prediction Feature
     prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid)
     unless params[:prediction_feature] # try to read prediction_feature from dataset
     raise OpenTox::NotFoundError.new "#{training_activities.features.size} features in dataset #{dataset_uri}. Please provide a  prediction_feature parameter." unless training_activities.features.size == 1
       prediction_feature = OpenTox::Feature.find(training_activities.features.keys.first,@subjectid)
       params[:prediction_feature] = prediction_feature.uri # pass to feature mining service
     end
+    raise OpenTox::NotFoundError.new "No feature #{prediction_feature.uri} in dataset #{params[:dataset_uri]}. (features: "+ training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
     
-    feature_generation_uri = @@feature_generation_default unless feature_generation_uri = params[:feature_generation_uri]
+    # Feature Generation URI
+    feature_generation_uri = @@feature_generation_default unless ( (feature_generation_uri = params[:feature_generation_uri]) || (params[:feature_dataset_uri]) )
 
-    raise OpenTox::NotFoundError.new "No feature #{prediction_feature.uri} in dataset #{params[:dataset_uri]}. (features: "+
-      training_activities.features.inspect+")" unless training_activities.features and training_activities.features.include?(prediction_feature.uri)
-
+    # Create instance
 		lazar = OpenTox::Model::Lazar.new
-    lazar.min_sim = params[:min_sim].to_f if params[:min_sim]
     
+
+
+
+    # # # ENDPOINT RELATED
+    
+    # Default Values
+    # Classification: Weighted Majority, Substructure.match
     if prediction_feature.feature_type == "classification"
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
       @training_classes.each_with_index { |c,i|
         lazar.value_map[i+1] = c # don't use '0': we must take the weighted mean later.
         params[:value_map] = lazar.value_map
       }
+    # Regression: SVM, Substructure.match_hits
     elsif  prediction_feature.feature_type == "regression"
-      lazar.nr_hits = true
+      lazar.feature_calculation_algorithm = "Substructure.match_hits" 
       lazar.prediction_algorithm = "Neighbors.local_svm_regression" 
     end
 
-    if params[:nr_hits] == "false" # if nr_hits is set optional to true/false it will return as String (but should be True/FalseClass)
-      lazar.nr_hits = false
-      #params[:nr_hits] = false
-    elsif params[:nr_hits] == "true"
-      lazar.nr_hits = true
+
+
+
+    # # # USER VALUES
+    
+    # Min Sim
+    min_sim = params[:min_sim].to_f if params[:min_sim]
+    min_sim = 0.3 unless params[:min_sim]
+
+    # Algorithm
+    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
+
+    # Nr Hits
+    nr_hits = false
+    if params[:nr_hits] == "true" || lazar.prediction_algorithm.include?("local_svm")
+      lazar.feature_calculation_algorithm = "Substructure.match_hits"
+      nr_hits = true
     end
-    params[:nr_hits] = "true" if lazar.nr_hits
+    params[:nr_hits] = "true" if lazar.feature_calculation_algorithm == "Substructure.match_hits" #not sure if this line in needed 
+
+    # Propositionalization
+    propositionalized = (lazar.prediction_algorithm=="Neighbors.weighted_majority_vote" ? false : true)
+   
+    # PC type
+    pc_type = params[:pc_type] unless params[:pc_type].nil?
+
+    # Min train performance
+    min_train_performance = params[:min_train_performance].to_f if params[:min_train_performance]
+    min_train_performance = 0.1 unless params[:min_train_performance]
+
+
+
+
+
 
     task.progress 10
 
-		if params[:feature_dataset_uri]
+
+
+
+
+    # # # Features
+
+    # Read Features
+    if params[:feature_dataset_uri]
+      lazar.feature_calculation_algorithm = "Substructure.lookup"
       feature_dataset_uri = params[:feature_dataset_uri]
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
-      case training_features.feature_type(@subjectid)
-      when "classification"
-        lazar.similarity_algorithm = "Similarity.tanimoto"
-      when "regression"
-        lazar.similarity_algorithm = "Similarity.euclid"
+      if training_features.feature_type(@subjectid) == "regression"
+        lazar.similarity_algorithm = "Similarity.cosine"
+        min_sim = 0.4 unless params[:min_sim]
+        raise OpenTox::NotFoundError.new "No pc_type parameter." unless params[:pc_type]
       end
-    else # create features
+
+    # Create Features
+    else 
       params[:feature_generation_uri] = feature_generation_uri
-      if feature_generation_uri.match(/fminer/)
-        lazar.feature_calculation_algorithm = "Substructure.match"
-      else
-        raise OpenTox::NotFoundError.new "External feature generation services not yet supported"
-      end
       params[:subjectid] = @subjectid
       prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
       if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
@@ -108,82 +150,60 @@ post '/lazar/?' do
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
     end
 
+
+
+    # # # Write fingerprints
     training_features.load_all(@subjectid)
 		raise OpenTox::NotFoundError.new "Dataset #{feature_dataset_uri} not found." if training_features.nil?
 
-    # sorted features for index lookups
-
-    lazar.features = training_features.features.sort if prediction_feature.feature_type == "regression" and lazar.feature_calculation_algorithm != "Substructure.match"
-
     training_features.data_entries.each do |compound,entry|
-      lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
-      entry.keys.each do |feature|
-        if lazar.feature_calculation_algorithm == "Substructure.match"
-          if training_features.features[feature]
-            smarts = training_features.features[feature][OT.smarts]
-            #lazar.fingerprints[compound] << smarts
-            if params[:nr_hits]
-              lazar.fingerprints[compound][smarts] = entry[feature].flatten.first
-            else
-              lazar.fingerprints[compound][smarts] = 1
+      if training_activities.data_entries.has_key? compound
+
+        lazar.fingerprints[compound] = {} unless lazar.fingerprints[compound]
+        entry.keys.each do |feature|
+
+          # CASE 1: Substructure
+          if (lazar.feature_calculation_algorithm == "Substructure.match") || (lazar.feature_calculation_algorithm == "Substructure.match_hits")
+            if training_features.features[feature]
+              smarts = training_features.features[feature][OT.smarts]
+              #lazar.fingerprints[compound] << smarts
+              if lazar.feature_calculation_algorithm == "Substructure.match_hits"
+                lazar.fingerprints[compound][smarts] = entry[feature].flatten.first * training_features.features[feature][OT.pValue]
+              else
+                lazar.fingerprints[compound][smarts] = 1 * training_features.features[feature][OT.pValue]
+              end
+              unless lazar.features.include? smarts
+                lazar.features << smarts
+                lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
+                lazar.effects[smarts] = training_features.features[feature][OT.effect]
+              end
             end
-            unless lazar.features.include? smarts
-              lazar.features << smarts
-              lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
-              lazar.effects[smarts] = training_features.features[feature][OT.effect]
-            end
-          end
-        else
-          case training_features.feature_type(@subjectid)
-          when "classification"
-            # fingerprints are sets
-            if entry[feature].flatten.size == 1
-              #lazar.fingerprints[compound] << feature if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
-              lazar.fingerprints[compound][feature] = entry[feature].flatten.first if entry[feature].flatten.first.to_s.match(TRUE_REGEXP)
-              lazar.features << feature unless lazar.features.include? feature
-            else
-              LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
-            end
-          when "regression"
-            # fingerprints are arrays
-            if entry[feature].flatten.size == 1
-              lazar.fingerprints[compound][lazar.features.index(feature)] = entry[feature].flatten.first
-              #lazar.fingerprints[compound][feature] = entry[feature].flatten.first
-            else
-              LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
-            end
+
+          # CASE 2: Others
+          elsif entry[feature].flatten.size == 1
+            lazar.fingerprints[compound][feature] = entry[feature].flatten.first
+            lazar.features << feature unless lazar.features.include? feature
+          else
+            LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{compound}, feature #{feature}"
           end
         end
+
       end
     end
     task.progress 80
 
-    # AM: allow settings override by user
-    lazar.prediction_algorithm = "Neighbors.#{params[:prediction_algorithm]}" unless params[:prediction_algorithm].nil?
-    if prediction_feature.feature_type == "regression" 
-      lazar.transform["class"] = "Log10" if lazar.transform["class"] == "NOP"
-    end
-    lazar.transform["class"] = params[:activity_transform] unless params[:activity_transform].nil?
-    lazar.prop_kernel = true if (params[:local_svm_kernel] == "propositionalized" || params[:prediction_algorithm] == "local_mlr_prop")
-    lazar.conf_stdev = false
-    lazar.conf_stdev = true if params[:conf_stdev] == "true"
 
-    # AM: Feed Data using Transformations
+
+
+    
+    # # # Activities
+  
     if prediction_feature.feature_type == "regression"
-      transformed_acts = []
-      training_activities.data_entries.each do |compound,entry| 
-        transformed_acts.concat entry[prediction_feature.uri] unless entry[prediction_feature.uri].empty?
-      end
-      transformer = eval "OpenTox::Algorithm::Transform::#{lazar.transform["class"]}.new(transformed_acts)"
-      transformed_acts = transformer.values
-      lazar.transform["offset"] = transformer.offset 
-      t_count=0
       training_activities.data_entries.each do |compound,entry| 
         lazar.activities[compound] = [] unless lazar.activities[compound]
         unless entry[prediction_feature.uri].empty?
           entry[prediction_feature.uri].each do |value|
-            lazar.activities[compound] << transformed_acts[t_count].to_s
-            t_count+=1
+            lazar.activities[compound] << value
           end
         end
       end
@@ -199,6 +219,11 @@ post '/lazar/?' do
     end
     task.progress 90
 
+
+
+
+    # Metadata
+
     lazar.metadata[DC.title] = "lazar model for #{URI.decode(File.basename(prediction_feature.uri))}"
     lazar.metadata[OT.dependentVariables] = prediction_feature.uri
     lazar.metadata[OT.trainingDataset] = dataset_uri
@@ -213,12 +238,19 @@ post '/lazar/?' do
     lazar.metadata[OT.parameters] = [
       {DC.title => "dataset_uri", OT.paramValue => dataset_uri},
       {DC.title => "prediction_feature", OT.paramValue => prediction_feature.uri},
-      {DC.title => "feature_generation_uri", OT.paramValue => feature_generation_uri}
+      {DC.title => "feature_generation_uri", OT.paramValue => feature_generation_uri},
+      {DC.title => "propositionalized", OT.paramValue => propositionalized},
+      {DC.title => "pc_type", OT.paramValue => pc_type},
+      {DC.title => "nr_hits", OT.paramValue => nr_hits},
+      {DC.title => "min_sim", OT.paramValue => min_sim},
+      {DC.title => "min_train_performance", OT.paramValue => min_train_performance},
+
     ]
 		
 		model_uri = lazar.save(@subjectid)
 		LOGGER.info model_uri + " created #{Time.now}"
     model_uri
+
 	end
   response['Content-Type'] = 'text/uri-list' 
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
