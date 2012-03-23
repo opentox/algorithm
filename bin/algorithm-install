@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# Installs Opentox Webservices.
+# Author: Christoph Helma, Andreas Maunz.
+#
+
+
+OT_PREFIX="$HOME/opentox-ruby"
+RUBY_VER="1.9.3-p125"
+RUBY_DWL="http://ftp.ruby-lang.org/pub/ruby/1.9"
+
+if [ "$(id -u)" = "0" ]; then
+  echo "This script must be run as non-root." 1>&2
+  exit 1
+fi
+
+DIR=`pwd`
+if echo $DIR | grep "algorithm/bin" >/dev/null 2>&1 ; then cd ..; fi
+
+# Utils
+. $HOME/.opentox/opentox-ui.sh 
+utils="git rbenv curl"
+for u in $utils; do
+  eval `echo $u | tr "[:lower:]" "[:upper:]"`=`which $u` || (echo "'$u' missing. Install '$u' first." && exit 1)
+done
+
+
+LOG="$OT_PREFIX/tmp/`basename $0`.log"
+echo
+echo "Installation ('$LOG'):"
+
+run_cmd ()
+{
+  local cmd="$1"; local title="$2"
+  printf "%30s" "'$title'"
+  if ! eval $cmd >>$LOG 2>&1 ; then  
+    printf "%50s\n" "FAIL"
+    echo "Last 10 lines of log:"
+    tail -10 "$LOG"
+    exit 1
+  fi
+  printf "%50s\n" "DONE"
+}
+
+install_ruby() {
+  local DIR=`pwd`
+  [ -d $DIR/tmp ] || mkdir -p $DIR/tmp && cd $DIR/tmp
+  ([ -d $DIR/tmp/ruby-$RUBY_VER ] || $CURL $RUBY_DWL/ruby-$RUBY_VER.tar.gz 2>/dev/null | tar xz) && cd ruby-$RUBY_VER
+  cmd="./configure --prefix=$HOME/.rbenv/versions/$RUBY_VER" && run_cmd "$cmd" "Configure"
+  cmd="make -j2" && run_cmd "$cmd" "Make"
+  cmd="make install" && run_cmd "$cmd" "Install"
+  $RBENV rehash
+  cd $DIR
+}
+
+[ "`$RBENV local`" = "$RUBY_VER" ] || install_ruby
+$RBENV local $RUBY_VER
+
+# fminer etc
+eval RUBY_INC="-I`dirname $HOME/.rbenv/versions/$RUBY_VER/include/ruby*/*linux/ruby`\ -I`dirname $HOME/.rbenv/versions/$RUBY_VER/include/ruby*/ruby`"
+eval OPBB_INC="-I`dirname $OT_PREFIX/openbabel*/include/openbabel*/openbabel`"
+cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
+cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
+cd "libfminer/libbbrc">>$LOG 2>&1
+$GIT checkout development>>$LOG 2>&1
+$GIT pull >>$LOG 2>&1
+cd - >>$LOG 2>&1
+cd "libfminer/liblast">>$LOG 2>&1
+$GIT checkout development>>$LOG 2>&1
+$GIT pull >>$LOG 2>&1
+cd - >>$LOG 2>&1
+for mylib in bbrc last; do
+  cmd="sed -i 's,^INCLUDE_OB.*,INCLUDE_OB\ =\ $OPBB_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (OB)"
+  cmd="sed -i 's,^INCLUDE_RB.*,INCLUDE_RB\ =\ $RUBY_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (RB)"
+done
+cd "libfminer/libbbrc">>$LOG 2>&1
+cmd="make ruby" && run_cmd "$cmd" "Make BBRC"
+cd - >>$LOG 2>&1
+cd "libfminer/liblast">>$LOG 2>&1
+cmd="make ruby" && run_cmd "$cmd" "Make LAST"
+cd - >>$LOG 2>&1
+cd "last-utils">>$LOG 2>&1
+$GIT checkout $OT_BRANCH>>$LOG 2>&1
+$GIT pull >>$LOG 2>&1
+
+cd "$DIR"
+
