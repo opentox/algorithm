@@ -46,7 +46,7 @@ run_cmd ()
 install_ruby() {
   printf "\n%50s\n" "RUBY"
   local DIR=`pwd`
-  if ! [ $RBENV versions $RUBY_VER | grep $RUBY_VER>/dev/null ]; then
+  if ! $RBENV versions $RUBY_VER | grep $RUBY_VER>/dev/null 2>&1; then
     [ -d $DIR/tmp ] || mkdir -p $DIR/tmp && cd $DIR/tmp
     ([ -d $DIR/tmp/ruby-$RUBY_VER ] || $CURL $RUBY_DWL/ruby-$RUBY_VER.tar.gz 2>/dev/null | tar xz) && cd ruby-$RUBY_VER
     cmd="./configure --prefix=$RUBY_DIR" && run_cmd "$cmd" "Configure"
@@ -120,9 +120,9 @@ echo
 [ -d $OT_CONFIG/log ] || cmd="mkdir -p $OT_CONFIG/log" && run_cmd "$cmd" "Main log directory"
 [ -d $OT_CONFIG/config/$SELF ] || cmd="mkdir -p $OT_CONFIG/config/$SELF" && run_cmd "$cmd" "$SELF config directory"
 
-[ "`$RBENV local`" = "$RUBY_VER" ] || install_ruby
-[ -n `find $RUBY_DIR -name openbabel.so 2>/dev/null` ] || install_ob_ruby
-( [ -n `find libfminer/ -name bbrc.so 2>/dev/null` ] && [ -n `find libfminer/ -name last.so 2>/dev/null` ] ) || install_fminer
+[ "`$RBENV local 2>/dev/null`" = "$RUBY_VER" ] || install_ruby
+[ -n "`find $RUBY_DIR -name openbabel.so 2>/dev/null`" ] || install_ob_ruby
+( [ -n "`find libfminer/ -name bbrc.so 2>/dev/null`" ] && [ -n "`find libfminer/ -name last.so 2>/dev/null`" ] ) || install_fminer
 
 echo
 install_bundler
