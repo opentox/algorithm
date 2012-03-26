@@ -8,16 +8,19 @@
 OT_PREFIX="$HOME/opentox-ruby"
 RUBY_VER="1.9.3-p125"
 RUBY_DWL="http://ftp.ruby-lang.org/pub/ruby/1.9"
+FMINER_BRANCH="development"
 
 if [ "$(id -u)" = "0" ]; then
   echo "This script must be run as non-root." 1>&2
   exit 1
 fi
 
+# Enforce main directory
 DIR=`pwd`
 if echo $DIR | grep "algorithm/bin" >/dev/null 2>&1 ; then cd ..; fi
 
-# Utils
+
+# Ruby
 . $HOME/.opentox/opentox-ui.sh 
 utils="git rbenv curl"
 for u in $utils; do
@@ -56,17 +59,18 @@ install_ruby() {
 [ "`$RBENV local`" = "$RUBY_VER" ] || install_ruby
 $RBENV local $RUBY_VER
 
+
 # fminer etc
 eval RUBY_INC="-I`dirname $HOME/.rbenv/versions/$RUBY_VER/include/ruby*/*linux/ruby`\ -I`dirname $HOME/.rbenv/versions/$RUBY_VER/include/ruby*/ruby`"
 eval OPBB_INC="-I`dirname $OT_PREFIX/openbabel*/include/openbabel*/openbabel`"
 cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
 cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
 cd "libfminer/libbbrc">>$LOG 2>&1
-$GIT checkout development>>$LOG 2>&1
+$GIT checkout $FMINER_BRANCH>>$LOG 2>&1
 $GIT pull >>$LOG 2>&1
 cd - >>$LOG 2>&1
 cd "libfminer/liblast">>$LOG 2>&1
-$GIT checkout development>>$LOG 2>&1
+$GIT checkout $FMINER_BRANCH>>$LOG 2>&1
 $GIT pull >>$LOG 2>&1
 cd - >>$LOG 2>&1
 for mylib in bbrc last; do
@@ -80,7 +84,7 @@ cd "libfminer/liblast">>$LOG 2>&1
 cmd="make ruby" && run_cmd "$cmd" "Make LAST"
 cd - >>$LOG 2>&1
 cd "last-utils">>$LOG 2>&1
-$GIT checkout $OT_BRANCH>>$LOG 2>&1
+$GIT checkout $FMINER_BRANCH>>$LOG 2>&1
 $GIT pull >>$LOG 2>&1
 
 cd "$DIR"
