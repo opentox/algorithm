@@ -5,6 +5,7 @@ OpenTox Algorithm
 - Implements the OpenTox algorithm API for
     - fminer
     - lazar
+    - feature selection
 
 REST operations
 ---------------

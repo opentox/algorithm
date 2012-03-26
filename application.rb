@@ -1,35 +1,32 @@
-require 'rubygems'
-# AM LAST: can include both libs, no problems
-require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/bbrc') # has to be included before openbabel, otherwise we have strange SWIG overloading problems
-require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last') # has to be included before openbabel, otherwise we have strange SWIG overloading problems
-require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb') # AM LAST
-gem "opentox-ruby", "~> 3"
-require 'opentox-ruby'
+require 'opentox-server'
+require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/bbrc') # include before openbabel
+require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last') # 
+require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 
-#require 'smarts.rb'
-#require 'similarity.rb'
-require 'openbabel.rb'
-require 'fminer.rb'
-require 'lazar.rb'
-require 'feature_selection.rb'
+#require 'openbabel.rb'
+#require 'fminer.rb'
+#require 'lazar.rb'
+#require 'feature_selection.rb'
 
-set :lock, true
+module OpenTox
+  class Application < Service
+    helpers do
+      def uri_list 
+        uris = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full) ]
+        uris.compact.sort.join("\n") + "\n"
+      end 
+    end
 
-before do
-	LOGGER.debug "Request: " + request.path
-end
+    get '/?' do
+      case @accept
+      when 'text/uri-list'
+        response['Content-Type'] = 'text/uri-list'
+        uri_list
+      else
+        response['Content-Type'] = 'application/rdf+xml'
+        uri_list
+      end
+    end
 
-# Get a list of available algorithms
-#
-# @return [text/uri-list] algorithm URIs
-get '/?' do
-	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full) ].join("\n") + "\n"
-  case request.env['HTTP_ACCEPT']
-  when /text\/html/
-    content_type "text/html"
-    OpenTox.text_to_html list,@subjectid
-  else
-    content_type 'text/uri-list'
-    list
   end
 end
