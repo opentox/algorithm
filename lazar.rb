@@ -144,7 +144,7 @@ post '/lazar/?' do
       params[:subjectid] = @subjectid
       prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
       if prediction_feature.feature_type == "regression" && feature_generation_uri.match(/fminer/) 
-        params[:feature_type] = "paths"
+        params[:feature_type] = "paths" unless params[:feature_type]
       end
       feature_dataset_uri = OpenTox::Algorithm::Generic.new(feature_generation_uri).run(params, OpenTox::SubTask.new(task,10,70)).to_s
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
