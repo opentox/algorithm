@@ -121,8 +121,8 @@ echo
 [ -d $OT_CONFIG/config/$SELF ] || cmd="mkdir -p $OT_CONFIG/config/$SELF" && run_cmd "$cmd" "$SELF config directory"
 
 [ "`$RBENV local`" = "$RUBY_VER" ] || install_ruby
-[ -z `find $RUBY_DIR -name openbabel.so 2>/dev/null` ] && install_ob_ruby
-( [ -z `find libfminer/ -name bbrc.so 2>/dev/null` ] || [ -z `find libfminer/ -name last.so 2>/dev/null` ] ) && install_fminer
+[ -n `find $RUBY_DIR -name openbabel.so 2>/dev/null` ] || install_ob_ruby
+( [ -n `find libfminer/ -name bbrc.so 2>/dev/null` ] && [ -n `find libfminer/ -name last.so 2>/dev/null` ] ) || install_fminer
 
 echo
 install_bundler
