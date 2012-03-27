@@ -3,17 +3,11 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/b
 require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last') # 
 require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 
-#require 'openbabel.rb'
-#require 'fminer.rb'
-#require 'lazar.rb'
-#require 'feature_selection.rb'
-
 module OpenTox
   class Application < Service
     helpers do
       def uri_list 
-        uris = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full) ]
-        uris.compact.sort.join("\n") + "\n"
+        "Gesendet von localhost:8080, der die Ruby-Bindings von libbrc, liblast und openbabel erfolgreich geladen hat.\nUnd tschuess.\n"
       end 
     end
 
