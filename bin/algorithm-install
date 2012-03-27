@@ -64,6 +64,7 @@ install_ob_ruby() {
   SRC_DIR=$(dirname $(find $OT_PREFIX -name openbabel-ruby.cpp))
   [ -d "$SRC_DIR" ] || (echo "Sources not found." 1>&2 && exit 1)
   cd $SRC_DIR
+  cmd="$RBENV local $RUBY_VER" && run_cmd "$cmd" "Configure Ruby"
   sed -i 's/Init_OpenBabel/Init_openbabel/g' openbabel-ruby.cpp # apply fix
   RUBY=`which ruby`
   cmd="$RUBY extconf.rb --with-openbabel-include=../../include --with-openbabel-lib=../../src/.libs" && run_cmd "$cmd" "Extconf ruby bindings"
