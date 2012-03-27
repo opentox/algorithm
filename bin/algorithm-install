@@ -1,132 +1,48 @@
 #!/bin/sh
-#
-# Installs Opentox Webservices.
+
+# Installs Opentox Webservice.
 # Author: Christoph Helma, Andreas Maunz.
 
 SELF=$(basename $0 -install)
-OT_PREFIX="$HOME/opentox-ruby"
-OT_CONFIG="$HOME/.opentox"
-RUBY_VER="1.9.3-p125"
-RUBY_DWL="http://ftp.ruby-lang.org/pub/ruby/1.9"
-RUBY_DIR="$HOME/.rbenv/versions/$RUBY_VER"
-FMINER_BRANCH="development"
-
 [ "`id -u`" = "0" ] && echo "This script must be run as non-root." 1>&2 && exit 1
 
 # check wd is root of service
 DIR=`pwd`
 if echo $DIR | grep "algorithm/bin" >/dev/null 2>&1 ; then cd ..; fi
 
-# check main directories present
-([ -d $OT_PREFIX ] && [ -d $OT_CONFIG ]) || (echo "Main directories missing." 1>&2 && exit 1)
-[ -d $OT_PREFIX/opentox-server ] || (echo "Warning: opentox-server missing." 1>&2)
+# # # Boot the script
 
-# load main config
-! [ -f $OT_CONFIG/opentox-ui.sh ] && echo "Main config file missing." 1>&2 && exit 1 || . $OT_CONFIG/opentox-ui.sh 
-
-# check utils
-utils="git rbenv curl gem make"
-for u in $utils; do
-  eval `echo $u | tr "[:lower:]" "[:upper:]"`=`which $u` || (echo "'$u' missing. Install '$u' first." 1>&2 && exit 1)
-done
-
-# util functions
-run_cmd ()
-{
-  local cmd="$1"; local title="$2"
-  printf "%50s" "'$title'"
-  if ! eval $cmd >>$LOG 2>&1 ; then  
-    printf "%30s\n" "FAIL"
-    echo "Last 10 lines of log:"
-    tail -10 "$LOG"
-    exit 1
-  fi
-  printf "%30s\n" "DONE"
-}
-install_ruby() {
-  printf "\n%50s\n" "RUBY"
-  local DIR=`pwd`
-  if ! $RBENV versions $RUBY_VER | grep $RUBY_VER>/dev/null 2>&1; then
-    [ -d $DIR/tmp ] || mkdir -p $DIR/tmp && cd $DIR/tmp
-    ([ -d $DIR/tmp/ruby-$RUBY_VER ] || $CURL $RUBY_DWL/ruby-$RUBY_VER.tar.gz 2>/dev/null | tar xz) && cd ruby-$RUBY_VER
-    cmd="./configure --prefix=$RUBY_DIR" && run_cmd "$cmd" "Configure"
-    cmd="make -j2" && run_cmd "$cmd" "Make"
-    [ -d $RUBY_DIR ] && rm -rf $RUBY_DIR
-    cmd="make install" && run_cmd "$cmd" "Install"
-  fi
-  cd $DIR
-  cmd="$RBENV rehash" && run_cmd "$cmd" "rbenv rehash"
-  cmd="$RBENV local $RUBY_VER" && run_cmd "$cmd" "rbenv set ruby"
-}
-install_ob_ruby() {
-  printf "\n%50s\n" "OB RUBY BINDINGS"
-  local DIR=`pwd`
-  SRC_DIR=$(dirname $(find $OT_PREFIX -name openbabel-ruby.cpp))
-  [ -d "$SRC_DIR" ] || (echo "Sources not found." 1>&2 && exit 1)
-  cd $SRC_DIR
-  cmd="$RBENV local $RUBY_VER" && run_cmd "$cmd" "Configure Ruby"
-  sed -i 's/Init_OpenBabel/Init_openbabel/g' openbabel-ruby.cpp # apply fix
-  RUBY=`which ruby`
-  cmd="$RUBY extconf.rb --with-openbabel-include=../../include --with-openbabel-lib=../../src/.libs" && run_cmd "$cmd" "Extconf ruby bindings"
-  cmd="$MAKE" && run_cmd "$cmd" "Make OB ruby bindings"
-  cmd="$MAKE install" && run_cmd "$cmd" "Install OB ruby bindings"
-  cd $DIR
-  cmd="$RBENV rehash" && run_cmd "$cmd" "rbenv rehash"
-}
-install_fminer() {
-  printf "\n%50s\n" "FMINER"
-  local DIR=`pwd`
-  eval RUBY_INC="-I`dirname $RUBY_DIR/include/ruby*/*linux/ruby`\ -I`dirname $RUBY_DIR/include/ruby*/ruby`"
-  eval OPBB_INC="-I`dirname $OT_PREFIX/openbabel*/include/openbabel*/openbabel`"
-  cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
-  cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
-  cd "libfminer/libbbrc">>$LOG 2>&1
-  $GIT checkout $FMINER_BRANCH>>$LOG 2>&1
-  $GIT pull >>$LOG 2>&1
-  cd - >>$LOG 2>&1
-  cd "libfminer/liblast">>$LOG 2>&1
-  $GIT checkout $FMINER_BRANCH>>$LOG 2>&1
-  $GIT pull >>$LOG 2>&1
-  cd - >>$LOG 2>&1
-  for mylib in bbrc last; do
-    cmd="sed -i 's,^INCLUDE_OB.*,INCLUDE_OB\ =\ $OPBB_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (OB)"
-    cmd="sed -i 's,^INCLUDE_RB.*,INCLUDE_RB\ =\ $RUBY_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (RB)"
-  done
-  cd "libfminer/libbbrc">>$LOG 2>&1
-  cmd="make ruby" && run_cmd "$cmd" "Make BBRC"
-  cd - >>$LOG 2>&1
-  cd "libfminer/liblast">>$LOG 2>&1
-  cmd="make ruby" && run_cmd "$cmd" "Make LAST"
-  cd - >>$LOG 2>&1
-  cd "last-utils">>$LOG 2>&1
-  $GIT checkout $FMINER_BRANCH>>$LOG 2>&1
-  $GIT pull >>$LOG 2>&1
-  cd $DIR
-}
-install_bundler() {
-  $GEM list | grep bundler >/dev/null 2>&1 || (cmd="$GEM install bundler" && run_cmd "$cmd" "Install bundler")
-  cmd="$RBENV rehash" && run_cmd "$cmd" "rbenv rehash"
-  BUNDLER=`which bundle`
-  cmd="$BUNDLER install" && run_cmd "$cmd" "Bundle install"
-}
+# load base config, helper funs, environment
+OT_CONFIG_DIR="$HOME/.opentox"
+! [ -f "$OT_CONFIG_DIR/config/install/config.sh" ] && echo "config.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/config/install/config.sh
+! [ -f "$OT_PREFIX/install/utils.sh" ] && echo "utils.sh not found." 1>&2 && exit 1 || . $OT_PREFIX/install/utils.sh
+! [ -f $OT_CONFIG_DIR/opentox-ui.sh ] && echo "opentox-ui.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/opentox-ui.sh 
+RUBY_DIR="$HOME/.rbenv/versions/$RUBY_NUM_VER"
 
 
 # # # Install
 
 LOG="$OT_PREFIX/tmp/`basename $0`.log"
+check_utils "rbenv find"
 echo
 echo "Installation ('$LOG'):"
 echo
 
-[ -d $OT_CONFIG/log ] || cmd="mkdir -p $OT_CONFIG/log" && run_cmd "$cmd" "Main log directory"
-[ -d $OT_CONFIG/config/$SELF ] || cmd="mkdir -p $OT_CONFIG/config/$SELF" && run_cmd "$cmd" "$SELF config directory"
+if [ "$OT_BRANCH" = "development" ]; then
+  cmd="test -d $OT_PREFIX/opentox-server" && run_cmd "$cmd" "opentox-server"
+  cmd="test -d $OT_PREFIX/opentox-client" && run_cmd "$cmd" "opentox-client"
+fi
 
-[ "`$RBENV local 2>/dev/null`" = "$RUBY_VER" ] || install_ruby
-[ -n "`find $RUBY_DIR -name openbabel.so 2>/dev/null`" ] || install_ob_ruby
-( [ -n "`find libfminer/ -name bbrc.so 2>/dev/null`" ] && [ -n "`find libfminer/ -name last.so 2>/dev/null`" ] ) || install_fminer
+
+# log directory for this service
+[ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "$SELF config directory"
+
+[ "`$RBENV local 2>/dev/null`" = "$RUBY_NUM_VER" ] || install_ruby
+[ -n "`$FIND $RUBY_DIR -name openbabel.so 2>/dev/null`" ] || install_ob_ruby
+( [ -n "`$FIND libfminer/ -name bbrc.so 2>/dev/null`" ] && [ -n "`$FIND libfminer/ -name last.so 2>/dev/null`" ] ) || . ./bin/fminer-install
 
 echo
-install_bundler
+install_with_bundler
 
 # return to wd
 cd "$DIR"

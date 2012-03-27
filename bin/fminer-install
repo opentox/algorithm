@@ -1,0 +1,53 @@
+#!/bin/sh
+
+# Install Fminer
+# Author: Andreas Maunz
+
+[ "`id -u`" = "0" ] && echo "This script must be run as non-root." 1>&2 && exit 1
+
+# check wd is root of service
+DIR=`pwd`
+if echo $DIR | grep "algorithm/bin" >/dev/null 2>&1 ; then cd ..; fi
+
+# load base config, helper funs, environment
+OT_CONFIG_DIR="$HOME/.opentox"
+! [ -f "$OT_CONFIG_DIR/config/install/config.sh" ] && echo "config.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/config/install/config.sh
+! [ -f "$OT_PREFIX/install/utils.sh" ] && echo "utils.sh not found." 1>&2 && exit 1 || . $OT_PREFIX/install/utils.sh
+! [ -f $OT_CONFIG_DIR/opentox-ui.sh ] && echo "opentox-ui.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/opentox-ui.sh 
+
+if [ -z "$LOG"]; then
+  LOG="$OT_PREFIX/tmp/`basename $0`.log"
+  echo
+  echo "Installation ('$LOG'):"
+  echo
+fi
+
+check_utils "git make sed"
+printf "\n%50s\n" "FMINER"
+local DIR=`pwd`
+eval RUBY_INC="-I`dirname $RUBY_DIR/include/ruby*/*linux/ruby`\ -I`dirname $RUBY_DIR/include/ruby*/ruby`"
+eval OPBB_INC="-I`dirname $OT_PREFIX/openbabel*/include/openbabel*/openbabel`"
+cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
+cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
+cd "libfminer/libbbrc">>$LOG 2>&1
+$GIT checkout $FMINER_BRANCH>>$LOG 2>&1
+$GIT pull >>$LOG 2>&1
+cd - >>$LOG 2>&1
+cd "libfminer/liblast">>$LOG 2>&1
+$GIT checkout $FMINER_BRANCH>>$LOG 2>&1
+$GIT pull >>$LOG 2>&1
+cd - >>$LOG 2>&1
+for mylib in bbrc last; do
+  cmd="$SED -i 's,^INCLUDE_OB.*,INCLUDE_OB\ =\ $OPBB_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (OB)"
+  cmd="$SED -i 's,^INCLUDE_RB.*,INCLUDE_RB\ =\ $RUBY_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (RB)"
+done
+cd "libfminer/libbbrc">>$LOG 2>&1
+cmd="$MAKE ruby" && run_cmd "$cmd" "Make BBRC"
+cd - >>$LOG 2>&1
+cd "libfminer/liblast">>$LOG 2>&1
+cmd="$MAKE ruby" && run_cmd "$cmd" "Make LAST"
+cd - >>$LOG 2>&1
+cd "last-utils">>$LOG 2>&1
+$GIT checkout $OT_BRANCH>>$LOG 2>&1
+$GIT pull >>$LOG 2>&1
+cd $DIR
