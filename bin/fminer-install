@@ -15,7 +15,7 @@ OT_CONFIG_DIR="$HOME/.opentox"
 ! [ -f "$OT_PREFIX/install/utils.sh" ] && echo "utils.sh not found." 1>&2 && exit 1 || . $OT_PREFIX/install/utils.sh
 ! [ -f $OT_CONFIG_DIR/opentox-ui.sh ] && echo "opentox-ui.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/opentox-ui.sh 
 
-if [ -z "$LOG"]; then
+if [ -z "$LOG" ]; then
   LOG="$OT_PREFIX/tmp/`basename $0`.log"
   echo
   echo "Installation ('$LOG'):"

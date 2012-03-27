@@ -29,13 +29,13 @@ echo "Installation ('$LOG'):"
 echo
 
 if [ "$OT_BRANCH" = "development" ]; then
-  cmd="test -d $OT_PREFIX/opentox-server" && run_cmd "$cmd" "opentox-server"
-  cmd="test -d $OT_PREFIX/opentox-client" && run_cmd "$cmd" "opentox-client"
+  cmd="test -d $OT_PREFIX/opentox-server" && run_cmd "$cmd" "Opentox-server"
+  cmd="test -d $OT_PREFIX/opentox-client" && run_cmd "$cmd" "Opentox-client"
 fi
 
 
 # log directory for this service
-[ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "$SELF config directory"
+[ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
 
 [ "`$RBENV local 2>/dev/null`" = "$RUBY_NUM_VER" ] || install_ruby
 [ -n "`$FIND $RUBY_DIR -name openbabel.so 2>/dev/null`" ] || install_ob_ruby
