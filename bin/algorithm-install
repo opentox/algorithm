@@ -51,5 +51,17 @@ fi
 echo
 install_with_bundler
 
+echo
+echo "Installation finished."
+echo
+echo "IMPORTANT: How to configure your system:"
+echo "IMPORTANT: a) Include '$OT_UI_CONF' in shell startup (e.g. ~/.bashrc)."
+echo "IMPORTANT: b) Manually source '$OT_UI_CONF' every time."
+echo "IMPORTANT: The command in both cases: '. $OT_UI_CONF'"
+echo "IMPORTANT: NOW would be the best time to configure!"
+echo
+echo "Thank you for your attention."
+echo
+
 # return to wd
 cd "$DIR"

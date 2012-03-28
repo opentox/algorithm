@@ -26,7 +26,7 @@ check_utils "git make sed"
 printf "\n%50s\n" "FMINER"
 local DIR=`pwd`
 eval RUBY_INC="-I`dirname $RUBY_DIR/include/ruby*/*linux/ruby`\ -I`dirname $RUBY_DIR/include/ruby*/ruby`"
-eval OPBB_INC="-I`dirname $OT_PREFIX/openbabel*/include/openbabel*/openbabel`"
+eval OPBB_INC="-I/usr/include/openbabel-2.0"
 cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
 cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
 cd "libfminer/libbbrc">>$LOG 2>&1
