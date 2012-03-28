@@ -46,7 +46,6 @@ fi
 [ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
 
 [ "`$RBENV local 2>/dev/null`" = "$RUBY_NUM_VER" ] || install_ruby
-[ -n "`$FIND $RUBY_DIR -name openbabel.so 2>/dev/null`" ] || install_ob_ruby
 ( [ -n "`$FIND libfminer/ -name bbrc.so 2>/dev/null`" ] && [ -n "`$FIND libfminer/ -name last.so 2>/dev/null`" ] ) || . ./bin/fminer-install
 
 echo

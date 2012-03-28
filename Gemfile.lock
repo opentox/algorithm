@@ -50,6 +50,7 @@ GEM
       faraday (~> 0.7)
       multi_json (~> 1.0)
     open4 (1.3.0)
+    openbabel (2.3.1)
     rack (1.4.1)
     rack-contrib (1.1.0)
       rack (>= 0.9.1)
@@ -99,5 +100,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  openbabel (= 2.3.1)
   opentox-client!
   opentox-server!
