@@ -7,7 +7,7 @@ module OpenTox
   class Application < Service
     helpers do
       def uri_list 
-        "Gesendet von localhost:8080, der die Ruby-Bindings von libbrc, liblast und openbabel erfolgreich geladen hat.\nUnd tschuess.\n"
+        "I have loaded native extensions for libbrc, liblast and openbabel right now!.\n\n My load path is: #{$LOAD_PATH} \n\nI have loaded #{$LOADED_FEATURES.size} objects.\n"
       end 
     end
 
