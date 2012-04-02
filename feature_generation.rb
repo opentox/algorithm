@@ -6,7 +6,7 @@ algorithm = OpenTox::Algorithm::Generic.new(url_for('/pcdesc',:full))
   algorithm.metadata = {
     DC.title => 'Physico-chemical (PC) descriptor calculation',
     DC.creator => "andreas@maunz.de, vorgrimmlerdavid@gmx.de",
-    RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
+    RDF.type => [OT.Algorithm,OTA.DescriptorCalculation],
     OT.parameters => [
       { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
       { DC.description => "PC type", OT.paramScope => "mandatory", DC.title => "pc_type" },

@@ -16,13 +16,12 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/l
 require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb') # AM LAST
 gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
+require 'rjb'
 
-#require 'smarts.rb'
-#require 'similarity.rb'
-require 'openbabel.rb'
 require 'fminer.rb'
 require 'lazar.rb'
-require 'feature_selection.rb'
+require 'fs.rb'
+require 'pc.rb'
 
 set :lock, true
 
@@ -34,7 +33,7 @@ end
 #
 # @return [text/uri-list] algorithm URIs
 get '/?' do
-	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full) ].join("\n") + "\n"
+	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full), url_for('/pc', :full) ].join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
   when /text\/html/
     content_type "text/html"
