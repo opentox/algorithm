@@ -1,6 +1,6 @@
-# Get list of feature_selection algorithms
+# Get list of feature selection algorithms
 #
-# @return [text/uri-list] URIs of feature_selection algorithms
+# @return [text/uri-list] URIs of feature selection algorithms
 get '/feature_selection/?' do
   list = [ url_for('/feature_selection/rfe', :full) ].join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
