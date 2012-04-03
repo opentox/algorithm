@@ -1,7 +1,11 @@
+# fs.rb
+# Feature Selection
+# Author: Andreas Maunz
+
+
 # Get list of feature selection algorithms
-#
 # @return [text/uri-list] URIs of feature selection algorithms
-get '/feature_selection/?' do
+get '/fs/?' do
   list = [ url_for('/feature_selection/rfe', :full) ].join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
   when /text\/html/
@@ -13,9 +17,9 @@ get '/feature_selection/?' do
   end
 end
 
-# Get RDF/XML representation of feature_selection rfe algorithm
-# @return [application/rdf+xml] OWL-DL representation of feature_selection rfe algorithm
-get "/feature_selection/rfe/?" do
+# Get representation of recursive feature elimination algorithm
+# @return [application/rdf+xml] OWL-DL representation of recursive feature elimination algorithm
+get "/fs/rfe/?" do
   algorithm = OpenTox::Algorithm::Generic.new(url_for('/feature_selection/rfe',:full))
   algorithm.metadata = {
     DC.title => 'recursive feature elimination',
@@ -44,9 +48,9 @@ get "/feature_selection/rfe/?" do
 end
 
 # Run rfe algorithm on dataset
-#
 # @param [String] dataset_uri URI of the training dataset
-# @param [String] feature_dataset_uri URI of the feature dataset
+# @param [String] prediction_feature URI
+# @param [String] feature_dataset_uri URI
 # @return [text/uri-list] Task URI
 post '/feature_selection/rfe/?' do 
 

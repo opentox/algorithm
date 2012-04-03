@@ -3,8 +3,8 @@
 # Author: Andreas Maunz
 
 
-# Get a list of pc algorithms
-# @return [text/uri-list] URIs of algorithms
+# Get a list of descriptor calculation algorithms
+# @return [text/uri-list] URIs of descriptor calculation algorithms
 get '/pc' do
   algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
   response['Content-Type'] = 'text/uri-list'
@@ -19,8 +19,8 @@ get '/pc' do
   end
 end
 
-# Get RDF/XML representation of OpenBabel algorithm
-# @return [application/rdf+xml] OWL-DL representation of OpenBabel algorithm
+# Get representation of descriptor calculation algorithm
+# @return [application/rdf+xml] OWL-DL representation of descriptor calculation algorithm
 get '/pc/:descriptor' do
   descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
   alg_params = [ { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" } ]
@@ -65,9 +65,10 @@ get '/pc/:descriptor' do
   end
 end
 
-# Run pc descriptor calculation algorithm on dataset
-#
+# Run pc descriptor calculation algorithm on dataset for a set of descriptors. Can be constrained to types and libraries.
 # @param [String] dataset_uri URI of the training dataset
+# @param optional [String] pc_type Physico-chemical descriptor type to generate, see TODO
+# @param optional [String] lib Library to use, see TODO
 # @return [text/uri-list] Task URI
 post '/pc' do
   response['Content-Type'] = 'text/uri-list'
@@ -87,7 +88,7 @@ post '/pc' do
   halt 202,task.uri.to_s+"\n"
 end
 
-# Run pc descriptor calculation algorithm on dataset
+# Run pc descriptor calculation algorithm on dataset for a specific descriptor.
 #
 # @param [String] dataset_uri URI of the training dataset
 # @return [text/uri-list] Task URI

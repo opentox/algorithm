@@ -1,3 +1,4 @@
+# Java Klimbim
 ENV["JAVA_HOME"] = "/usr/lib/jvm/java-6-sun" unless ENV["JAVA_HOME"]
 ENV["JOELIB2"] = File.join File.expand_path(File.dirname(__FILE__)),"java"
 deps = []
@@ -8,16 +9,20 @@ jars = Dir[ENV["JOELIB2"]+"/*.jar"].collect {|f| File.expand_path(f) }
 deps = deps + jars
 ENV["CLASSPATH"] = deps.join(":")
 
-
 require 'rubygems'
-# AM LAST: can include both libs, no problems
-require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/bbrc') # has to be included before openbabel, otherwise we have strange SWIG overloading problems
-require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last') # has to be included before openbabel, otherwise we have strange SWIG overloading problems
-require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb') # AM LAST
+
+
+# fminer libs to be included before openbabel, otherwise strange SWIG overloading problems
+require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/bbrc') 
+require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last')
+require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
+
 gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'rjb'
 
+
+# main
 require 'fminer.rb'
 require 'lazar.rb'
 require 'fs.rb'
