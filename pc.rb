@@ -3,12 +3,12 @@
 # Author: Andreas Maunz
 
 
-# Get a list of OpenBabel algorithms
-# @return [text/uri-list] URIs of OpenBabel algorithms
+# Get a list of pc algorithms
+# @return [text/uri-list] URIs of algorithms
 get '/pc' do
   algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
   response['Content-Type'] = 'text/uri-list'
-  list = (algorithms.keys << "AllDescriptors").join("\n") + "\n"
+  list = (algorithms.keys.sort << "AllDescriptors").collect { |name| url_for("/pc/#{name}",:full) }.join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
   when /text\/html/
     content_type "text/html"
@@ -28,7 +28,7 @@ get '/pc/:descriptor' do
   if params[:descriptor] != "AllDescriptors"
     descriptors = descriptors[params[:descriptor]]
   else
-    alg_params << { DC.description => "Descriptor Category, one or more of '#{descriptors.collect { |id, info| info[:category] }.uniq.sort.join(",")}'", OT.paramScope => "optional", DC.title => "category" }
+    alg_params << { DC.description => "Physico-chemical type, one or more of '#{descriptors.collect { |id, info| info[:pc_type] }.uniq.sort.join(",")}'", OT.paramScope => "optional", DC.title => "pc_type" }
     alg_params << { DC.description => "Software Library, one or more of '#{descriptors.collect { |id, info| info[:lib] }.uniq.sort.join(",")}'", OT.paramScope => "optional", DC.title => "lib" }
     descriptors = {:id => "AllDescriptors", :name => "All PC descriptors" }
   end
@@ -44,7 +44,7 @@ get '/pc/:descriptor' do
       RDF.type => [OTA.DescriptorCalculation],
     }
     algorithm.metadata[OT.parameters] = alg_params
-    algorithm.metadata[DC.description] << (", category: " + descriptors[:category]) unless descriptors[:id] == "AllDescriptors"
+    algorithm.metadata[DC.description] << (", pc_type: " + descriptors[:pc_type]) unless descriptors[:id] == "AllDescriptors"
     algorithm.metadata[DC.description] << (", lib: " + descriptors[:lib]) unless descriptors[:id] == "AllDescriptors"
 
     # Deliver
@@ -63,5 +63,49 @@ get '/pc/:descriptor' do
   else
     raise OpenTox::NotFoundError.new "Unknown descriptor #{params[:descriptor]}."
   end
+end
+
+# Run pc descriptor calculation algorithm on dataset
+#
+# @param [String] dataset_uri URI of the training dataset
+# @return [text/uri-list] Task URI
+post '/pc' do
+  response['Content-Type'] = 'text/uri-list'
+  raise OpenTox::NotFoundError.new "Parameter 'dataset_uri' missing." unless params[:dataset_uri]
+
+  descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
+  params[:pc_type] = descriptors.collect { |id,info| info[:pc_type]}.uniq.sort.join(',')  unless params[:pc_type]
+
+  task = OpenTox::Task.create("PC descriptor calculation for dataset ", @uri) do |task|
+    Rjb.load(nil,["-Xmx64m"]) # start vm
+    byteArray = Rjb::import('java.io.ByteArrayOutputStream'); printStream = Rjb::import('java.io.PrintStream'); 
+    out = byteArray.new() ; Rjb::import('java.lang.System').out = printStream.new(out) # joelib is too verbose
+    s = Rjb::import('JoelibFc') # import main class
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :rjb => s, :task => task, :lib => params[:lib] } )
+  end
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
+  halt 202,task.uri.to_s+"\n"
+end
+
+# Run pc descriptor calculation algorithm on dataset
+#
+# @param [String] dataset_uri URI of the training dataset
+# @return [text/uri-list] Task URI
+post '/pc/:descriptor' do
+  response['Content-Type'] = 'text/uri-list'
+  raise OpenTox::NotFoundError.new "Parameter 'dataset_uri' missing." unless params[:dataset_uri]
+
+  descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
+  params[:pc_type] = descriptors.collect { |id,info| info[:pc_type]}.uniq.sort.join(',')
+
+  task = OpenTox::Task.create("PC descriptor calculation for dataset ", @uri) do |task|
+    Rjb.load(nil,["-Xmx64m"]) # start vm
+    byteArray = Rjb::import('java.io.ByteArrayOutputStream'); printStream = Rjb::import('java.io.PrintStream'); 
+    out = byteArray.new() ; Rjb::import('java.lang.System').out = printStream.new(out) # joelib is too verbose
+    s = Rjb::import('JoelibFc') # import main class
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :descriptor => params[:descriptor], :rjb => s, :task => task } )
+  end
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
+  halt 202,task.uri.to_s+"\n"
 end
 
