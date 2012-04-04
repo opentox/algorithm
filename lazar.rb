@@ -108,7 +108,8 @@ post '/lazar/?' do
     propositionalized = (lazar.prediction_algorithm=="Neighbors.weighted_majority_vote" ? false : true)
    
     # PC type
-    pc_type = params[:pc_type] unless params[:pc_type].nil?
+    pc_type = params[:pc_type] if params[:pc_type]
+    lib = params[:lib] if params[:lib]
 
     # Min train performance
     min_train_performance = params[:min_train_performance].to_f if params[:min_train_performance]
@@ -136,6 +137,7 @@ post '/lazar/?' do
         lazar.similarity_algorithm = "Similarity.cosine"
         min_sim = 0.4 unless params[:min_sim]
         raise OpenTox::NotFoundError.new "No pc_type parameter." unless params[:pc_type]
+        raise OpenTox::NotFoundError.new "No lib parameter." unless params[:lib]
       end
 
     # Create Features
@@ -241,6 +243,7 @@ post '/lazar/?' do
       {DC.title => "feature_generation_uri", OT.paramValue => feature_generation_uri},
       {DC.title => "propositionalized", OT.paramValue => propositionalized},
       {DC.title => "pc_type", OT.paramValue => pc_type},
+      {DC.title => "lib", OT.paramValue => lib},
       {DC.title => "nr_hits", OT.paramValue => nr_hits},
       {DC.title => "min_sim", OT.paramValue => min_sim},
       {DC.title => "min_train_performance", OT.paramValue => min_train_performance},
