@@ -70,7 +70,7 @@ end
 # @param optional [String] pc_type Physico-chemical descriptor type to generate, see TODO
 # @param optional [String] lib Library to use, see TODO
 # @return [text/uri-list] Task URI
-post '/pc' do
+post '/pc/AllDescriptors' do
   response['Content-Type'] = 'text/uri-list'
   raise OpenTox::NotFoundError.new "Parameter 'dataset_uri' missing." unless params[:dataset_uri]
 
