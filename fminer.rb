@@ -139,9 +139,7 @@ post '/fminer/bbrc/?' do
     else
       raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
         "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
-      @training_classes = fminer.training_dataset.accept_values(fminer.prediction_feature.uri).sort
-      @value_map=Hash.new
-      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
+      @value_map=fminer.training_dataset.value_map(fminer.prediction_feature.uri)
     end
     @@bbrc.SetMinfreq(fminer.minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -270,9 +268,7 @@ post '/fminer/last/?' do
     else
       raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
         "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
-      @training_classes = fminer.training_dataset.accept_values(fminer.prediction_feature.uri).sort
-      @value_map=Hash.new
-      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
+      @value_map=fminer.training_dataset.value_map(fminer.prediction_feature.uri)
     end
     @@last.SetMinfreq(fminer.minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
