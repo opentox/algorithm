@@ -59,32 +59,41 @@ post '/feature_selection/rfe/?' do
   raise OpenTox::NotFoundError.new "Please submit a feature_dataset_uri." unless params[:feature_dataset_uri]
 
   ds_csv=OpenTox::RestClientWrapper.get( params[:dataset_uri], {:accept => "text/csv"} )
-  tf_ds=Tempfile.open(['rfe_', '.csv'])
-  tf_ds.puts(ds_csv)
-  tf_ds.flush()
+  ds=Tempfile.open(['rfe_', '.csv'])
+  ds.puts(ds_csv)
+  ds.flush()
 
-  prediction_feature = params[:prediction_feature_uri].split('/').last # get col name
+  prediction_feature = URI.escape(params[:prediction_feature_uri].split('/').last) # get col name
   
+  fds_features = OpenTox::Dataset.new(params[:feature_dataset_uri]).load_features
   fds_csv=OpenTox::RestClientWrapper.get( params[:feature_dataset_uri], {:accept => "text/csv"})
-  tf_fds=Tempfile.open(['rfe_', '.csv'])
-  tf_fds.puts(fds_csv)
-  tf_fds.flush()
+  fds=Tempfile.open(['rfe_', '.csv'])
+  fds.puts(fds_csv)
+  fds.flush()
 
   del_missing = params[:del_missing] == "true" ? true : false
 
   task = OpenTox::Task.create("Recursive Feature Elimination", url_for('/feature_selection',:full)) do |task|
-    r_result_file = OpenTox::Algorithm::FeatureSelection.rfe( { :ds_csv_file => tf_ds.path, :prediction_feature => prediction_feature, :fds_csv_file => tf_fds.path, :del_missing => del_missing } )
+    r_result_file = OpenTox::Algorithm::FeatureSelection.rfe( { :ds_csv_file => ds.path, :prediction_feature => prediction_feature, :fds_csv_file => fds.path, :del_missing => del_missing } )
     
-    parser = OpenTox::Parser::Spreadsheets.new
-    ds = OpenTox::Dataset.new
-    ds.save
-    parser.dataset = ds
-    ds = parser.load_csv(File.open(r_result_file).read,false,true)
-    ds.save    
-    r_result_uri = ds.uri
-    #r_result_uri = OpenTox::Dataset.create_from_csv_file(r_result_file).uri
+    
+    # # # Upload dataset
+    ds = OpenTox::Dataset.find ( 
+      OpenTox::RestClientWrapper.post(
+        File.join(CONFIG[:services]["opentox-dataset"]), File.open(r_result_file).read, {:content_type => "text/csv"}
+      )
+    ) 
+    ds.features.each { |id,info| # rewrite features
+      fds_features.each { |fid,finfo|
+        if ( (fid.split('/').last == id.split('/').last) && (finfo[DC.title] == info[DC.title]) )
+          ds.features[id] = finfo
+          break
+        end
+      }
+    }
+    r_result_uri = ds.save
     begin
-      tf_ds.close!; tf_fds.close! 
+      ds.close!; fds.close! 
       File.unlink(r_result_file)
     rescue
     end
