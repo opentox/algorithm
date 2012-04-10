@@ -59,7 +59,7 @@ post '/feature_selection/rfe/?' do
   tf_ds.puts(ds_csv)
   tf_ds.flush()
 
-  prediction_feature = params[:prediction_feature_uri].split('/').last # get col name
+  prediction_feature = URI.escape(params[:prediction_feature_uri].split('/').last) # get col name
   
   fds_csv=OpenTox::RestClientWrapper.get( params[:feature_dataset_uri], {:accept => "text/csv"})
   tf_fds=Tempfile.open(['rfe_', '.csv'])
