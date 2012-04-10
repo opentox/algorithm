@@ -76,7 +76,6 @@ post '/lazar/?' do
       @training_classes = training_activities.accept_values(prediction_feature.uri).sort
       @training_classes.each_with_index { |c,i|
         lazar.value_map[i+1] = c # don't use '0': we must take the weighted mean later.
-        params[:value_map] = lazar.value_map
       }
     # Regression: SVM, Substructure.match_hits
     elsif  prediction_feature.feature_type == "regression"

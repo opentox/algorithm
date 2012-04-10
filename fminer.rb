@@ -167,7 +167,7 @@ post '/fminer/bbrc/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@bbrc, params, @value_map)
+    fminer.add_fminer_data(@@bbrc, @value_map)
 
     g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=g_array.to_scale.median
@@ -298,7 +298,7 @@ post '/fminer/last/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@last, params, @value_map)
+    fminer.add_fminer_data(@@last, @value_map)
 
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
