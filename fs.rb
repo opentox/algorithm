@@ -29,7 +29,7 @@ get "/fs/rfe/?" do
     RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
     OT.parameters => [
       { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-      { DC.description => "Prediction Feature URI", OT.paramScope => "mandatory", DC.title => "prediction_feature_uri" },
+      { DC.description => "Prediction Feature URI", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
       { DC.description => "Feature Dataset URI", OT.paramScope => "mandatory", DC.title => "feature_dataset_uri" },
       { DC.description => "Delete Instances with missing values", OT.paramScope => "optional", DC.title => "del_missing" }
   ]
@@ -55,7 +55,7 @@ end
 post '/feature_selection/rfe/?' do 
 
   raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri]
-  raise OpenTox::NotFoundError.new "Please submit a prediction_feature_uri." unless params[:prediction_feature_uri]
+  raise OpenTox::NotFoundError.new "Please submit a prediction_feature_uri." unless params[:prediction_feature]
   raise OpenTox::NotFoundError.new "Please submit a feature_dataset_uri." unless params[:feature_dataset_uri]
 
   ds_csv=OpenTox::RestClientWrapper.get( params[:dataset_uri], {:accept => "text/csv"} )
@@ -63,7 +63,7 @@ post '/feature_selection/rfe/?' do
   ds.puts(ds_csv)
   ds.flush()
 
-  prediction_feature = URI.escape(params[:prediction_feature_uri].split('/').last) # get col name
+  prediction_feature = URI.escape(params[:prediction_feature].split('/').last) # get col name
   
   fds_features = OpenTox::Dataset.new(params[:feature_dataset_uri]).load_features
   fds_csv=OpenTox::RestClientWrapper.get( params[:feature_dataset_uri], {:accept => "text/csv"})

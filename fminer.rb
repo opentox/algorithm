@@ -39,6 +39,7 @@ get "/fminer/bbrc/?" do
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
       { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
       { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
+      { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -69,7 +70,7 @@ get "/fminer/last/?" do
       { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
       { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-      { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
+      { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -253,7 +254,6 @@ end
 # @param [optional] parameters LAST parameters, accepted parameters are
 #   - min_frequency freq  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
-#   - hops Maximum number of hops
 #   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
@@ -272,7 +272,6 @@ post '/fminer/last/?' do
     end
     @@last.SetMinfreq(fminer.minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
-    @@last.SetMaxHops(params[:hops]) if params[:hops]
     @@last.SetConsoleOut(false)
 
 

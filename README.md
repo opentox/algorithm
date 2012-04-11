@@ -3,60 +3,81 @@ OpenTox Algorithm
 
 - An [OpenTox](http://www.opentox.org) REST Webservice
 - Implements the OpenTox algorithm API for
-    - fminer
     - lazar
+    - subgraph descriptor calculation (fminer)
+    - physico-chemical descriptor calculation (pc) for more than 300 descriptors
+    - feature selection (fs) using recursive feature elimination (rfe)
 
 REST operations
 ---------------
 
-    Get a list of all algorithms  GET   /                       -  URIs of algorithms                    200
-    Get a representation of the   GET   /fminer/                -  fminer representation                 200,404
-     fminer algorithms
-    Get a representation of the   GET   /fminer/bbrc            -  bbrc representation                   200,404
-    bbrc algorithm
-    Get a representation of the   GET   /fminer/last            -  last representation                   200,404
-     last algorithm
-    Get a representation of the   GET   /lazar                  -  lazar representation                  200,404
-     lazar algorithm
-    Get a representation of the   GET   /feature_selection      -  feature selection representation      200,404
-     feature selection algorithms
-    Get a representation of the   GET   /feature_selection/rfe  -  rfe representation                    200,404
-     rfe algorithm
+DESCRIPTION                  REST  ADDRESS           ARGUMENTS                      RETURN                    CODES
 
+Get a representation of the  GET   /lazar            -                              lazar representation      200,404
+lazar algorithm
 
-    Create bbrc features          POST  /fminer/bbrc            dataset_uri,                URI for feature dataset   200,400,404,500
-                                                                feature_uri,
-                                                                [min_frequency=5 per-mil],
-                                                                [feature_type=trees],
-                                                                [backbone=true],
-                                                                [min_chisq_significance=0.95],
-                                                                [nr_hits=false]
-    Create last features          POST  /fminer/last            dataset_uri,                URI for feature dataset   200,400,404,500
-                                                                feature_uri,
-                                                                [min_frequency=8 %],
-                                                                [feature_type=trees],
-                                                                [nr_hits=false]
-    Create lazar model            POST  /lazar                  dataset_uri,                URI for lazar model       200,400,404,500
-                                                                [prediction_feature],
-                                                                [feature_generation_uri],
-                                                                [prediction_algorithm],
-                                                                [feature_dataset_uri],
-                                                                [pc_type=null],
-                                                                [nr_hits=false (class. using wt. maj. vote), true (else)],
-                                                                [min_sim=0.3 (nominal), 0.4 (numeric features)]
-                                                                [min_train_performance=0.1]
+Get a list of all algorithms GET   /                 -                              URIs of algorithms        200
+Get a representation of the  GET   /fminer/          -                              fminer representation     200,404
+fminer algorithms
+Get a representation of the  GET   /fminer/bbrc      -                              bbrc representation       200,404
+bbrc algorithm
+Get a representation of the  GET   /fminer/last      -                              last representation       200,404
+last algorithm
 
-    Create selected features      POST /feature_selection/rfe   dataset_uri,                URI for dataset 200,400,404,500
-                                                                prediction_feature,
-                                                                feature_dataset_uri,
-                                                                [del_missing=false]
+Get a representation of the  GET   /pc               -                              URIs of algorithms        200,404
+pc algorithms
+Get a representation of the  GET   /pc/<name>        -                              descriptor representation 200,404
+pc algorithm <name>
 
+Get a representation of the  GET   /fs               -                              fs representation         200,404
+fs algorithms
+Get a representation of the  GET   /fs/rfe           -                              rfe representation        200,404
+rfe algorithm
 
+Create lazar model           POST  /lazar            dataset_uri,                   URI for lazar model       200,400,404,500
+                                                     [prediction_feature],
+                                                     [feature_generation_uri],
+                                                     [feature_dataset_uri],
+                                                     [prediction_algorithm],
+                                                     [pc_type=null],
+                                                     [lib=null],
+                                                     [nr_hits=false (cl.wmv), 
+                                                       true (else)],
+                                                     [min_sim=0.3 (nominal), 0.4 
+                                                       (numeric features)],
+                                                     [min_train_performance=0.1]
+
+Create bbrc features         POST  /fminer/bbrc      dataset_uri,                   URI for feature dataset   200,400,404,500
+                                                     prediction_feature,
+                                                     [min_frequency=5 per-mil],
+                                                     [feature_type=trees],
+                                                     [backbone=true],
+                                                     [min_chisq_significance=0.95],
+                                                     [nr_hits=false]
+Create last features         POST  /fminer/last      dataset_uri,                   URI for feature dataset   200,400,404,500
+                                                     prediction_feature,
+                                                     [min_frequency=8 %],
+                                                     [feature_type=trees],
+                                                     [nr_hits=false]
+
+Create features              POST /pc/AllDescriptors dataset_uri,                   URI for dataset           200,400,404,500
+                                                     [pc_type=constitutional,
+                                                     topological,geometrical,
+                                                     electronic,cpsa,hybrid],
+                                                     [lib=cdk,joelib,openbabel]
+
+Create feature               POST /pc/<name>         dataset_uri                    URI for dataset           200,400,404,500
+
+Select features              POST /fs/rfe            dataset_uri,                   URI for dataset           200,400,404,500
+                                                     prediction_feature,
+                                                     feature_dataset_uri,
+                                                     [del_missing=false]
 Synopsis
 --------
 
 - prediction\_algorithm: One of "weighted\_majority\_vote" (default for classification),  "local\_svm\_classification", "local\_svm\_regression" (default for regression). "weighted\_majority\_vote"  is not applicable for regression.
-- pc_type: Mandatory for feature dataset, one of [geometrical, topological, electronic, constitutional, hybrid, cpsa].
+- pc_type: Mandatory for feature datasets that do not contain appropriate feature metadata, one of [geometrical, topological, electronic, constitutional, hybrid, cpsa].
+- lib: Mandatory for feature datasets that do not contain appropriate feature metadata, one of [cdk, openbabel, joelib].
 - nr_hits: Whether nominal features should be instantiated with their occurrence counts in the instances. One of "true", "false". 
 - min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1].
 - min_train_performance. The minimum training performance for "local\_svm\_classification" (Accuracy) and "local\_svm\_regression" (R-squared). Numeric value in [0,1].
@@ -124,7 +145,13 @@ Creates a standard Lazar model.
 
 * * *
 
-### Create a feature dataset of selected features
-    curl -X POST -d dataset_uri={dataset_uri} -d prediction_feature_uri={prediction_feature_uri} -d feature_dataset_uri={feature_dataset_uri} -d del_missing=true http://webservices.in-silico.ch/test/algorithm/feature_selection/rfe
+### Create a feature dataset of physico-chemical descriptors with CDK
+    curl -X POST -d dataset_uri={dataset_uri} -d lib=cdk http://webservices.in-silico.ch/test/algorithm/pc/AllDescriptors
+
+* * *
+
+### Select features from a feature dataset
+    curl -X POST -d dataset_uri={dataset_uri} -d prediction_feature_uri={prediction_feature_uri} -d feature_dataset_uri={feature_dataset_uri} http://webservices.in-silico.ch/test/algorithm/fs/rfe
+
 
 Copyright (c) 2009-2011 Christoph Helma, Martin Guetlein, Micha Rautenberg, Andreas Maunz, David Vorgrimmler, Denis Gebele. See LICENSE for details.
