@@ -124,16 +124,34 @@ post '/lazar/?' do
 
     # # # Features
 
-    # Read Features
+    # Read Features, currently only OT.NumericFeatures supported
     if params[:feature_dataset_uri]
       lazar.feature_calculation_algorithm = "Substructure.lookup"
       feature_dataset_uri = params[:feature_dataset_uri]
       training_features = OpenTox::Dataset.new(feature_dataset_uri)
-      if training_features.feature_type(@subjectid) == "regression"
+      training_feature_types = training_features.feature_types(@subjectid)
+      if training_feature_types.collect { |id, info| info.include? OT.NumericFeature }.include?(false) # <- extend this
+        raise OpenTox::NotFoundError.new "Found a non-numeric feature in feature dataset"
+      else
         lazar.similarity_algorithm = "Similarity.cosine"
         min_sim = 0.4 unless params[:min_sim]
-        raise OpenTox::NotFoundError.new "No pc_type parameter." unless params[:pc_type]
-        raise OpenTox::NotFoundError.new "No lib parameter." unless params[:lib]
+        training_features_tl = training_features.features.collect{|f,info| info[DC.description].gsub(/.*\[/,"").chop.split(", ")}
+        training_features_pc_types = training_features_tl.collect{|info| info[0]}.flatten.uniq
+        training_features_lib = training_features_tl.collect{|info| info[1]}.flatten.uniq
+        unless (params[:pc_type] or params[:lib])
+          if (!params[:pc_type] && training_features_pc_types.size>0)
+            pc_type=training_features_pc_types.join(',')
+            LOGGER.info "pc_type '#{pc_type}' auto-detected from feature dataset"
+          end
+          if (!params[:lib] && training_features_lib.size>0)
+            lib=training_features_lib.join(',')
+            LOGGER.info "lib '#{lib}' auto-detected from feature dataset"
+          end
+          unless (pc_type and lib)
+            raise OpenTox::NotFoundError.new "No pc_type parameter given, and autodetection from feature dataset failed"
+            raise OpenTox::NotFoundError.new "No lib parameter given, and autodetection from feature dataset failed"
+          end
+        end
       end
 
     # Create Features
