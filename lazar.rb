@@ -196,7 +196,7 @@ post '/lazar/?' do
 
 
     
-    # # # Activities
+    # # # Activities and Compounds
   
     if prediction_feature.feature_type == "regression"
       training_activities.data_entries.each do |compound,entry| 
@@ -217,6 +217,8 @@ post '/lazar/?' do
         end
       end
     end
+
+    lazar.compounds=training_activities.compounds.collect
     task.progress 90
 
 
