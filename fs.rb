@@ -52,7 +52,7 @@ end
 # @param [String] prediction_feature URI
 # @param [String] feature_dataset_uri URI
 # @return [text/uri-list] Task URI
-post '/feature_selection/rfe/?' do 
+post '/fs/rfe/?' do 
 
   raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri]
   raise OpenTox::NotFoundError.new "Please submit a prediction_feature_uri." unless params[:prediction_feature]
