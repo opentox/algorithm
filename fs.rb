@@ -38,7 +38,7 @@ get "/fs/rfe/?" do
   when /text\/html/
     content_type "text/html"
     OpenTox.text_to_html algorithm.to_yaml
-  when /application\/x-yaml/
+  when /yaml/
     content_type "application/x-yaml"
     algorithm.to_yaml
   else
