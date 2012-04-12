@@ -55,7 +55,7 @@ end
 post '/fs/rfe/?' do 
 
   raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri]
-  raise OpenTox::NotFoundError.new "Please submit a prediction_feature_uri." unless params[:prediction_feature]
+  raise OpenTox::NotFoundError.new "Please submit a prediction_feature." unless params[:prediction_feature]
   raise OpenTox::NotFoundError.new "Please submit a feature_dataset_uri." unless params[:feature_dataset_uri]
 
   ds_csv=OpenTox::RestClientWrapper.get( params[:dataset_uri], {:accept => "text/csv"} )
