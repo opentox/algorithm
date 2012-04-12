@@ -228,7 +228,7 @@ post '/lazar/?' do
     lazar.metadata[OT.dependentVariables] = prediction_feature.uri
     lazar.metadata[OT.trainingDataset] = dataset_uri
 		lazar.metadata[OT.featureDataset] = feature_dataset_uri
-    case training_activities.feature_type(@subjectid)
+    case prediction_feature.feature_type
     when "classification"
       lazar.metadata[RDF.type] = [OT.Model, OTA.ClassificationLazySingleTarget]
     when "regression"
