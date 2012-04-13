@@ -125,7 +125,9 @@ post '/lazar/?' do
 
       else
         lazar.similarity_algorithm = "Similarity.cosine"
-        min_sim = 0.4 unless params[:min_sim]
+        min_sim = 0.7 unless params[:min_sim] 
+        min_sim = (min_sim * 2.0 -1.0 ) # transform to cosine range [-1,1]
+
         training_features_tl = training_features.features.collect{|f,info| info[DC.description].gsub(/.*\[/,"").chop.split(", ")}
         training_features_pc_types = training_features_tl.collect{|info| info[0]}.flatten.uniq
         training_features_lib = training_features_tl.collect{|info| info[1]}.flatten.uniq
