@@ -63,7 +63,7 @@ post '/fs/rfe/?' do
   ds.puts(ds_csv)
   ds.flush()
 
-  prediction_feature = URI.escape(params[:prediction_feature].split('/').last) # get col name
+  prediction_feature = params[:prediction_feature].split('/').last # get col name
   
   fds_features = OpenTox::Dataset.new(params[:feature_dataset_uri]).load_features
   fds_csv=OpenTox::RestClientWrapper.get( params[:feature_dataset_uri], {:accept => "text/csv"})

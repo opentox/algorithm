@@ -7,6 +7,7 @@ OpenTox Algorithm
     - subgraph descriptor calculation (fminer)
     - physico-chemical descriptor calculation (pc) for more than 300 descriptors
     - feature selection (fs) using recursive feature elimination (rfe)
+- See http://opentox-ruby.maunz.de for high-level workflow documentation
 
 REST operations
 ---------------
@@ -82,8 +83,6 @@ Synopsis
 - min_sim: The minimum similarity threshold for neighbors. Numeric value in [0,1].
 - min_train_performance. The minimum training performance for "local\_svm\_classification" (Accuracy) and "local\_svm\_regression" (R-squared). Numeric value in [0,1].
 - del_missing: one of true, false
-
-See http://www.maunz.de/wordpress/opentox/2011/lazar-models-and-how-to-trigger-them for a graphical overview.
 
 
 Supported MIME formats
