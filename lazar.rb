@@ -208,7 +208,6 @@ post '/lazar/?' do
 
     
     # # # Activities
-
     if prediction_feature.feature_type == "regression"
       training_dataset.data_entries.each do |compound,entry| 
         lazar.activities[compound] = [] unless lazar.activities[compound]
@@ -229,7 +228,7 @@ post '/lazar/?' do
       end
     end
 
-
+    lazar.compounds=training_activities.compounds.collect
     task.progress 90
 
 
