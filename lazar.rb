@@ -53,7 +53,7 @@ post '/lazar/?' do
     # Prediction Feature
     prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid)
     unless params[:prediction_feature] # try to read prediction_feature from dataset
-    raise OpenTox::NotFoundError.new "#{training_dataset.features.size} features in dataset #{dataset_uri}. Please provide a  prediction_feature parameter." unless training_dataset.features.size == 1
+      raise OpenTox::NotFoundError.new "#{training_dataset.features.size} features in dataset #{dataset_uri}. Please provide a prediction_feature parameter." unless training_dataset.features.size == 1
       prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first,@subjectid)
       params[:prediction_feature] = prediction_feature.uri # pass to feature mining service
     end
