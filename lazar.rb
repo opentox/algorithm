@@ -128,24 +128,31 @@ post '/lazar/?' do
         min_sim = 0.7 unless params[:min_sim] 
         min_sim = (min_sim * 2.0 -1.0 ) # transform to cosine range [-1,1]
 
-        training_features_tl = training_features.features.collect{|f,info| info[DC.description].gsub(/.*\[/,"").chop.split(", ")}
+        training_features_tl = training_features.features.collect{|f,info|
+          if info[DC.description] == nil
+            [nil, nil]
+          else
+            info[DC.description].gsub(/.*\[/,"").chop.split(", ")
+          end
+        
+        }
         training_features_pc_types = training_features_tl.collect{|info| info[0]}.flatten.uniq
         training_features_lib = training_features_tl.collect{|info| info[1]}.flatten.uniq
-        unless (params[:pc_type] or params[:lib])
-
-          if (!params[:pc_type] && training_features_pc_types.size>0)
+        unless (params[:pc_type] and params[:lib])
+          
+          if (!params[:pc_type] && training_features_pc_types.compact.uniq.size > 0)
             pc_type=training_features_pc_types.join(',')
             LOGGER.info "pc_type '#{pc_type}' auto-detected from feature dataset"
           end
           
-          if (!params[:lib] && training_features_lib.size>0)
+          if (!params[:lib] && training_features_lib.compact.uniq.size > 0)
             lib=training_features_lib.join(',')
             LOGGER.info "lib '#{lib}' auto-detected from feature dataset"
           end
           
           unless (pc_type and lib)
-            raise OpenTox::NotFoundError.new "No pc_type parameter given, and autodetection from feature dataset failed"
-            raise OpenTox::NotFoundError.new "No lib parameter given, and autodetection from feature dataset failed"
+            raise OpenTox::NotFoundError.new "No pc_type parameter given, and autodetection from feature dataset failed" unless pc_type
+            raise OpenTox::NotFoundError.new "No lib parameter given, and autodetection from feature dataset failed" unless lib
           end
         
         end
@@ -230,7 +237,7 @@ post '/lazar/?' do
       end
     end
 
-    lazar.compounds=training_activities.compounds.collect
+    lazar.compounds=training_dataset.compounds.collect
     task.progress 90
 
 
