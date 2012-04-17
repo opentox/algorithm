@@ -129,23 +129,23 @@ post '/lazar/?' do
         min_sim = (min_sim * 2.0 -1.0 ) # transform to cosine range [-1,1]
 
         training_features_tl = training_features.features.collect{|f,info|
-          if info[DC.description] == nil
+          unless info[DC.description]
             [nil, nil]
           else
             info[DC.description].gsub(/.*\[/,"").chop.split(", ")
           end
         
         }
-        training_features_pc_types = training_features_tl.collect{|info| info[0]}.flatten.uniq
-        training_features_lib = training_features_tl.collect{|info| info[1]}.flatten.uniq
+        training_features_pc_types = training_features_tl.collect{|info| info[0]}.flatten.uniq.compact
+        training_features_lib = training_features_tl.collect{|info| info[1]}.flatten.uniq.compact
         unless (params[:pc_type] and params[:lib])
           
-          if (!params[:pc_type] && training_features_pc_types.compact.uniq.size > 0)
+          if (!params[:pc_type] && training_features_pc_types.size>0)
             pc_type=training_features_pc_types.join(',')
             LOGGER.info "pc_type '#{pc_type}' auto-detected from feature dataset"
           end
           
-          if (!params[:lib] && training_features_lib.compact.uniq.size > 0)
+          if (!params[:lib] && training_features_lib.size>0)
             lib=training_features_lib.join(',')
             LOGGER.info "lib '#{lib}' auto-detected from feature dataset"
           end
