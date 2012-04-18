@@ -39,6 +39,7 @@ get "/fminer/bbrc/?" do
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
       { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
       { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
+      { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -69,7 +70,7 @@ get "/fminer/last/?" do
       { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
       { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-      { DC.description => "Maximum number of hops", OT.paramScope => "optional", DC.title => "hops" },
+      { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -139,9 +140,7 @@ post '/fminer/bbrc/?' do
     else
       raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
         "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
-      @training_classes = fminer.training_dataset.accept_values(fminer.prediction_feature.uri).sort
-      @value_map=Hash.new
-      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
+      @value_map=fminer.training_dataset.value_map(fminer.prediction_feature.uri)
     end
     @@bbrc.SetMinfreq(fminer.minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -167,7 +166,7 @@ post '/fminer/bbrc/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@bbrc, params, @value_map)
+    fminer.add_fminer_data(@@bbrc, @value_map)
 
     g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=g_array.to_scale.median
@@ -255,7 +254,6 @@ end
 # @param [optional] parameters LAST parameters, accepted parameters are
 #   - min_frequency freq  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
-#   - hops Maximum number of hops
 #   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
@@ -270,13 +268,10 @@ post '/fminer/last/?' do
     else
       raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
         "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
-      @training_classes = fminer.training_dataset.accept_values(fminer.prediction_feature.uri).sort
-      @value_map=Hash.new
-      @training_classes.each_with_index { |c,i| @value_map[i+1] = c }
+      @value_map=fminer.training_dataset.value_map(fminer.prediction_feature.uri)
     end
     @@last.SetMinfreq(fminer.minfreq)
     @@last.SetType(1) if params[:feature_type] == "paths"
-    @@last.SetMaxHops(params[:hops]) if params[:hops]
     @@last.SetConsoleOut(false)
 
 
@@ -298,7 +293,7 @@ post '/fminer/last/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@last, params, @value_map)
+    fminer.add_fminer_data(@@last, @value_map)
 
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
