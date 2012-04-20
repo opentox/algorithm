@@ -1,9 +1,3 @@
-2012-04-20
-	* Dichotomy between nominal and numeric features removed, which allows for uniform handling of all descriptors
-	* Uniform interface /pc for feature generation (for PC descriptors)
-	* Uniform interface /fs for feature selection (using recursive feature elimination)
-	* min_sim for cosine similarity corrected
-
 v3.1.0 2012-02-24
 	* lazar.rb: pc type parameter in model, cleaned all parameters,	propositionalized learning only for SVM, switch for minimal training performance, removed conf_stdev
 	* fminer.rb: feature match service for datasets, also with number of hits
