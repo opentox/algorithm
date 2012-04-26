@@ -106,7 +106,7 @@ post '/pc/:descriptor' do
     byteArray = Rjb::import('java.io.ByteArrayOutputStream'); printStream = Rjb::import('java.io.PrintStream'); 
     out = byteArray.new() ; Rjb::import('java.lang.System').out = printStream.new(out) # joelib is too verbose
     s = Rjb::import('JoelibFc') # import main class
-    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :descriptor => params[:descriptor], :rjb => s, add_uri => false, :task => task } )
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :descriptor => params[:descriptor], :rjb => s, :add_uri => false, :task => task } )
   end
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
