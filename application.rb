@@ -38,7 +38,7 @@ end
 #
 # @return [text/uri-list] algorithm URIs
 get '/?' do
-	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full), url_for('/pc', :full) ].join("\n") + "\n"
+	list = [ url_for('/lazar', :full), url_for('/fminer/bbrc', :full), url_for('/fminer/bbrc/sample', :full), url_for('/fminer/last', :full), url_for('/feature_selection/rfe', :full), url_for('/pc', :full) ].join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
   when /text\/html/
     content_type "text/html"
