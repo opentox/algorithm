@@ -4,6 +4,3 @@
 [submodule "last-utils"]
 	path = last-utils
   url = git://github.com/amaunz/last-utils.git
-[submodule "bbrc-sample"]
-	path = bbrc-sample
-	url = git://github.com/amaunz/bbrc-sample.git
