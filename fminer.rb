@@ -57,7 +57,7 @@ end
 
 # Get RDF/XML representation of fminer bbrc algorithm
 # @return [application/rdf+xml] OWL-DL representation of fminer bbrc algorithm
-get "/fminer/bbrc/sample?" do
+get "/fminer/bbrc/sample/?" do
   algorithm = OpenTox::Algorithm::Generic.new(url_for('/fminer/bbrc/sample',:full))
   algorithm.metadata = {
     DC.title => 'fminer backbone refinement class representatives, obtained from samples of a dataset',
@@ -293,7 +293,7 @@ end
 post '/fminer/bbrc/sample/?' do
 
   fminer=OpenTox::Algorithm::Fminer.new
-  fminer.check_params(params,80,@subjectid)
+  fminer.check_params(params,100,@subjectid) # AM: 100 per-mil (10%) as default minfreq
 
   # num_boots
   unless params[:num_boots]
@@ -312,17 +312,6 @@ post '/fminer/bbrc/sample/?' do
     raise OpenTox::BadRequestError.new "min_sampling_support is not numeric" unless OpenTox::Algorithm.numeric? params[:min_sampling_support]
 	  min_sampling_support= params[:min_sampling_support].to_i.ceil
   end
-
-  # re-set min_frequency
-  unless params[:min_frequency]
-    min_frequency = (fminer.training_dataset.compounds.size * 0.1).ceil
-    LOGGER.debug "Set min_frequency to default value #{fminer.minfreq}"
-  else
-    raise OpenTox::BadRequestError.new "min_frequency is not numeric" unless OpenTox::Algorithm.numeric? params[:min_frequency]
-	  min_frequency= params[:min_frequency].to_i.ceil
-  end
-
-    fminer.training_dataset.compounds.size
 
   task = OpenTox::Task.create("Mining BBRC sample features", url_for('/fminer',:full)) do |task|
     if fminer.prediction_feature.feature_type == "regression"
@@ -352,11 +341,11 @@ post '/fminer/bbrc/sample/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@last, @value_map)
+    fminer.add_fminer_data(nil, @value_map) # AM: 'nil' as instance to only fill in administrative data
 
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
-    # run bbrc-sample
+    # run bbrc-sample, obtain smarts and p-values
     features = Set.new
     task.progress 10
 
