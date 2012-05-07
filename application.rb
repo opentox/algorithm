@@ -20,6 +20,7 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'rjb'
+require 'rinruby'
 
 
 # main

@@ -345,10 +345,25 @@ post '/fminer/bbrc/sample/?' do
 
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
+
     # run bbrc-sample, obtain smarts and p-values
     features = Set.new
     task.progress 10
 
+    @r = RinRuby.new(true,false) # global R instance leads to Socket errors after a large number of requests
+    @r.assign "dataset.uri", params[:dataset_uri]
+    @r.assign "prediction.feature.uri", fminer.prediction_feature.uri
+    @r.assign "num.boots", num_boots
+    @r.assign "min.frequency.per.sample", fminer.minfreq
+    @r.assign "min.sampling.support", min_sampling_support
+    @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
+    @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
+    
+    @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
+    @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, F)"
+    
+    smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes
+    r_p_values = @r.pull "ans.p.values"
 
     # matching
     task.progress 90
