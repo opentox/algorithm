@@ -186,7 +186,10 @@ post '/fminer/bbrc/?' do
       OT.hasSource => url_for('/fminer/bbrc', :full),
       OT.parameters => [
         { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
+        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
+        { DC.title => "min_frequency", OT.paramValue => fminer.minfreq },
+        { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") }
+
     ]
     })
     feature_dataset.save(@subjectid)
@@ -455,8 +458,10 @@ post '/fminer/last/?' do
       OT.hasSource => url_for('/fminer/last', :full),
       OT.parameters => [
         { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-    ]
+        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
+        { DC.title => "min_frequency", OT.paramValue => fminer.minfreq },
+        { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") }
+      ]
     })
     feature_dataset.save(@subjectid)
 
