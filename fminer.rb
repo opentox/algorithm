@@ -359,7 +359,7 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
     
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
-    @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, F)"
+    @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T)"
     
     smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
     r_p_values = @r.pull "ans.p.values"
@@ -369,9 +369,6 @@ post '/fminer/bbrc/sample/?' do
     lu = LU.new                             # AM LAST: uses last-utils here
     params[:nr_hits] == "true" ? hit_count=true: hit_count=false
 
-
-    LOGGER.debug fminer.smi.to_yaml
-    LOGGER.debug smarts.to_yaml
     matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
 
     matches.each do |smarts, ids|
