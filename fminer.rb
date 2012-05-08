@@ -307,7 +307,7 @@ post '/fminer/bbrc/sample/?' do
   # min_sampling_support
   unless params[:min_sampling_support]
     min_sampling_support = (num_boots * 0.3).ceil
-    LOGGER.debug "Set num_boots to default value #{min_sampling_support}"
+    LOGGER.debug "Set min_sampling_support to default value #{min_sampling_support}"
   else
     raise OpenTox::BadRequestError.new "min_sampling_support is not numeric" unless OpenTox::Algorithm.numeric? params[:min_sampling_support]
 	  min_sampling_support= params[:min_sampling_support].to_i.ceil
@@ -324,19 +324,18 @@ post '/fminer/bbrc/sample/?' do
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
-      DC.title => "BBRC sampled representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
+      DC.title => "BBRC representatives for " + fminer.training_dataset.metadata[DC.title].to_s + "(bootstrapped)",
       DC.creator => url_for('/fminer/bbrc/sample',:full),
       OT.hasSource => url_for('/fminer/bbrc/sample', :full)
     })
     feature_dataset.save(@subjectid)
 
-    fminer.compounds = []
-    fminer.db_class_sizes = Array.new # AM: effect
-    fminer.all_activities = Hash.new # DV: for effect calculation (class and regr)
-    fminer.smi = [] # AM LAST: needed for matching the patterns back
-
-    # Add data to fminer
-    fminer.add_fminer_data(nil, @value_map) # AM: 'nil' as instance to only fill in administrative data
+    # filled by add_fminer_data:
+    fminer.compounds = [] # indexed by id, starting from 1 (not 0)
+    fminer.db_class_sizes = Array.new # for effect calculation
+    fminer.all_activities = Hash.new # for effect calculation, indexed by id, starting from 1 (not 0)
+    fminer.smi = [] # needed for matching the patterns back, indexed by id, starting from 1 (not 0)
+    fminer.add_fminer_data(nil, @value_map) # To only fill in administrative data (no fminer priming) pass 'nil' as instance
 
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
@@ -344,7 +343,6 @@ post '/fminer/bbrc/sample/?' do
     # run bbrc-sample, obtain smarts and p-values
     features = Set.new
     task.progress 10
-
     @r = RinRuby.new(true,false) # global R instance leads to Socket errors after a large number of requests
     @r.assign "dataset.uri", params[:dataset_uri]
     @r.assign "prediction.feature.uri", fminer.prediction_feature.uri
@@ -353,12 +351,16 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "min.sampling.support", min_sampling_support
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
-    
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
-    @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, F)"
-    
-    smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes
-    r_p_values = @r.pull "ans.p.values"
+    begin
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T)"
+      smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
+      r_p_values = @r.pull "ans.p.values"
+    rescue Exception => e
+      LOGGER.debug "#{e.class}: #{e.message}"
+      LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+    end
+    @r.quit # free R
 
     # matching
     task.progress 90
@@ -379,12 +381,12 @@ post '/fminer/bbrc/sample/?' do
     matches.each do |smarts, ids|
       feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
       p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
-      g=Array.new
+      g = Array.new
       @value_map.each { |y,act| g[y-1]=Array.new }
       feat_hash.each  { |x,y|   g[y-1].push(x)   }
       max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes)
       effect = g.size-max
-      feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
+      feature_uri = File.join feature_dataset.uri,"feature","bbrc", features.size.to_s
       unless features.include? smarts
         features << smarts
         metadata = {
