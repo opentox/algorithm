@@ -348,7 +348,6 @@ post '/fminer/bbrc/sample/?' do
     # run bbrc-sample, obtain smarts and p-values
     features = Set.new
     task.progress 10
-
     @r = RinRuby.new(true,false) # global R instance leads to Socket errors after a large number of requests
     @r.assign "dataset.uri", params[:dataset_uri]
     @r.assign "prediction.feature.uri", fminer.prediction_feature.uri
@@ -357,20 +356,22 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "min.sampling.support", min_sampling_support
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
-    
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
-    @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T)"
-    
-    smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
-    r_p_values = @r.pull "ans.p.values"
+    begin
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T)"
+      smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
+      r_p_values = @r.pull "ans.p.values"
+    rescue Exception => e
+      LOGGER.debug "#{e.class}: #{e.message}"
+      LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+    end
+    @r.quit # free R
 
     # matching
     task.progress 90
     lu = LU.new                             # AM LAST: uses last-utils here
     params[:nr_hits] == "true" ? hit_count=true: hit_count=false
-
     matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
-
     matches.each do |smarts, ids|
       feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
       p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
