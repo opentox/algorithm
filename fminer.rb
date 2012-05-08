@@ -359,6 +359,7 @@ post '/fminer/bbrc/sample/?' do
       @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T)"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
+      merge_time = @r.pull "merge.time"
     rescue Exception => e
       LOGGER.debug "#{e.class}: #{e.message}"
       LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
@@ -378,7 +379,9 @@ post '/fminer/bbrc/sample/?' do
         { DC.title => "min_sampling_support", OT.paramValue => min_sampling_support },
         { DC.title => "num_boots", OT.paramValue => num_boots },
         { DC.title => "min_frequency_per_sample", OT.paramValue => fminer.minfreq },
-        { DC.title => "nr_hits", OT.paramValue => hit_count.to_s }]
+        { DC.title => "nr_hits", OT.paramValue => hit_count.to_s },
+        { DC.title => "merge_time", OT.paramValue => merge_time.to_s }
+          ]
     })
 
     matches.each do |smarts, ids|
