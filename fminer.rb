@@ -326,12 +326,7 @@ post '/fminer/bbrc/sample/?' do
     feature_dataset.add_metadata({
       DC.title => "BBRC sampled representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
       DC.creator => url_for('/fminer/bbrc/sample',:full),
-      OT.hasSource => url_for('/fminer/bbrc/sample', :full),
-      OT.parameters => [
-        { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-        # TODO: add more params
-    ]
+      OT.hasSource => url_for('/fminer/bbrc/sample', :full)
     })
     feature_dataset.save(@subjectid)
 
@@ -370,6 +365,16 @@ post '/fminer/bbrc/sample/?' do
     lu = LU.new                             # AM LAST: uses last-utils here
     params[:nr_hits] == "true" ? hit_count=true: hit_count=false
     matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
+    
+    feature_dataset.add_metadata({
+          OT.parameters => [
+        { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
+        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
+        { DC.title => "min_sampling_support", OT.paramValue => min_sampling_support },
+        { DC.title => "num_boots", OT.paramValue => num_boots },
+        { DC.title => "min_frequency_per_sample", OT.paramValue => fminer.minfreq },
+        { DC.title => "nr_hits", OT.paramValue => hit_count.to_s }]
+    })
 
     matches.each do |smarts, ids|
       feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
