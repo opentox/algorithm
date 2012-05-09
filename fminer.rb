@@ -291,6 +291,7 @@ end
 #   - min_sampling_support Minimum sampling support (default 30% of num_boots)
 #   - min_frequency  Minimum frequency (default 10% of dataset size)
 #   - nr_hits Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)
+#   - random_seed Random seed ensures same datasets in bootBbrc
 #
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/sample/?' do
@@ -314,6 +315,15 @@ post '/fminer/bbrc/sample/?' do
   else
     raise OpenTox::BadRequestError.new "min_sampling_support is not numeric" unless OpenTox::Algorithm.numeric? params[:min_sampling_support]
 	  min_sampling_support= params[:min_sampling_support].to_i.ceil
+  end
+
+  # random_seed
+  unless params[:random_seed]
+    random_seed = 1
+    LOGGER.debug "Set random seed to default value #{random_seed}"
+  else
+    raise OpenTox::BadRequestError.new "random_seed is not numeric" unless OpenTox::Algorithm.numeric? params[:random_seed]
+    random_seed= params[:random_seed].to_i.ceil
   end
 
   task = OpenTox::Task.create("Mining BBRC sample features", url_for('/fminer',:full)) do |task|
@@ -352,11 +362,12 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "num.boots", num_boots
     @r.assign "min.frequency.per.sample", fminer.minfreq
     @r.assign "min.sampling.support", min_sampling_support
+    @r.assign "random.seed", random_seed
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
     begin
-      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T)"
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed)"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
       merge_time = @r.pull "merge.time"
@@ -384,7 +395,8 @@ post '/fminer/bbrc/sample/?' do
         { DC.title => "nr_hits", OT.paramValue => hit_count.to_s },
         { DC.title => "merge_time", OT.paramValue => merge_time.to_s },
         { DC.title => "n_stripped_mss", OT.paramValue => n_stripped_mss.to_s },
-        { DC.title => "n_stripped_cst", OT.paramValue => n_stripped_cst.to_s }
+        { DC.title => "n_stripped_cst", OT.paramValue => n_stripped_cst.to_s },
+        { DC.title => "random_seed", OT.paramValue => random_seed.to_s }
           ]
     })
 
