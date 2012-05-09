@@ -360,6 +360,8 @@ post '/fminer/bbrc/sample/?' do
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
       merge_time = @r.pull "merge.time"
+      n_stripped_mss = @r.pull "n.stripped.mss"
+      n_stripped_cst = @r.pull "n.stripped.cst"
     rescue Exception => e
       LOGGER.debug "#{e.class}: #{e.message}"
       LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
@@ -380,7 +382,9 @@ post '/fminer/bbrc/sample/?' do
         { DC.title => "num_boots", OT.paramValue => num_boots },
         { DC.title => "min_frequency_per_sample", OT.paramValue => fminer.minfreq },
         { DC.title => "nr_hits", OT.paramValue => hit_count.to_s },
-        { DC.title => "merge_time", OT.paramValue => merge_time.to_s }
+        { DC.title => "merge_time", OT.paramValue => merge_time.to_s },
+        { DC.title => "n_stripped_mss", OT.paramValue => n_stripped_mss.to_s },
+        { DC.title => "n_stripped_cst", OT.paramValue => n_stripped_cst.to_s }
           ]
     })
 
