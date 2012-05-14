@@ -132,14 +132,16 @@ post '/fminer/:method/match?' do
     end
     c_dataset.compounds.each do |c|
       res_dataset.add_compound(c)
-      comp = OpenTox::Compound.new(c)
-      f_dataset.features.each do |f,m|
-        if params[:nr_hits] == "true"
-          hits = comp.match_hits([m[OT.smarts]])
-          res_dataset.add(c,f,hits[m[OT.smarts]]) if hits[m[OT.smarts]]
-        else
-          res_dataset.add(c,f,1) if comp.match?(m[OT.smarts])
-        end
+    end
+    smi = [nil]; smi += c_dataset.compounds.collect { |c| OpenTox::Compound.new(c).to_smiles }
+    smarts = f_dataset.features.collect { |f,m| m[OT.smarts] }
+    params[:nr_hits] == "true" ? hit_count=true: hit_count=false
+    matches, counts = LU.new.match_rb(smi, smarts, hit_count)
+    f_dataset.features.each do |f,m|
+      if (matches[m[OT.smarts]] && matches[m[OT.smarts]].size>0)
+        matches[m[OT.smarts]].each_with_index {|id,idx| 
+          res_dataset.add(c_dataset.compounds[id-1],f,counts[m[OT.smarts]][idx])
+        }
       end
     end
     res_dataset.save @subjectid
