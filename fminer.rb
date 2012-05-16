@@ -71,6 +71,7 @@ get "/fminer/bbrc/sample/?" do
       { DC.description => "Minimum sampling support", OT.paramScope => "optional", DC.title => "min_sampling_support" },
       { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+      { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" }
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -177,7 +178,7 @@ post '/fminer/bbrc/?' do
     end
     @@bbrc.SetMinfreq(fminer.minfreq)
     @@bbrc.SetType(1) if params[:feature_type] == "paths"
-    @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
+    @@bbrc.SetBackbone(false) if params[:backbone] == "false"
     @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
     @@bbrc.SetConsoleOut(false)
 
@@ -190,7 +191,8 @@ post '/fminer/bbrc/?' do
         { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
         { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
         { DC.title => "min_frequency", OT.paramValue => fminer.minfreq },
-        { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") }
+        { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") },
+        { DC.title => "backbone", OT.paramValue => (params[:backbone] == "false" ? "false" : "true") }
 
     ]
     })
@@ -294,6 +296,7 @@ end
 #   - min_frequency  Minimum frequency (default 10% of dataset size)
 #   - nr_hits Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)
 #   - random_seed Random seed ensures same datasets in bootBbrc
+#   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
 #
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/sample/?' do
@@ -326,6 +329,15 @@ post '/fminer/bbrc/sample/?' do
   else
     raise OpenTox::BadRequestError.new "random_seed is not numeric" unless OpenTox::Algorithm.numeric? params[:random_seed]
     random_seed= params[:random_seed].to_i.ceil
+  end
+
+  # backbone
+  unless params[:backbone]
+    backbone = "true"
+    LOGGER.debug "Set backbone to default value #{backbone}"
+  else
+    raise OpenTox::BadRequestError.new "backbone is neither 'true' nor 'false'" unless (params[:backbone] == "true" or params[:backbone] == "false")
+    backbone = params[:backbone]
   end
 
   task = OpenTox::Task.create("Mining BBRC sample features", url_for('/fminer',:full)) do |task|
@@ -365,11 +377,12 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "min.frequency.per.sample", fminer.minfreq
     @r.assign "min.sampling.support", min_sampling_support
     @r.assign "random.seed", random_seed
+    @r.assign "do.backbone", backbone
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
     begin
-      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed)"
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(do.backbone))"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
       merge_time = @r.pull "merge.time"
@@ -398,7 +411,8 @@ post '/fminer/bbrc/sample/?' do
         { DC.title => "merge_time", OT.paramValue => merge_time.to_s },
         { DC.title => "n_stripped_mss", OT.paramValue => n_stripped_mss.to_s },
         { DC.title => "n_stripped_cst", OT.paramValue => n_stripped_cst.to_s },
-        { DC.title => "random_seed", OT.paramValue => random_seed.to_s }
+        { DC.title => "random_seed", OT.paramValue => random_seed.to_s },
+        { DC.title => "backbone", OT.paramValue => backbone.to_s }
           ]
     })
 
