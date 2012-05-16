@@ -377,12 +377,12 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "min.frequency.per.sample", fminer.minfreq
     @r.assign "min.sampling.support", min_sampling_support
     @r.assign "random.seed", random_seed
-    @r.assign "do.backbone", backbone
+    @r.assign "backbone", backbone
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
     begin
-      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(do.backbone))"
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(backbone))"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
       merge_time = @r.pull "merge.time"
