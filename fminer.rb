@@ -71,7 +71,8 @@ get "/fminer/bbrc/sample/?" do
       { DC.description => "Minimum sampling support", OT.paramScope => "optional", DC.title => "min_sampling_support" },
       { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
-      { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" }
+      { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
+      { DC.description => "Chisq estimation method, pass 'mean' to use simple mean estimate for chisq test.", OT.paramScope => "optional", DC.title => "method" }
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -297,6 +298,7 @@ end
 #   - nr_hits Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)
 #   - random_seed Random seed ensures same datasets in bootBbrc
 #   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
+#   - method Chisq estimation method, pass 'mean' to use simple mean estimate (default 'mle').
 #
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/sample/?' do
@@ -340,6 +342,15 @@ post '/fminer/bbrc/sample/?' do
     backbone = params[:backbone]
   end
 
+  # method
+  unless params[:method]
+    method="mean"
+    LOGGER.debug "Set method to default value #{method}"
+  else
+    raise OpenTox::BadRequestError.new "method is neither 'mle' nor 'mean'" unless (params[:method] == "mle" or params[:method] == "mean")
+    method = params[:method]
+  end
+
   task = OpenTox::Task.create("Mining BBRC sample features", url_for('/fminer',:full)) do |task|
     if fminer.prediction_feature.feature_type == "regression"
       raise OpenTox::BadRequestError.new "BBRC sampling is only for classification"
@@ -380,9 +391,10 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "backbone", backbone
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
+    @r.assign "method", method
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
     begin
-      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(backbone))"
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(backbone), method)"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
       merge_time = @r.pull "merge.time"
@@ -412,7 +424,8 @@ post '/fminer/bbrc/sample/?' do
         { DC.title => "n_stripped_mss", OT.paramValue => n_stripped_mss.to_s },
         { DC.title => "n_stripped_cst", OT.paramValue => n_stripped_cst.to_s },
         { DC.title => "random_seed", OT.paramValue => random_seed.to_s },
-        { DC.title => "backbone", OT.paramValue => backbone.to_s }
+        { DC.title => "backbone", OT.paramValue => backbone.to_s },
+        { DC.title => "method", OT.paramValue => method.to_s }
           ]
     })
 
