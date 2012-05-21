@@ -304,9 +304,9 @@ post '/fminer/bbrc/?' do
         p_value = f[1]
 
         if (!@@bbrc.GetRegression)
-          id_arrs = f[2..-1].flatten                                       # f[2..-1] is filled in *de*scending order,
-          max = OpenTox::Algorithm.effect(f[2..-1], fminer.db_class_sizes) # db_class_size is filled in *a*scending order,
-          effect = f[2..-1].size-max                                       # thus need to turn around effect
+          id_arrs = f[2..-1].flatten
+          max = OpenTox::Algorithm.effect(f[2..-1].reverse, fminer.db_class_sizes) # f needs reversal for bbrc
+          effect = max+1
         else #regression part
           id_arrs = f[2]
           # DV: effect calculation
