@@ -633,7 +633,7 @@ post '/fminer/last/?' do
         @value_map.each { |y,act| g[y-1]=Array.new }
         feat_hash.each  { |x,y|   g[y-1].push(x)   }
         max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes)
-        effect = g.size-max
+        effect = max+1
       end
       feature_uri = File.join feature_dataset.uri,"feature","last", features.size.to_s
       unless features.include? smarts
