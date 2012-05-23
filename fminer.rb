@@ -476,6 +476,7 @@ post '/fminer/bbrc/sample/?' do
       @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(backbone), method)"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
+      smarts_p_values = {}; smarts.size.times { |i| smarts_p_values[ smarts[i] ] = r_p_values[i] }
       merge_time = @r.pull "merge.time"
       n_stripped_mss = @r.pull "n.stripped.mss"
       n_stripped_cst = @r.pull "n.stripped.cst"
@@ -510,7 +511,6 @@ post '/fminer/bbrc/sample/?' do
 
     matches.each do |smarts, ids|
       feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
-      p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
       g = Array.new
       @value_map.each { |y,act| g[y-1]=Array.new }
       feat_hash.each  { |x,y|   g[y-1].push(x)   }
@@ -523,7 +523,7 @@ post '/fminer/bbrc/sample/?' do
           RDF.type => [OT.Feature, OT.Substructure],
           OT.hasSource => feature_dataset.uri,
           OT.smarts => smarts,
-          OT.pValue => p_value.abs,
+          OT.pValue => smarts_p_values[smarts],
           OT.effect => effect,
           OT.parameters => [
             { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
