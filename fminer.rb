@@ -7,11 +7,13 @@ ENV['FMINER_NR_HITS'] = 'true'
 @@bbrc = Bbrc::Bbrc.new
 @@last = Last::Last.new
 
+
+
 # Get list of fminer algorithms
 #
 # @return [text/uri-list] URIs of fminer algorithms
 get '/fminer/?' do
-  list = [ url_for('/fminer/bbrc', :full), url_for('/fminer/bbrc/sample', :full), url_for('/fminer/last', :full) ].join("\n") + "\n"
+  list = [ url_for('/fminer/bbrc', :full), url_for('/fminer/bbrc/sample', :full), url_for('/fminer/last', :full), url_for('/fminer/bbrc/match', :full), url_for('/fminer/last/match', :full) ].join("\n") + "\n"
   case request.env['HTTP_ACCEPT']
   when /text\/html/
     content_type "text/html"
@@ -21,6 +23,8 @@ get '/fminer/?' do
     list
   end
 end
+
+
 
 # Get RDF/XML representation of fminer bbrc algorithm
 # @return [application/rdf+xml] OWL-DL representation of fminer bbrc algorithm
@@ -119,117 +123,39 @@ get "/fminer/last/?" do
   end
 end
 
-# Matches features of a a feature dataset onto instances of another dataset. 
-# The latter is referred to as 'training dataset', since p-values are computed,
-# if user passes a prediction feature, or if the training dataset has only one feature.
-# The result does not contain the prediction feature.
+
+# Get RDF/XML representation of fminer matching algorithm
 # @param [String] dataset_uri URI of the dataset 
 # @param [String] feature_dataset_uri URI of the feature dataset (i.e. dependent variable)
 # @param [optional] parameters Accepted parameters are
 # - prediction_feature URI of prediction feature to calculate p-values for
-# @return [text/uri-list] Task URI
-post '/fminer/:method/match?' do
-  raise OpenTox::BadRequestError.new "feature_dataset_uri not given" unless params[:feature_dataset_uri]
-  raise OpenTox::BadRequestError.new "dataset_uri not given" unless params[:dataset_uri]
-
-  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}"
-  unless params[:prediction_feature] # try to read prediction_feature from dataset
-    prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first) if training_dataset.features.size == 1
+get "/fminer/:method/match?" do
+  algorithm = OpenTox::Algorithm::Generic.new(url_for("/fminer/#{params[:method]}/match",:full))
+  algorithm.metadata = {
+    DC.title => 'fminer feature matching',
+    DC.creator => "mguetlein@gmail.com, andreas@maunz.de",
+    RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
+    OT.parameters => [
+      { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
+      { DC.description => "Feature Dataset URI", OT.paramScope => "mandatory", DC.title => "feature_dataset_uri" },
+      { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" }
+  ]
+  }
+  case request.env['HTTP_ACCEPT']
+  when /text\/html/
+    content_type "text/html"
+    OpenTox.text_to_html algorithm.to_yaml
+  when /application\/x-yaml/
+    content_type "application/x-yaml"
+    algorithm.to_yaml
+  else
+    response['Content-Type'] = 'application/rdf+xml'
+    algorithm.to_rdfxml
   end
-  prediction_feature = OpenTox::Feature.find(params[:prediction_feature]) if params[:prediction_feature]
-
-  task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
-
-    # get endpoint statistics
-    if prediction_feature
-      db_class_sizes = Array.new # for effect calculation
-      all_activities = Hash.new # for effect calculation, indexed by id, starting from 1 (not 0)
-      id = 1
-      training_dataset.compounds.each do |compound|
-        entry=training_dataset.data_entries[compound]
-        entry.each do |feature,values|
-          if feature == prediction_feature.uri
-            values.each { |val|
-              if val.nil? 
-                LOGGER.warn "No #{feature} activity for #{compound.to_s}."
-              else
-                if prediction_feature.feature_type == "classification"
-                  activity= training_dataset.value_map(prediction_feature.uri).invert[val].to_i # activities are mapped to 1..n
-                  db_class_sizes[activity-1].nil? ? db_class_sizes[activity-1]=1 : db_class_sizes[activity-1]+=1 # AM effect
-                elsif prediction_feature.feature_type == "regression"
-                  activity= val.to_f 
-                end
-                begin
-                  all_activities[id]=activity # DV: insert global information
-                  id += 1
-                rescue Exception => e
-                  LOGGER.warn "Could not add " + smiles + "\t" + val.to_s + " to fminer"
-                  LOGGER.warn e.backtrace
-                end
-              end
-            }
-          end
-        end
-      end
-    end
-
-    # Intialize result by adding compounds
-    f_dataset = OpenTox::Dataset.find params[:feature_dataset_uri],@subjectid
-    c_dataset = OpenTox::Dataset.find params[:dataset_uri],@subjectid
-    res_dataset = OpenTox::Dataset.create CONFIG[:services]["dataset"],@subjectid
-    c_dataset.compounds.each do |c|
-      res_dataset.add_compound(c)
-    end
-
-    # Run matching, put data entries in result. Features are recreated.
-    smi = [nil]; smi += c_dataset.compounds.collect { |c| OpenTox::Compound.new(c).to_smiles }
-    smarts = f_dataset.features.collect { |f,m| m[OT.smarts] }
-    params[:nr_hits] == "true" ? hit_count=true: hit_count=false
-    matches, counts = LU.new.match_rb(smi, smarts, hit_count) if smarts.size>0
-
-    f_dataset.features.each do |f,m|
-      if (matches[m[OT.smarts]] && matches[m[OT.smarts]].size>0)
-
-        feature_uri = File.join res_dataset.uri,"feature","match", res_dataset.features.size.to_s
-        metadata = {
-          RDF.type => [OT.Feature, OT.Substructure],
-          OT.hasSource => f_dataset.uri,
-          OT.smarts => m[OT.smarts],
-          OT.parameters => [
-            { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] }
-          ]
-        }
-
-        if (prediction_feature) 
-          feat_hash = Hash[*(all_activities.select { |k,v| matches[m[OT.smarts]].include?(k) }.flatten)]
-          if prediction_feature.feature_type == "regression"
-            p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
-            effect = (p_value > 0) ? "activating" : "deactivating"
-          else
-            p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f
-            g=Array.new # g is filled in *a*scending activity
-            training_dataset.value_map(prediction_feature.uri).each { |y,act| g[y-1]=Array.new }
-            feat_hash.each  { |x,y|   g[y-1].push(x)   }
-            max = OpenTox::Algorithm.effect(g, db_class_sizes) # db_class_sizes is filled in *a*scending activity
-            effect = max+1
-          end
-          metadata[OT.effect] = effect
-          metadata[OT.pValue] = p_value.abs
-          metadata[OT.parameters] << { DC.title => "prediction_feature", OT.paramValue => prediction_feature.uri }
-        end
-        
-        res_dataset.add_feature feature_uri, metadata
-
-        matches[m[OT.smarts]].each_with_index {|id,idx| 
-          res_dataset.add(c_dataset.compounds[id-1],feature_uri,counts[m[OT.smarts]][idx])
-        }
-      end
-    end
-    res_dataset.save @subjectid
-    res_dataset.uri
-  end
-  return_task(task)
 end
+
+
+
 
 # Run bbrc algorithm on dataset
 #
@@ -668,3 +594,116 @@ post '/fminer/last/?' do
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
+
+# Matches features of a a feature dataset onto instances of another dataset. 
+# The latter is referred to as 'training dataset', since p-values are computed,
+# if user passes a prediction feature, or if the training dataset has only one feature.
+# The result does not contain the prediction feature.
+# @param [String] dataset_uri URI of the dataset 
+# @param [String] feature_dataset_uri URI of the feature dataset (i.e. dependent variable)
+# @param [optional] parameters Accepted parameters are
+# - prediction_feature URI of prediction feature to calculate p-values for
+# @return [text/uri-list] Task URI
+post '/fminer/:method/match?' do
+  raise OpenTox::BadRequestError.new "feature_dataset_uri not given" unless params[:feature_dataset_uri]
+  raise OpenTox::BadRequestError.new "dataset_uri not given" unless params[:dataset_uri]
+
+  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}"
+  unless params[:prediction_feature] # try to read prediction_feature from dataset
+    prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first) if training_dataset.features.size == 1
+  end
+  prediction_feature = OpenTox::Feature.find(params[:prediction_feature]) if params[:prediction_feature]
+
+  task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
+
+    # get endpoint statistics
+    if prediction_feature
+      db_class_sizes = Array.new # for effect calculation
+      all_activities = Hash.new # for effect calculation, indexed by id, starting from 1 (not 0)
+      id = 1
+      training_dataset.compounds.each do |compound|
+        entry=training_dataset.data_entries[compound]
+        entry.each do |feature,values|
+          if feature == prediction_feature.uri
+            values.each { |val|
+              if val.nil? 
+                LOGGER.warn "No #{feature} activity for #{compound.to_s}."
+              else
+                if prediction_feature.feature_type == "classification"
+                  activity= training_dataset.value_map(prediction_feature.uri).invert[val].to_i # activities are mapped to 1..n
+                  db_class_sizes[activity-1].nil? ? db_class_sizes[activity-1]=1 : db_class_sizes[activity-1]+=1 # AM effect
+                elsif prediction_feature.feature_type == "regression"
+                  activity= val.to_f 
+                end
+                begin
+                  all_activities[id]=activity # DV: insert global information
+                  id += 1
+                rescue Exception => e
+                  LOGGER.warn "Could not add " + smiles + "\t" + val.to_s + " to fminer"
+                  LOGGER.warn e.backtrace
+                end
+              end
+            }
+          end
+        end
+      end
+    end
+
+    # Intialize result by adding compounds
+    f_dataset = OpenTox::Dataset.find params[:feature_dataset_uri],@subjectid
+    c_dataset = OpenTox::Dataset.find params[:dataset_uri],@subjectid
+    res_dataset = OpenTox::Dataset.create CONFIG[:services]["dataset"],@subjectid
+    c_dataset.compounds.each do |c|
+      res_dataset.add_compound(c)
+    end
+
+    # Run matching, put data entries in result. Features are recreated.
+    smi = [nil]; smi += c_dataset.compounds.collect { |c| OpenTox::Compound.new(c).to_smiles }
+    smarts = f_dataset.features.collect { |f,m| m[OT.smarts] }
+    params[:nr_hits] == "true" ? hit_count=true: hit_count=false
+    matches, counts = LU.new.match_rb(smi, smarts, hit_count) if smarts.size>0
+
+    f_dataset.features.each do |f,m|
+      if (matches[m[OT.smarts]] && matches[m[OT.smarts]].size>0)
+
+        feature_uri = File.join res_dataset.uri,"feature","match", res_dataset.features.size.to_s
+        metadata = {
+          RDF.type => [OT.Feature, OT.Substructure],
+          OT.hasSource => f_dataset.uri,
+          OT.smarts => m[OT.smarts],
+          OT.parameters => [
+            { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] }
+          ]
+        }
+
+        if (prediction_feature) 
+          feat_hash = Hash[*(all_activities.select { |k,v| matches[m[OT.smarts]].include?(k) }.flatten)]
+          if prediction_feature.feature_type == "regression"
+            p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
+            effect = (p_value > 0) ? "activating" : "deactivating"
+          else
+            p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f
+            g=Array.new # g is filled in *a*scending activity
+            training_dataset.value_map(prediction_feature.uri).each { |y,act| g[y-1]=Array.new }
+            feat_hash.each  { |x,y|   g[y-1].push(x)   }
+            max = OpenTox::Algorithm.effect(g, db_class_sizes) # db_class_sizes is filled in *a*scending activity
+            effect = max+1
+          end
+          metadata[OT.effect] = effect
+          metadata[OT.pValue] = p_value.abs
+          metadata[OT.parameters] << { DC.title => "prediction_feature", OT.paramValue => prediction_feature.uri }
+        end
+        
+        res_dataset.add_feature feature_uri, metadata
+
+        matches[m[OT.smarts]].each_with_index {|id,idx| 
+          res_dataset.add(c_dataset.compounds[id-1],feature_uri,counts[m[OT.smarts]][idx])
+        }
+      end
+    end
+    res_dataset.save @subjectid
+    res_dataset.uri
+  end
+  return_task(task)
+end
+
