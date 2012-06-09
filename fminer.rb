@@ -98,16 +98,38 @@ post '/fminer/:method/match?' do
     f_dataset.features.each do |f,m|
       res_dataset.add_feature(f,m)
     end
-    c_dataset.compounds.each do |c|
-      res_dataset.add_compound(c)
-      comp = OpenTox::Compound.new(c)
-      f_dataset.features.each do |f,m|
-        if params[:nr_hits] == "true"
+
+    step_width = 100 / c_dataset.compounds.size.to_f
+    count = 0 
+    
+    if params[:nr_hits] == "true"
+      c_dataset.compounds.each do |c|
+        res_dataset.add_compound(c)
+        comp = OpenTox::Compound.new(c)
+        f_dataset.features.each do |f,m|
           hits = comp.match_hits([m[OT.smarts]])
           res_dataset.add(c,f,hits[m[OT.smarts]]) if hits[m[OT.smarts]]          
-        else
-          res_dataset.add(c,f,1) if comp.match?(m[OT.smarts])
         end
+        count += 1
+        task.progress step_width*count
+      end
+    else
+      LOGGER.debug "match #{c_dataset.compounds.size} compounds with #{f_dataset.features.keys.size} features"
+      
+      obconversion = OpenBabel::OBConversion.new
+      obmol = OpenBabel::OBMol.new
+      obconversion.set_in_format('inchi')
+      smarts_pattern = OpenBabel::OBSmartsPattern.new
+      c_dataset.compounds.each do |c|
+        res_dataset.add_compound(c)
+        comp = OpenTox::Compound.new(c)
+        obconversion.read_string(obmol,comp.inchi)
+        f_dataset.features.each do |f,m|
+          smarts_pattern.init(m[OT.smarts])
+          res_dataset.add(c,f,1) if smarts_pattern.match(obmol)
+        end
+        count += 1
+        task.progress step_width*count if count%100==0
       end
     end
     res_dataset.save @subjectid
@@ -167,7 +189,8 @@ post '/fminer/bbrc/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@bbrc, params, @value_map)
+    #fminer.add_fminer_data(@@bbrc, params, @value_map)
+    fminer.add_fminer_data(@@bbrc, @value_map)
 
     g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=g_array.to_scale.median
@@ -298,7 +321,8 @@ post '/fminer/last/?' do
     fminer.smi = [] # AM LAST: needed for matching the patterns back
 
     # Add data to fminer
-    fminer.add_fminer_data(@@last, params, @value_map)
+    #fminer.add_fminer_data(@@last, params, @value_map)
+    fminer.add_fminer_data(@@last, @value_map)
 
     raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
