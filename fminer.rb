@@ -666,7 +666,8 @@ post '/fminer/:method/match?' do
     f_dataset.features.each do |f,m|
       if (matches[m[OT.smarts]] && matches[m[OT.smarts]].size>0)
 
-        feature_uri = File.join res_dataset.uri,"feature","match", res_dataset.features.size.to_s
+        feature_uri = File.join params[:feature_dataset_uri],"feature","bbrc","match", res_dataset.features.size.to_s
+        #feature_uri = File.join res_dataset.uri,"feature","match", res_dataset.features.size.to_s
         metadata = {
           RDF.type => [OT.Feature, OT.Substructure],
           OT.hasSource => f_dataset.uri,
@@ -690,7 +691,7 @@ post '/fminer/:method/match?' do
             effect = max+1
           end
           metadata[OT.effect] = effect
-          metadata[OT.pValue] = p_value.abs
+          metadata[OT.pValue] = ((p_value.abs * 10000).round / 10000).to_f
           metadata[OT.parameters] << { DC.title => "prediction_feature", OT.paramValue => prediction_feature.uri }
         end
         
