@@ -89,6 +89,9 @@ end
 # with fminer in dataset <feature_dataset_uri>
 # accept params[:nr_hits] as used in other fminer methods 
 post '/fminer/:method/match?' do 
+  
+  LOGGER.info "apply fminer match #{params.inspect}"
+  
   raise OpenTox::BadRequestError.new "feature_dataset_uri not given" unless params[:feature_dataset_uri]
   raise OpenTox::BadRequestError.new "dataset_uri not given" unless params[:dataset_uri] 
   task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
@@ -133,6 +136,7 @@ post '/fminer/:method/match?' do
       end
     end
     res_dataset.save @subjectid
+    LOGGER.info "fminer match result #{res_dataset.uri}"
     res_dataset.uri
   end
   return_task(task)
@@ -150,6 +154,8 @@ end
 #   - nr_hits Set to "true" to get hit count instead of presence
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do 
+  
+  LOGGER.info "apply fminer bbrc #{params.inspect}"
 
   fminer=OpenTox::Algorithm::Fminer.new
   fminer.check_params(params,5,@subjectid)
@@ -170,7 +176,7 @@ post '/fminer/bbrc/?' do
     @@bbrc.SetBackbone(eval params[:backbone]) if params[:backbone] and ( params[:backbone] == "true" or params[:backbone] == "false" ) # convert string to boolean
     @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
     @@bbrc.SetConsoleOut(false)
-
+    
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
     feature_dataset.add_metadata({
       DC.title => "BBRC representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
@@ -292,6 +298,7 @@ post '/fminer/bbrc/?' do
     end
     
     feature_dataset.save(@subjectid) 
+    LOGGER.info "fminer bbrc result #{feature_dataset.uri}"
     feature_dataset.uri
   end
   response['Content-Type'] = 'text/uri-list'
