@@ -47,14 +47,19 @@ class AlgorithmTest < Test::Unit::TestCase
       #feature_dataset_uri = "http://apps.ideaconsult.net:8080/ambit2/dataset/603204?pagesize=200&page=0"
       #prediction_feature = "http://apps.ideaconsult.net:8080/ambit2/feature/528321"
       
-      dataset_uri = "http://apps.ideaconsult.net:8080/ambit2/dataset/425254"
-      prediction_feature = "http://apps.ideaconsult.net:8080/ambit2/feature/528321"
+     # dataset_uri = "http://apps.ideaconsult.net:8080/ambit2/dataset/425254"
+     # prediction_feature = "http://apps.ideaconsult.net:8080/ambit2/feature/528321"
       
-#      dataset_uri = "http://local-ot/dataset/1488"
-#      prediction_feature = "http://local-ot/dataset/1315/feature/Rodent%20carcinogenicity"
+      ##dataset_uri = "http://local-ot/dataset/1488"
+      #prediction_feature = "http://local-ot/dataset/1315/feature/Rodent%20carcinogenicity"
+      
+      #kazius 250 no features
+      dataset_uri = "http://local-ot/dataset/9264"
+      prediction_feature = dataset_uri+"/feature/endpoint"
+      
       params = {:dataset_uri=>dataset_uri,
                 :prediction_feature=>prediction_feature,
-                :min_frequency=>7} #multi: 10=>4, 5=>>3000
+                :min_frequency=>7, :max_num_features=>300} #multi: 10=>4, 5=>>3000
       post "/fminer/bbrc",params
       
 #      params = {:dataset_uri=>dataset_uri,

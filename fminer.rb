@@ -200,6 +200,8 @@ post '/fminer/bbrc/?' do
     step_width = 80 / @@bbrc.GetNoRootNodes().to_f
     features = Set.new
 
+    feature_count = {}
+    
     # run @@bbrc
     (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
       results = @@bbrc.MineRoot(j)
@@ -245,6 +247,9 @@ post '/fminer/bbrc/?' do
           }
           feature_dataset.add_feature feature_uri, metadata
           #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
+          
+          feature_count[feature_uri] = 0 
+          
         end
         id_arrs.each { |id_count_hash|
           id=id_count_hash.keys[0].to_i
@@ -253,6 +258,7 @@ post '/fminer/bbrc/?' do
             feature_dataset.add(fminer.compounds[id], feature_uri, count)
           else
             feature_dataset.add(fminer.compounds[id], feature_uri, 1)
+            feature_count[feature_uri] = feature_count[feature_uri]+1
           end
         }
 
@@ -261,7 +267,30 @@ post '/fminer/bbrc/?' do
 
     # AM: add feature values for non-present features
     # feature_dataset.complete_data_entries 
-
+    
+    if (params[:max_num_features] && feature_dataset.features.size>params[:max_num_features].to_i)
+      LOGGER.debug "removing features, found: #{feature_dataset.features.size}, max-num: #{params[:max_num_features]}"
+      
+      feature_p_count = []
+      feature_dataset.features.each do |f_uri,m|
+        feature_p_count << [f_uri, m[OT.pValue], feature_count[f_uri]]
+      end
+      # sort by p-value, tie breaking by number of compounds that match this feature
+      sorted = feature_p_count.sort do |a,b|
+        if b[1] == a[1]
+          b[2] <=> a[2]
+        else
+          b[1] <=> a[1]
+        end
+      end
+      (params[:max_num_features].to_i..(sorted.size-1)).each do |i|
+        feature_dataset.features.delete(sorted[i][0])
+        feature_dataset.compounds.each do |c|
+          feature_dataset.data_entries[c].delete(sorted[i][0])   
+        end
+      end
+    end
+    
     feature_dataset.save(@subjectid) 
     feature_dataset.uri
   end
