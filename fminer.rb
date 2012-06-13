@@ -102,10 +102,9 @@ post '/fminer/:method/match?' do
       res_dataset.add_feature(f,m)
     end
 
-    step_width = 100 / c_dataset.compounds.size.to_f
-    count = 0 
-    
     if params[:nr_hits] == "true"
+      step_width = 100 / c_dataset.compounds.size.to_f
+      count = 0
       c_dataset.compounds.each do |c|
         res_dataset.add_compound(c)
         comp = OpenTox::Compound.new(c)
@@ -118,21 +117,29 @@ post '/fminer/:method/match?' do
       end
     else
       LOGGER.debug "match #{c_dataset.compounds.size} compounds with #{f_dataset.features.keys.size} features"
-      
+      step_width = 100 / f_dataset.features.size.to_f
+      count = 0
+        
       obconversion = OpenBabel::OBConversion.new
-      obmol = OpenBabel::OBMol.new
-      obconversion.set_in_format('inchi')
+      obconversion.set_in_format('inchi')    
       smarts_pattern = OpenBabel::OBSmartsPattern.new
+      
+      obmols = {}
       c_dataset.compounds.each do |c|
         res_dataset.add_compound(c)
-        comp = OpenTox::Compound.new(c)
-        obconversion.read_string(obmol,comp.inchi)
-        f_dataset.features.each do |f,m|
-          smarts_pattern.init(m[OT.smarts])
-          res_dataset.add(c,f,1) if smarts_pattern.match(obmol)
+        inchi = OpenTox::Compound.new(c).inchi
+        obmol = OpenBabel::OBMol.new
+        obconversion.read_string(obmol,inchi)
+        obmols[c] = obmol
+      end
+      
+      f_dataset.features.each do |f,m|
+        smarts_pattern.init(m[OT.smarts])
+        c_dataset.compounds.each do |c|
+          res_dataset.add(c,f,1) if smarts_pattern.match(obmols[c])
         end
         count += 1
-        task.progress step_width*count if count%100==0
+        task.progress step_width*count if count%10==0
       end
     end
     res_dataset.save @subjectid

@@ -56,18 +56,22 @@ class AlgorithmTest < Test::Unit::TestCase
       #kazius 250 no features
       dataset_uri = "http://local-ot/dataset/9264"
       prediction_feature = dataset_uri+"/feature/endpoint"
+      feature_dataset_uri = "http://local-ot/dataset/91409"
       
       params = {:dataset_uri=>dataset_uri,
                 :prediction_feature=>prediction_feature,
                 :min_frequency=>7, :max_num_features=>300} #multi: 10=>4, 5=>>3000
-      post "/fminer/bbrc",params
+      
       
 #      params = {:dataset_uri=>dataset_uri,
 #        :prediction_feature=>prediction_feature, :feature_dataset_uri=>feature_dataset_uri}
 #      post "/lazar",params
       
-      uri = wait_for_task(last_response.body)
-      puts uri
+      #post "/fminer/bbrc",params
+      #uri = wait_for_task(last_response.body)
+      #puts uri
+      
+      #puts OpenTox::RestClientWrapper.post(File.join(CONFIG[:services]["opentox-algorithm"],"fminer/bbrc"),params)
       
 #      model = uri
 #      puts "model #{model}"
@@ -76,13 +80,18 @@ class AlgorithmTest < Test::Unit::TestCase
       
       #puts "features: "+OpenTox::Dataset.find(uri).features.size.to_s
      
-     
-#      params = {:dataset_uri=>"http://local-ot/dataset/1724",
-#        :feature_dataset_uri=>"http://local-ot/dataset/1725"}
-#      #post "/fminer/match",params
-#      #uri = wait_for_task(last_response.body)
-#      #puts uri
-#      
+      feature_dataset_uri="http://opentox.informatik.uni-freiburg.de/dataset/3277"
+      dataset_uri="http://opentox.informatik.uni-freiburg.de/dataset/1333"
+
+      params = {:dataset_uri=>dataset_uri,
+        :feature_dataset_uri=>feature_dataset_uri}
+      #post "/fminer/bbrc/match",params
+      #uri = wait_for_task(last_response.body)
+      
+      puts OpenTox::RestClientWrapper.post(File.join(CONFIG[:services]["opentox-algorithm"],"fminer/bbrc/match"),params)
+      
+#      puts uri
+      
 #      fminer = File.join(CONFIG[:services]["opentox-algorithm"],"fminer/bbrc")
 #      OpenTox::RestClientWrapper.post(fminer,params)
       
@@ -92,7 +101,7 @@ class AlgorithmTest < Test::Unit::TestCase
 #      post "/lazar",params
 #      uri = wait_for_task(last_response.body)
 #      puts uri
-      puts "features: "+OpenTox::Dataset.find(uri).features.size.to_s
+      #puts "features: "+OpenTox::Dataset.find(uri).features.size.to_s
       
    #  fminer = File.join(CONFIG[:services]["opentox-algorithm"],"fminer/bbrc")
    #  OpenTox::RestClientWrapper.post(fminer,params)
