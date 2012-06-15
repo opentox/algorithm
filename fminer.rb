@@ -136,7 +136,7 @@ post '/fminer/:method/match?' do
       f_dataset.features.each do |f,m|
         smarts_pattern.init(m[OT.smarts])
         c_dataset.compounds.each do |c|
-          res_dataset.add(c,f,1) if smarts_pattern.match(obmols[c])
+          res_dataset.add(c,f,1,true) if smarts_pattern.match(obmols[c])
         end
         count += 1
         task.progress step_width*count if count%10==0
