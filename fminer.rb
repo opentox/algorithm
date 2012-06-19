@@ -608,7 +608,7 @@ post '/fminer/:method/match?' do
   raise OpenTox::BadRequestError.new "feature_dataset_uri not given" unless params[:feature_dataset_uri]
   raise OpenTox::BadRequestError.new "dataset_uri not given" unless params[:dataset_uri]
 
-  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}"
+  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}",@subjectid
   unless params[:prediction_feature] # try to read prediction_feature from dataset
     prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first) if training_dataset.features.size == 1
   end
