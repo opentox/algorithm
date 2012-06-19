@@ -610,9 +610,9 @@ post '/fminer/:method/match?' do
 
   training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}",@subjectid
   unless params[:prediction_feature] # try to read prediction_feature from dataset
-    prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first) if training_dataset.features.size == 1
+    prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first,@subjectid) if training_dataset.features.size == 1
   end
-  prediction_feature = OpenTox::Feature.find(params[:prediction_feature]) if params[:prediction_feature]
+  prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid) if params[:prediction_feature]
 
   task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
 
