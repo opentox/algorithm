@@ -3,6 +3,7 @@ v4.0.0 2012-07-12
 	* fminer feature datasets carry metadata (minfreq, nr_hits, ...)
 	* matching service uses now last-utils, calculates p-values
 	* fminer support for percentage and per-mil frequencies
+	* switch to opentox-ruby version 4.0.0
 
 2012-04-20
 	* Dichotomy between nominal and numeric features removed, which allows for uniform handling of all descriptors
