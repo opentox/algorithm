@@ -17,7 +17,7 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/b
 require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last')
 require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 
-gem "opentox-ruby", "~> 3"
+gem "opentox-ruby", "~> 4"
 require 'opentox-ruby'
 require 'rjb'
 require 'rinruby'
