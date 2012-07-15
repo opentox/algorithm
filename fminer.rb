@@ -139,7 +139,7 @@ post '/fminer/:method/match?' do
           res_dataset.add(c,f,1,true) if smarts_pattern.match(obmols[c])
         end
         count += 1
-        task.progress step_width*count if count%10==0
+        task.progress step_width*count if count%10==0 and step_width*count<=100
       end
     end
     res_dataset.save @subjectid
