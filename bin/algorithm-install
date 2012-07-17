@@ -7,7 +7,7 @@ SELF=$(basename $0 -install)
 [ "`id -u`" = "0" ] && echo "This script must be run as non-root." 1>&2 && exit 1
 
 # Adjust ruby version here!
-RUBY_NUM_VER="1.9.3-p125"
+RUBY_NUM_VER="1.9.3-p194"
 
 echo
 echo "Welcome to service installation (<Return> to continue)."
@@ -45,11 +45,18 @@ fi
 # log directory for this service
 [ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
 
+# ruby
 [ "`$RBENV local 2>/dev/null`" = "$RUBY_NUM_VER" ] || install_ruby
+
+# fminer
 ( [ -n "`$FIND libfminer/ -name bbrc.so 2>/dev/null`" ] && [ -n "`$FIND libfminer/ -name last.so 2>/dev/null`" ] ) || . ./bin/fminer-install
 
+# self
 echo
 install_with_bundler
+
+# config
+echo '$aa = { :uri => nil }' > $OT_CONFIG_DIR/config/$SELF.rb
 
 echo
 echo "Installation finished."

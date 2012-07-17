@@ -24,7 +24,7 @@ fi
 
 check_utils "git make sed"
 printf "\n%50s\n" "FMINER"
-local DIR=`pwd`
+DIR=`pwd`
 eval RUBY_INC="-I`dirname $RUBY_DIR/include/ruby*/*linux/ruby`\ -I`dirname $RUBY_DIR/include/ruby*/ruby`"
 eval OPBB_INC="-I/usr/include/openbabel-2.0"
 cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"

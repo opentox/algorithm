@@ -17,7 +17,7 @@ module OpenTox
         response['Content-Type'] = 'text/uri-list'
         uri_list
       else
-        response['Content-Type'] = 'application/rdf+xml'
+        response['Content-Type'] = 'text/plain'
         uri_list
       end
     end
