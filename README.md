@@ -4,10 +4,7 @@ OpenTox Algorithm
 - An [OpenTox](http://www.opentox.org) REST Webservice
 - Implements the OpenTox algorithm API for
     - lazar
-    - subgraph descriptor calculation (fminer)
-    - physico-chemical descriptor calculation (pc) for more than 300 descriptors
-    - feature selection (fs) using recursive feature elimination (rfe)
-- See [opentox-ruby on maunz.de](http://opentox-ruby.maunz.de) for high-level workflow documentation
+    - feature selection
 
 REST operations
 ---------------
