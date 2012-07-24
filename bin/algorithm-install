@@ -16,7 +16,7 @@ read delete_me
 
 # check wd is root of service
 DIR=`pwd`
-if echo $DIR | grep "algorithm/bin" >/dev/null 2>&1 ; then cd ..; fi
+if echo $DIR | grep "$SELF/bin" >/dev/null 2>&1 ; then cd ..; fi
 
 # # # Boot the script
 
