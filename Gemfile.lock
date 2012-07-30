@@ -5,6 +5,7 @@ PATH
       bundler
       open4
       rdf
+      rdf-n3
       rdf-raptor
       rest-client
 
@@ -15,46 +16,20 @@ PATH
       opentox-client
       rack
       rack-contrib
-      rdf-n3
-      roo
       sinatra
       sinatra-contrib
-      spreadsheet (= 0.6.8)
       unicorn
 
 GEM
   remote: http://rubygems.org/
   specs:
-    addressable (2.2.8)
-    backports (2.6.1)
-    choice (0.1.6)
+    addressable (2.3.2)
+    backports (2.6.2)
     eventmachine (0.12.10)
-    faraday (0.8.1)
-      multipart-post (~> 1.1)
-    ffi (1.0.11)
-    google-spreadsheet-ruby (0.3.0)
-      google_drive (>= 0.3.0)
-    google_drive (0.3.1)
-      nokogiri (>= 1.4.4, != 1.5.2, != 1.5.1)
-      oauth (>= 0.3.6)
-      oauth2 (>= 0.5.0)
-    httpauth (0.1)
-    json (1.7.3)
-    jwt (0.1.4)
-      json (>= 1.2.4)
+    ffi (1.1.2)
     kgio (2.7.4)
-    log4r (1.1.10)
     mime-types (1.19)
-    multi_json (1.3.6)
-    multipart-post (1.1.5)
     nokogiri (1.5.5)
-    oauth (0.4.6)
-    oauth2 (0.8.0)
-      faraday (~> 0.8)
-      httpauth (~> 0.1)
-      jwt (~> 0.1.4)
-      multi_json (~> 1.0)
-      rack (~> 1.2)
     open4 (1.3.0)
     openbabel (2.3.1.2)
     rack (1.4.1)
@@ -74,15 +49,6 @@ GEM
       rdf (~> 0.3.0)
     rest-client (1.6.7)
       mime-types (>= 1.16)
-    roo (1.10.1)
-      choice (>= 0.1.4)
-      google-spreadsheet-ruby (>= 0.1.5)
-      nokogiri (>= 1.5.0)
-      rubyzip (>= 0.9.4)
-      spreadsheet (> 0.6.4)
-      todonotes (>= 0.1.0)
-    ruby-ole (1.2.11.4)
-    rubyzip (0.9.9)
     sinatra (1.3.2)
       rack (~> 1.3, >= 1.3.6)
       rack-protection (~> 1.2)
@@ -94,11 +60,7 @@ GEM
       rack-test
       sinatra (~> 1.3.0)
       tilt (~> 1.3)
-    spreadsheet (0.6.8)
-      ruby-ole (>= 1.0)
     tilt (1.3.3)
-    todonotes (0.1.0)
-      log4r
     unicorn (4.3.1)
       kgio (~> 2.6)
       rack
@@ -108,6 +70,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  nokogiri
   openbabel (= 2.3.1.2)
   opentox-client!
   opentox-server!
