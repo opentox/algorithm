@@ -304,6 +304,7 @@ end
 #   - random_seed Random seed ensures same datasets in bootBbrc
 #   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
 #   - method Chisq estimation method, pass 'mean' to use simple mean estimate (default 'mle').
+#   - cache Whether cache files should be used for the combination of dataset, min_frequency, backbone, random seed (default "false")
 #
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/sample/?' do
@@ -356,6 +357,14 @@ post '/fminer/bbrc/sample/?' do
     method = params[:method]
   end
 
+  # cache
+  cache=false
+  if params[:cache] == "true"
+    cache=true
+    LOGGER.debug "Set cache to true"
+  end
+
+
   task = OpenTox::Task.create("Mining BBRC sample features", url_for('/fminer',:full)) do |task|
     if fminer.prediction_feature.feature_type == "regression"
       raise OpenTox::BadRequestError.new "BBRC sampling is only for classification"
@@ -397,9 +406,22 @@ post '/fminer/bbrc/sample/?' do
     @r.assign "bbrc.service", File.join(CONFIG[:services]["opentox-algorithm"], "fminer/bbrc")
     @r.assign "dataset.service", CONFIG[:services]["opentox-dataset"]
     @r.assign "method", method
+
+    require 'digest/md5'
+    fminer.smi.shift
+    cachedId = Digest::MD5.hexdigest(
+      fminer.smi.sort.join+
+      num_boots.to_s+
+      fminer.minfreq.to_s+
+      random_seed.to_s+
+      backbone.to_s
+    )
+    @r.assign "cachedId", cachedId
+    @r.eval "cachedId <- NULL" unless cache
+
     @r.eval "source(\"bbrc-sample/bbrc-sample.R\")"
     begin
-      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, NULL, bbrc.service, dataset.service, T, random.seed, as.logical(backbone), method)"
+      @r.eval "bootBbrc(dataset.uri, prediction.feature.uri, num.boots, min.frequency.per.sample, min.sampling.support, cachedId, bbrc.service, dataset.service, T, random.seed, as.logical(backbone), method)"
       smarts = (@r.pull "ans.patterns").collect! { |id| id.gsub(/\'/,"") } # remove extra quotes around smarts
       r_p_values = @r.pull "ans.p.values"
       smarts_p_values = {}; smarts.size.times { |i| smarts_p_values[ smarts[i] ] = r_p_values[i] }
