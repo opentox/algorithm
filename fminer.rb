@@ -349,9 +349,9 @@ post '/fminer/bbrc/?' do
     
     # Add fminer results to feature dataset along owd
     which_row = @@fminer.training_dataset.compounds.inject({}) { |h,id| h[id]=0; h }
-    fminer_compounds_owd.each { |compound|
+    unused_compounds = fminer_compounds_owd - fminer_results.keys
+    (fminer_compounds_owd - unused_compounds).each { |compound|
       feature_dataset.add_compound(compound) # add compounds *in order*
-       # select appropriate feature value
       fminer_results[compound].each { |feature, values|
         feature_dataset.add( compound, feature, values[which_row[compound]] )
       }
