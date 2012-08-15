@@ -167,6 +167,7 @@ end
 #   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
 #   - min_chisq_significance Significance threshold (between 0 and 1)
 #   - nr_hits Set to "true" to get hit count instead of presence
+#   - complete_entries Set to "true" to obtain data entries for each compound
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do
 
@@ -207,7 +208,7 @@ post '/fminer/bbrc/?' do
     fminer.compounds = []
     fminer.db_class_sizes = Array.new # AM: effect
     fminer.all_activities = Hash.new # DV: for effect calculation in regression part
-    fminer.smi = [] # AM LAST: needed for matching the patterns back
+    fminer.smi = [] # needed for matching the patterns back
 
     # Add data to fminer
     fminer.add_fminer_data(@@bbrc, @value_map)
@@ -221,6 +222,10 @@ post '/fminer/bbrc/?' do
     features = Set.new
 
     # run @@bbrc
+    
+    # prepare to receive results as hash { c => [ [f,v], ... ] }
+    fminer_results = fminer.training_dataset.compounds.inject({}) { |h,id| h[id]={}; h }
+     
     (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
       results = @@bbrc.MineRoot(j)
       task.progress 10+step_width*(j+1)
@@ -269,16 +274,45 @@ post '/fminer/bbrc/?' do
         id_arrs.each { |id_count_hash|
           id=id_count_hash.keys[0].to_i
           count=id_count_hash.values[0].to_i
+          fminer_results[fminer.compounds[id]][feature_uri] || fminer_results[fminer.compounds[id]][feature_uri] = []
           if params[:nr_hits] == "true"
-            feature_dataset.add(fminer.compounds[id], feature_uri, count)
+            fminer_results[fminer.compounds[id]][feature_uri] << count
           else
-            feature_dataset.add(fminer.compounds[id], feature_uri, 1)
+            fminer_results[fminer.compounds[id]][feature_uri] << 1
           end
         }
 
       end # end of
     end   # feature parsing
 
+    # Collect compounds, in order with duplicates (owd)
+    fminer_compounds_owd = fminer.compounds.collect 
+    fminer_compounds_owd.shift if fminer_compounds_owd[0].nil?
+
+    # Complete fminer_results, s.t. it contains entries for any training compound
+    if (params[:complete_entries] == "true")
+      myhelpfeature = File.join(feature_dataset.uri,"feature","bbrc", (features.size-1).to_s)
+      missing_cmpds = fminer_results.keys.collect { |cmpd| # remember empty cpmpds
+        cmpd if fminer_results[cmpd].size == 0
+      }
+      fminer_compounds_owd.each { |cmpd| # add possibly multiple entries
+        if missing_cmpds.include? cmpd
+          fminer_results[cmpd][myhelpfeature] || fminer_results[cmpd][myhelpfeature] = []
+          fminer_results[cmpd][myhelpfeature] << 0
+        end
+      }
+    end
+    
+    # Add fminer results to feature dataset along owd
+    which_row = fminer.training_dataset.compounds.inject({}) { |h,id| h[id]=0; h }
+    fminer_compounds_owd.each { |compound|
+      feature_dataset.add_compound(compound) # add compounds *in order*
+       # select appropriate feature value
+      fminer_results[compound].each { |feature, values|
+        feature_dataset.add( compound, feature, values[which_row[compound]] )
+      }
+      which_row[compound] += 1
+    }
     # AM: add feature values for non-present features
     # feature_dataset.complete_data_entries
 
@@ -436,9 +470,9 @@ post '/fminer/bbrc/sample/?' do
 
     # matching
     task.progress 90
-    lu = LU.new                             # AM LAST: uses last-utils here
+    lu = LU.new
     params[:nr_hits] == "true" ? hit_count=true: hit_count=false
-    matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
+    matches, counts = lu.match_rb(fminer.smi,smarts,hit_count,true) # last arg: always create complete entries for sampling
     
     feature_dataset.add_metadata({
           OT.parameters => [
@@ -458,7 +492,9 @@ post '/fminer/bbrc/sample/?' do
     })
 
     matches.each do |smarts, ids|
-      feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
+      # get activities of feature occurrences; see http://goo.gl/c68t8
+      non_zero_ids = ids.collect { |idx| idx if counts[ids.index(idx)] > 0 }
+      feat_hash = Hash[*(fminer.all_activities.select { |k,v| non_zero_ids.include?(k) }.flatten)] 
       g = Array.new
       @value_map.each { |y,act| g[y-1]=Array.new }
       feat_hash.each  { |x,y|   g[y-1].push(x)   }
@@ -480,11 +516,7 @@ post '/fminer/bbrc/sample/?' do
         }
         feature_dataset.add_feature feature_uri, metadata
       end
-      if !hit_count
-        ids.each { |id| feature_dataset.add(fminer.compounds[id], feature_uri, 1)}
-      else
-        ids.each_with_index { |id,i| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][i])}
-      end
+      ids.each_with_index { |id,idx| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][idx])}
     end
 
     # AM: add feature values for non-present features
@@ -506,6 +538,7 @@ end
 #   - min_frequency freq  Minimum frequency (default 5)
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
 #   - nr_hits Set to "true" to get hit count instead of presence
+#   - complete_entries Set to "true" to obtain data entries for each compound
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
 
@@ -543,7 +576,7 @@ post '/fminer/last/?' do
     fminer.compounds = []
     fminer.db_class_sizes = Array.new # AM: effect
     fminer.all_activities = Hash.new # DV: for effect calculation (class and regr)
-    fminer.smi = [] # AM LAST: needed for matching the patterns back
+    fminer.smi = [] # needed for matching the patterns back
 
     # Add data to fminer
     fminer.add_fminer_data(@@last, @value_map)
@@ -556,6 +589,9 @@ post '/fminer/last/?' do
     task.progress 10
     step_width = 80 / @@last.GetNoRootNodes().to_f
 
+    # prepare to receive results as hash { c => [ [f,v], ... ] }
+    fminer_results = fminer.training_dataset.compounds.inject({}) { |h,id| h[id]={}; h }
+
     (0 .. @@last.GetNoRootNodes()-1).each do |j|
       results = @@last.MineRoot(j)
       task.progress 10+step_width*(j+1)
@@ -564,16 +600,18 @@ post '/fminer/last/?' do
       end
     end
 
-    lu = LU.new                             # AM LAST: uses last-utils here
-    dom=lu.read(xml)                        # AM LAST: parse GraphML
-    smarts=lu.smarts_rb(dom,'nls')          # AM LAST: converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
+    lu = LU.new                             # uses last-utils here
+    dom=lu.read(xml)                        # parse GraphML
+    smarts=lu.smarts_rb(dom,'nls')          # converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
     params[:nr_hits] == "true" ? hit_count=true: hit_count=false
-    matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # AM LAST: creates instantiations
+    matches, counts = lu.match_rb(fminer.smi,smarts,hit_count)       # creates instantiations
 
     matches.each do |smarts, ids|
-      feat_hash = Hash[*(fminer.all_activities.select { |k,v| ids.include?(k) }.flatten)] # AM LAST: get activities of feature occurrences; see http://www.softiesonrails.com/2007/9/18/ruby-201-weird-hash-syntax
+      # get activities of feature occurrences; see http://goo.gl/c68t8
+      non_zero_ids = ids.collect { |idx| idx if counts[ids.index(idx)] > 0 }
+      feat_hash = Hash[*(fminer.all_activities.select { |k,v| non_zero_ids.include?(k) }.flatten)] 
       if @@last.GetRegression()
-        p_value = @@last.KSTest(fminer.all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
+        p_value = @@last.KSTest(fminer.all_activities.values, feat_hash.values).to_f # use internal function for test
         effect = (p_value > 0) ? "activating" : "deactivating"
       else
         p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
@@ -599,12 +637,48 @@ post '/fminer/last/?' do
         }
         feature_dataset.add_feature feature_uri, metadata
       end
+
       if !hit_count
-        ids.each { |id| feature_dataset.add(fminer.compounds[id], feature_uri, 1)}
+        ids.each { |id| 
+          fminer_results[fminer.compounds[id]][feature_uri] || fminer_results[fminer.compounds[id]][feature_uri] = []
+          fminer_results[fminer.compounds[id]][feature_uri] << 1 
+        }
       else
-        ids.each_with_index { |id,i| feature_dataset.add(fminer.compounds[id], feature_uri, counts[smarts][i])}
+        ids.each_with_index { |id,i| 
+          fminer_results[fminer.compounds[id]][feature_uri] || fminer_results[fminer.compounds[id]][feature_uri] = []
+          fminer_results[fminer.compounds[id]][feature_uri] << counts[smarts][i]
+        }
       end
     end
+
+    # Collect compounds, in order with duplicates (owd)
+    fminer_compounds_owd = fminer.compounds.collect 
+    fminer_compounds_owd.shift if fminer_compounds_owd[0].nil?
+
+    # Complete fminer_results, s.t. it contains entries for any training compound
+    if (params[:complete_entries] == "true")
+      myhelpfeature = File.join(feature_dataset.uri,"feature","last", (features.size-1).to_s)
+      missing_cmpds = fminer_results.keys.collect { |cmpd| # remember empty cpmpds
+        cmpd if fminer_results[cmpd].size == 0
+      }
+      fminer_compounds_owd.each { |cmpd| # add possibly multiple entries
+        if missing_cmpds.include? cmpd
+          fminer_results[cmpd][myhelpfeature] || fminer_results[cmpd][myhelpfeature] = []
+          fminer_results[cmpd][myhelpfeature] << 0
+        end
+      }
+    end
+
+    # Add fminer results to feature dataset along owd
+    which_row = fminer.training_dataset.compounds.inject({}) { |h,id| h[id]=0; h }
+    fminer_compounds_owd.each { |compound|
+      feature_dataset.add_compound(compound) # add compounds *in order*
+       # select appropriate feature value
+      fminer_results[compound].each { |feature, values|
+        feature_dataset.add( compound, feature, values[which_row[compound]] )
+      }
+      which_row[compound] += 1
+    }
 
     # AM: add feature values for non-present features
     # feature_dataset.complete_data_entries
@@ -623,73 +697,57 @@ end
 # The result does not contain the prediction feature.
 # @param [String] dataset_uri URI of the dataset 
 # @param [String] feature_dataset_uri URI of the feature dataset (i.e. dependent variable)
-# @param [optional] parameters Accepted parameters are
-# - prediction_feature URI of prediction feature to calculate p-values for
+# @param [String] prediction_feature URI of prediction feature to calculate p-values for
+# @param [optional] 
+#   - complete_entries Set to "true" to obtain data entries for each compound
 # @return [text/uri-list] Task URI
 post '/fminer/:method/match?' do
   raise OpenTox::BadRequestError.new "feature_dataset_uri not given" unless params[:feature_dataset_uri]
   raise OpenTox::BadRequestError.new "dataset_uri not given" unless params[:dataset_uri]
 
-  training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}",@subjectid
+  fminer=OpenTox::Algorithm::Fminer.new
+  fminer.training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}",@subjectid
   unless params[:prediction_feature] # try to read prediction_feature from dataset
-    prediction_feature = OpenTox::Feature.find(training_dataset.features.keys.first,@subjectid) if training_dataset.features.size == 1
+    fminer.prediction_feature = OpenTox::Feature.find(fminer.training_dataset.features.keys.first,@subjectid) if fminer.training_dataset.features.size == 1
   end
-  prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid) if params[:prediction_feature]
+  fminer.prediction_feature = OpenTox::Feature.find(params[:prediction_feature],@subjectid) if params[:prediction_feature]
+
+  raise OpenTox::NotFoundError.new "No feature #{fminer.prediction_feature.uri} in dataset #{params[:dataset_uri]}" unless fminer.training_dataset.features and fminer.training_dataset.features.include?(fminer.prediction_feature.uri)
 
   task = OpenTox::Task.create("Matching features", url_for('/fminer/match',:full)) do |task|
 
-    # get endpoint statistics
-    if prediction_feature
-      db_class_sizes = Array.new # for effect calculation
-      all_activities = Hash.new # for effect calculation, indexed by id, starting from 1 (not 0)
-      id = 1
-      training_dataset.compounds.each do |compound|
-        entry=training_dataset.data_entries[compound]
-        entry.each do |feature,values|
-          if feature == prediction_feature.uri
-            values.each { |val|
-              if val.nil? 
-                LOGGER.warn "No #{feature} activity for #{compound.to_s}."
-              else
-                if prediction_feature.feature_type == "classification"
-                  activity= training_dataset.value_map(prediction_feature.uri).invert[val].to_i # activities are mapped to 1..n
-                  db_class_sizes[activity-1].nil? ? db_class_sizes[activity-1]=1 : db_class_sizes[activity-1]+=1 # AM effect
-                elsif prediction_feature.feature_type == "regression"
-                  activity= val.to_f 
-                end
-                begin
-                  all_activities[id]=activity # DV: insert global information
-                  id += 1
-                rescue Exception => e
-                  LOGGER.warn "Could not add " + smiles + "\t" + val.to_s + " to fminer"
-                  LOGGER.warn e.backtrace
-                end
-              end
-            }
-          end
-        end
-      end
+    if fminer.prediction_feature.feature_type == "classification"
+      raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
+        "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
+      @value_map=fminer.training_dataset.value_map(fminer.prediction_feature.uri)
     end
+
+    # filled by add_fminer_data:
+    fminer.compounds = [] # indexed by id, starting from 1 (not 0)
+    fminer.db_class_sizes = Array.new # for effect calculation
+    fminer.all_activities = Hash.new # for effect calculation, indexed by id, starting from 1 (not 0)
+    fminer.smi = [] # needed for matching the patterns back, indexed by id, starting from 1 (not 0)
+    fminer.add_fminer_data(nil, @value_map) # To only fill in administrative data (no fminer priming) pass 'nil' as instance
+    raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
 
     # Intialize result by adding compounds
     f_dataset = OpenTox::Dataset.find params[:feature_dataset_uri],@subjectid
-    c_dataset = OpenTox::Dataset.find params[:dataset_uri],@subjectid
+    c_dataset = fminer.training_dataset
     res_dataset = OpenTox::Dataset.create CONFIG[:services]["dataset"],@subjectid
     c_dataset.compounds.each do |c|
       res_dataset.add_compound(c)
     end
 
     # Run matching, put data entries in result. Features are recreated.
-    smi = [nil]; smi += c_dataset.compounds.collect { |c| OpenTox::Compound.new(c).to_smiles }
     smarts = f_dataset.features.collect { |f,m| m[OT.smarts] }
-    params[:nr_hits] == "true" ? hit_count=true: hit_count=false
-    matches, counts = LU.new.match_rb(smi, smarts, hit_count) if smarts.size>0
+    params[:nr_hits] == "true" ? hit_count=true : hit_count=false
+    params[:complete_entries] == "true" ? complete_entries=true : complete_entries=false
+    matches, counts = LU.new.match_rb(fminer.smi, smarts, hit_count, complete_entries) if smarts.size>0
 
     f_dataset.features.each do |f,m|
       if (matches[m[OT.smarts]] && matches[m[OT.smarts]].size>0)
 
         feature_uri = File.join params[:feature_dataset_uri],"feature","bbrc","match", res_dataset.features.size.to_s
-        #feature_uri = File.join res_dataset.uri,"feature","match", res_dataset.features.size.to_s
         metadata = {
           RDF.type => [OT.Feature, OT.Substructure],
           OT.hasSource => f_dataset.uri,
@@ -699,28 +757,25 @@ post '/fminer/:method/match?' do
           ]
         }
 
-        if (prediction_feature) 
-          feat_hash = Hash[*(all_activities.select { |k,v| matches[m[OT.smarts]].include?(k) }.flatten)]
-          if prediction_feature.feature_type == "regression"
-            p_value = @@last.KSTest(all_activities.values, feat_hash.values).to_f # AM LAST: use internal function for test
-            effect = (p_value > 0) ? "activating" : "deactivating"
-          else
-            p_value = @@last.ChisqTest(all_activities.values, feat_hash.values).to_f
-            g=Array.new # g is filled in *a*scending activity
-            training_dataset.value_map(prediction_feature.uri).each { |y,act| g[y-1]=Array.new }
-            feat_hash.each  { |x,y|   g[y-1].push(x)   }
-            max = OpenTox::Algorithm.effect(g, db_class_sizes) # db_class_sizes is filled in *a*scending activity
-            effect = max+1
-          end
-          metadata[OT.effect] = effect
-          metadata[OT.pValue] = ((p_value.abs * 10000).round / 10000).to_f
-          metadata[OT.parameters] << { DC.title => "prediction_feature", OT.paramValue => prediction_feature.uri }
+        feat_hash = Hash[*(fminer.all_activities.select { |k,v| matches[m[OT.smarts]].include?(k) }.flatten)]
+        if fminer.prediction_feature.feature_type == "regression"
+          p_value = @@last.KSTest(fminer.all_activities.values, feat_hash.values).to_f # use internal function for test
+          effect = (p_value > 0) ? "activating" : "deactivating"
+        else
+          p_value = @@last.ChisqTest(fminer.all_activities.values, feat_hash.values).to_f
+          g=Array.new # g is filled in *a*scending activity
+          c_dataset.value_map(fminer.prediction_feature.uri).each { |y,act| g[y-1]=Array.new }
+          feat_hash.each  { |x,y|   g[y-1].push(x)   }
+          max = OpenTox::Algorithm.effect(g, fminer.db_class_sizes) # db_class_sizes is filled in *a*scending activity
+          effect = max+1
         end
-        
+        metadata[OT.effect] = effect
+        metadata[OT.pValue] = p_value.abs
+        metadata[OT.parameters] << { DC.title => "prediction_feature", OT.paramValue => fminer.prediction_feature.uri }
         res_dataset.add_feature feature_uri, metadata
 
         matches[m[OT.smarts]].each_with_index {|id,idx| 
-          res_dataset.add(c_dataset.compounds[id-1],feature_uri,counts[m[OT.smarts]][idx])
+          res_dataset.add(fminer.compounds[id],feature_uri,counts[m[OT.smarts]][idx])
         }
       end
     end
