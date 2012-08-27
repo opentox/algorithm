@@ -1,7 +1,7 @@
 PATH
   remote: ~/opentox-ruby/opentox-client
   specs:
-    opentox-client (1.0.0)
+    opentox-client (1.0.0pre1)
       bundler
       open4
       rdf
@@ -12,7 +12,7 @@ PATH
 PATH
   remote: ~/opentox-ruby/opentox-server
   specs:
-    opentox-server (1.0.0)
+    opentox-server (1.0.0pre1)
       opentox-client
       rack
       rack-contrib
@@ -24,14 +24,16 @@ GEM
   remote: http://rubygems.org/
   specs:
     addressable (2.3.2)
-    backports (2.6.2)
+    backports (2.6.4)
+    emk-sinatra-url-for (0.2.1)
+      sinatra (>= 0.9.1.1)
     eventmachine (0.12.10)
-    ffi (1.1.2)
+    ffi (1.1.5)
     kgio (2.7.4)
     mime-types (1.19)
-    nokogiri (1.5.5)
+    nokogiri (1.4.7)
     open4 (1.3.0)
-    openbabel (2.3.1.2)
+    openbabel (2.3.1.5)
     rack (1.4.1)
     rack-contrib (1.1.0)
       rack (>= 0.9.1)
@@ -40,7 +42,7 @@ GEM
     rack-test (0.6.1)
       rack (>= 1.0)
     raindrops (0.10.0)
-    rdf (0.3.7)
+    rdf (0.3.8)
       addressable (>= 2.2.6)
     rdf-n3 (0.3.7)
       rdf (>= 0.3.4)
@@ -49,7 +51,9 @@ GEM
       rdf (~> 0.3.0)
     rest-client (1.6.7)
       mime-types (>= 1.16)
-    sinatra (1.3.2)
+    rinruby (2.0.3)
+    rjb (1.3.9)
+    sinatra (1.3.3)
       rack (~> 1.3, >= 1.3.6)
       rack-protection (~> 1.2)
       tilt (~> 1.3, >= 1.3.3)
@@ -70,7 +74,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  nokogiri
-  openbabel (= 2.3.1.2)
+  emk-sinatra-url-for (~> 0.2.1)
+  nokogiri (~> 1.4.4)
+  openbabel (~> 2.3.1.5)
   opentox-client!
   opentox-server!
+  rinruby (~> 2.0.2)
+  rjb (~> 1.3.4)
