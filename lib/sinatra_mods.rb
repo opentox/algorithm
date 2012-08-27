@@ -4,8 +4,9 @@ module OpenTox
     # get url_for support
     helpers Sinatra::UrlForHelper
 
-    # fix IE
     before {
+      $logger.debug "Request: " + request.path
+      # fix IE
       request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
       request.env['HTTP_ACCEPT']=request.params["media"] if request.params["media"]
     }
