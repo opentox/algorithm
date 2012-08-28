@@ -4,7 +4,7 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/l
 require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 
 # Service Libraries
-libs = ['to-html', 'migration_workarounds', 'sinatra_mods', 'set_java']
+libs = ['to-html', 'migration_workarounds', 'sinatra_mods', 'set_java', 'fminer', 'generic']
 libs.each { |lib| require "./lib/#{lib}.rb" }
 
 # Service Components
