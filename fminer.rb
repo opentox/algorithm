@@ -12,65 +12,48 @@ module OpenTox
   class Application < Service
 
   # Get list of fminer algorithms
-  #
-  # @return [text/uri-list] URIs of fminer algorithms
+  # @return [text/uri-list] URIs
   get '/algorithm/fminer/?' do
-    list = [ url_for('/algorithm/fminer/bbrc', :full), url_for('/algorithm/fminer/bbrc/sample', :full), url_for('/algorithm/fminer/last', :full), url_for('/algorithm/fminer/bbrc/match', :full), url_for('/algorithm/fminer/last/match', :full) ].join("\n") + "\n"
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html list
-    else
-      content_type 'text/uri-list'
-      list
-    end
+    list = [ url_for('/algorithm/fminer/bbrc', :full), 
+             url_for('/algorithm/fminer/bbrc/sample', :full), 
+             url_for('/algorithm/fminer/last', :full), 
+             url_for('/algorithm/fminer/bbrc/match', :full), 
+             url_for('/algorithm/fminer/last/match', :full) 
+           ].join("\n") + "\n"
+    format_output(list)
   end
   
-  
-  
-  # Get RDF/XML representation of fminer bbrc algorithm
-  # @return [application/rdf+xml] OWL-DL representation of fminer bbrc algorithm
+  # Get representation of BBRC algorithm
+  # @return [String] Representation
   get "/algorithm/fminer/bbrc/?" do
     algorithm = OpenTox::Algorithm::Generic.new(url_for('/algorithm/fminer/bbrc',:full))
     algorithm.metadata = {
-      DC.title => 'fminer backbone refinement class representatives',
-      DC.creator => "andreas@maunz.de, helma@in-silico.ch",
-      DC.contributor => "vorgrimmlerdavid@gmx.de",
-  #    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_bbrc",
-      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
-      OT.parameters => [
+      DC.title => 'Backbone Refinement Class Representatives',
+      DC.creator => "andreas@maunz.de",
+      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+    }
+    algorithm.parameters = [
         { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
         { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
         { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
         { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
         { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
         { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
-        { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+        { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" }
     ]
-    }
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html algorithm.to_yaml
-    when /application\/x-yaml/
-      content_type "application/x-yaml"
-      algorithm.to_yaml
-    else
-      response['Content-Type'] = 'application/rdf+xml'
-      algorithm.to_rdfxml
-    end
+    format_output(algorithm)
   end
   
-  # Get RDF/XML representation of fminer bbrc algorithm
-  # @return [application/rdf+xml] OWL-DL representation of fminer bbrc algorithm
+  # Get representation of BBRC-sample algorithm
+  # @return [String] Representation
   get "/algorithm/fminer/bbrc/sample/?" do
     algorithm = OpenTox::Algorithm::Generic.new(url_for('/algorithm/fminer/bbrc/sample',:full))
     algorithm.metadata = {
-      DC.title => 'fminer backbone refinement class representatives, obtained from samples of a dataset',
+      DC.title => 'Backbone Refinement Class Representatives, obtained from samples of a dataset',
       DC.creator => "andreas@maunz.de",
-  #    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_bbrc",
-      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
-      OT.parameters => [
+      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+    }
+    algorithm.parameters = [
         { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
         { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
         { DC.description => "Number of bootstrap samples", OT.paramScope => "optional", DC.title => "num_boots" },
@@ -80,83 +63,45 @@ module OpenTox
         { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
         { DC.description => "Chisq estimation method, pass 'mean' to use simple mean estimate for chisq test.", OT.paramScope => "optional", DC.title => "method" }
     ]
-    }
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html algorithm.to_yaml
-    when /yaml/
-      content_type "application/x-yaml"
-      algorithm.to_yaml
-    else
-      response['Content-Type'] = 'application/rdf+xml'
-      algorithm.to_rdfxml
-    end
+    format_output(algorithm)
   end
   
-  # Get RDF/XML representation of fminer last algorithm
-  # @return [application/rdf+xml] OWL-DL representation of fminer last algorithm
+  # Get representation of fminer LAST-PM algorithm
+  # @return [String] Representation
   get "/algorithm/fminer/last/?" do
     algorithm = OpenTox::Algorithm::Generic.new(url_for('/algorithm/fminer/last',:full))
     algorithm.metadata = {
-      DC.title => 'fminer latent structure class representatives',
-      DC.creator => "andreas@maunz.de, helma@in-silico.ch",
-      DC.contributor => "vorgrimmlerdavid@gmx.de",
-  #    BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#fminer_last",
-      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
-      OT.parameters => [
+      DC.title => 'Latent Structure Pattern Mining descriptors',
+      DC.creator => "andreas@maunz.de",
+      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+    }
+    algorithm.parameters = [
         { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
         { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
         { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
         { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-        { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+        { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" }
     ]
-    }
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html algorithm.to_yaml
-    when /application\/x-yaml/
-      content_type "application/x-yaml"
-      algorithm.to_yaml
-    else
-      response['Content-Type'] = 'application/rdf+xml'
-      algorithm.to_rdfxml
-    end
+    format_output(algorithm)
   end
   
   
-  # Get RDF/XML representation of fminer matching algorithm
-  # @param [String] dataset_uri URI of the dataset 
-  # @param [String] feature_dataset_uri URI of the feature dataset (i.e. dependent variable)
-  # @param [optional] parameters Accepted parameters are
-  # - prediction_feature URI of prediction feature to calculate p-values for
+  # Get representation of matching algorithm
+  # @return [String] Representation
   get "/algorithm/fminer/:method/match?" do
     algorithm = OpenTox::Algorithm::Generic.new(url_for("/algorithm/fminer/#{params[:method]}/match",:full))
     algorithm.metadata = {
       DC.title => 'fminer feature matching',
       DC.creator => "mguetlein@gmail.com, andreas@maunz.de",
-      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
-      OT.parameters => [
+      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+    }
+    algorithm.parameters = [
         { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
         { DC.description => "Feature Dataset URI", OT.paramScope => "mandatory", DC.title => "feature_dataset_uri" },
         { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" }
     ]
-    }
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html algorithm.to_yaml
-    when /application\/x-yaml/
-      content_type "application/x-yaml"
-      algorithm.to_yaml
-    else
-      response['Content-Type'] = 'application/rdf+xml'
-      algorithm.to_rdfxml
-    end
+    format_output(algorithm)
   end
-  
-  
   
   
   # Run bbrc algorithm on dataset

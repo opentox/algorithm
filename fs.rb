@@ -6,47 +6,28 @@ module OpenTox
   class Application < Service
 
   # Get list of feature selection algorithms
-  # @return [text/uri-list] URIs of feature selection algorithms
+  # @return [text/uri-list] URIs
   get '/algorithm/fs/?' do
     list = [ url_for('/algorithm/feature_selection/rfe', :full) ].join("\n") + "\n"
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html list
-    else
-      content_type 'text/uri-list'
-      list
-    end
+    format_output(list)
   end
   
-  # Get representation of recursive feature elimination algorithm
-  # @return [application/rdf+xml] OWL-DL representation of recursive feature elimination algorithm
+  # Get representation of Recursive Feature Elimination algorithm
+  # @return [String] Representation
   get "/algorithm/fs/rfe/?" do
     algorithm = OpenTox::Algorithm::Generic.new(url_for('/algorithm/feature_selection/rfe',:full))
     algorithm.metadata = {
-      DC.title => 'recursive feature elimination',
-      DC.creator => "andreas@maunz.de, helma@in-silico.ch",
-      DC.contributor => "vorgrimmlerdavid@gmx.de",
-      BO.instanceOf => "http://opentox.org/ontology/ist-algorithms.owl#feature_selection_rfe",
-      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised],
-      OT.parameters => [
+      DC.title => 'Recursive Feature Elimination',
+      DC.creator => "andreas@maunz.de",
+      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+    }
+    algorithm.parameters = [
         { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
         { DC.description => "Prediction Feature URI", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
         { DC.description => "Feature Dataset URI", OT.paramScope => "mandatory", DC.title => "feature_dataset_uri" },
         { DC.description => "Delete Instances with missing values", OT.paramScope => "optional", DC.title => "del_missing" }
     ]
-    }
-    case request.env['HTTP_ACCEPT']
-    when /text\/html/
-      content_type "text/html"
-      OpenTox.text_to_html algorithm.to_yaml
-    when /yaml/
-      content_type "application/x-yaml"
-      algorithm.to_yaml
-    else
-      response['Content-Type'] = 'application/rdf+xml'  
-      algorithm.to_rdfxml
-    end
+    format_output(algorithm)
   end
   
   # Run rfe algorithm on dataset

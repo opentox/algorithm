@@ -22,7 +22,7 @@ module OpenTox
                url_for('/algorithm/fminer/last', :full), 
                url_for('/algorithm/fminer/bbrc/match', :full), 
                url_for('/algorithm/fminer/last/match', :full), 
-               url_for('/algorithm/feature_selection/rfe', :full), 
+               url_for('/algorithm/fs/rfe', :full), 
                url_for('/algorithm/pc', :full) ].join("\n") + "\n"
       format_output (list)
     end
