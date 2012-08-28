@@ -7,6 +7,8 @@ module OpenTox
     # Put any code here that should be executed immediately before 
     # request is processed
     before {
+      $logger.debug "Request: " + request.path
+      # fix IE
       request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
       request.env['HTTP_ACCEPT']=request.params["media"] if request.params["media"]
     }
