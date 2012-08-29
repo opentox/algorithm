@@ -3,13 +3,13 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/b
 require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last') # 
 require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 
-# Service Libraries
-libs = ['to-html', 'migration_workarounds', 'sinatra_mods', 'set_java', 'fminer', 'generic']
+# Library Code (Backend Classes)
+libs = ['fminer', 'generic', 'utils/diag', 'utils/java', 'utils/html', 'utils/workarounds']
 libs.each { |lib| require "./lib/#{lib}.rb" }
 
-# Service Components
-services = ['fminer', 'fs', 'pc'] # TODO: add lazar
-services.each { |service| require "./#{service}.rb" }
+# Service Components (Sinatra Routes)
+services = ['fminer', 'fs', 'pc', 'sinatra'] 
+services.each { |lib| require "./webapp/#{lib}.rb" }
 
 module OpenTox
   class Application < Service
