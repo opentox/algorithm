@@ -8,15 +8,15 @@ module OpenTox
 
   # Get a list of descriptor calculation algorithms
   # @return [text/uri-list] URIs
-  get '/algorithm/pc' do
+  get '/pc' do
     algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
-    list = (algorithms.keys.sort << "AllDescriptors").collect { |name| url_for("/algorithm/pc/#{name}",:full) }.join("\n") + "\n"
+    list = (algorithms.keys.sort << "AllDescriptors").collect { |name| url_for("/pc/#{name}",:full) }.join("\n") + "\n"
     format_output(list)
   end
   
   # Get representation of Descriptor Calculation Algorithm
   # @return [String] Representation
-  get '/algorithm/pc/:descriptor' do
+  get '/pc/:descriptor' do
     descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
     alg_params = [ 
       { DC.description => "Dataset URI", 
@@ -39,7 +39,7 @@ module OpenTox
   
     if descriptors 
       # Contents
-      algorithm = OpenTox::Algorithm::Generic.new(url_for("/algorithm/pc/#{params[:descriptor]}",:full))
+      algorithm = OpenTox::Algorithm::Generic.new(url_for("/pc/#{params[:descriptor]}",:full))
       mmdata = {
         DC.title => params[:descriptor],
         DC.creator => "andreas@maunz.de",
@@ -61,7 +61,7 @@ module OpenTox
   # @param optional [String] pc_type Physico-chemical descriptor type to generate, see TODO
   # @param optional [String] lib Library to use, see TODO
   # @return [text/uri-list] Task URI
-  post '/algorithm/pc/AllDescriptors' do
+  post '/pc/AllDescriptors' do
     response['Content-Type'] = 'text/uri-list'
     raise OpenTox::NotFoundError.new "Parameter 'dataset_uri' missing." unless params[:dataset_uri]
   
@@ -85,7 +85,7 @@ module OpenTox
   #
   # @param [String] dataset_uri URI of the training dataset
   # @return [text/uri-list] Task URI
-  post '/algorithm/pc/:descriptor' do
+  post '/pc/:descriptor' do
     response['Content-Type'] = 'text/uri-list'
     raise OpenTox::NotFoundError.new "Parameter 'dataset_uri' missing." unless params[:dataset_uri]
   

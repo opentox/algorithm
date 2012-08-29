@@ -7,15 +7,15 @@ module OpenTox
 
   # Get list of feature selection algorithms
   # @return [text/uri-list] URIs
-  get '/algorithm/fs/?' do
-    list = [ url_for('/algorithm/feature_selection/rfe', :full) ].join("\n") + "\n"
+  get '/fs/?' do
+    list = [ url_for('/fs/rfe', :full) ].join("\n") + "\n"
     format_output(list)
   end
   
   # Get representation of Recursive Feature Elimination algorithm
   # @return [String] Representation
-  get "/algorithm/fs/rfe/?" do
-    algorithm = OpenTox::Algorithm::Generic.new(url_for('/algorithm/feature_selection/rfe',:full))
+  get "/fs/rfe/?" do
+    algorithm = OpenTox::Algorithm::Generic.new(url_for('/fs/rfe',:full))
     algorithm.metadata = {
       DC.title => 'Recursive Feature Elimination',
       DC.creator => "andreas@maunz.de",
@@ -35,7 +35,7 @@ module OpenTox
   # @param [String] prediction_feature URI
   # @param [String] feature_dataset_uri URI
   # @return [text/uri-list] Task URI
-  post '/algorithm/fs/rfe/?' do 
+  post '/fs/rfe/?' do 
   
     raise OpenTox::NotFoundError.new "Please submit a dataset_uri." unless params[:dataset_uri]
     raise OpenTox::NotFoundError.new "Please submit a prediction_feature." unless params[:prediction_feature]
@@ -56,7 +56,7 @@ module OpenTox
   
     del_missing = params[:del_missing] == "true" ? true : false
   
-    task = OpenTox::Task.create("Recursive Feature Elimination", url_for('/algorithm/feature_selection',:full)) do |task|
+    task = OpenTox::Task.create("Recursive Feature Elimination", url_for('/fs',:full)) do |task|
       r_result_file = OpenTox::Algorithm::FeatureSelection.rfe( { :ds_csv_file => ds.path, :prediction_feature => prediction_feature, :fds_csv_file => fds.path, :del_missing => del_missing } )
       
       

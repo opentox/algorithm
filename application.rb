@@ -15,7 +15,7 @@ module OpenTox
   class Application < Service
 
     # get implementation
-    get '/algorithm/?' do
+    get '/?' do
       list = [ url_for('/algorithm/lazar', :full), 
                url_for('/algorithm/fminer/bbrc', :full), 
                url_for('/algorithm/fminer/bbrc/sample', :full), 

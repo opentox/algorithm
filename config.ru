@@ -2,4 +2,6 @@ SERVICE="algorithm"
 require 'bundler'
 Bundler.require
 require './application.rb'
-run OpenTox::Application
+map "/algorithm" do
+  run OpenTox::Application
+end
