@@ -1,3 +1,7 @@
+# fminer.rb
+# Substructural Descriptors
+# Author: Andreas Maunz
+
 ENV['FMINER_SMARTS'] = 'true'
 ENV['FMINER_NO_AROMATIC'] = 'true'
 ENV['FMINER_PVALUES'] = 'true'
@@ -118,17 +122,26 @@ module OpenTox
     # @return [text/uri-list] Task URI
     post '/fminer/bbrc/?' do
     
-      fminer=OpenTox::Algorithm::Fminer.new
+      fminer=OpenTox::Algorithm::Fminer.new(url_for('/fminer/bbrc',:full))
       fminer.check_params(params,5,@subjectid)
     
-      task = OpenTox::Task.create("Mining BBRC features", url_for('/fminer',:full)) do |task|
+      task = OpenTox::Task.create( 
+                                  $task[:uri], 
+                                  @subjectid, 
+                                  { RDF::DC.description => "Mining BBRC features", 
+                                    RDF::DC.creator => url_for('/fminer/bbrc',:full) 
+                                  } 
+                                 ) do |task|
         @@bbrc.Reset
         if fminer.prediction_feature.feature_type == "regression"
           @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
         else
-          raise "no accept values for dataset '"+fminer.training_dataset.uri.to_s+"' and feature '"+fminer.prediction_feature.uri.to_s+
-            "'" unless fminer.training_dataset.accept_values(fminer.prediction_feature.uri)
-          @value_map=fminer.training_dataset.value_map(fminer.prediction_feature.uri)
+          bad_request_error "No accept values for "\
+                            "dataset '#{fminer.training_dataset.uri}' and "\
+                            "feature '#{fminer.prediction_feature.uri}'" unless 
+                             fminer.prediction_feature.accept_values
+          @value_map=fminer.training_dataset.value_map(fminer.prediction_feature)
+          $logger.debug @value_map
         end
         @@bbrc.SetMinfreq(fminer.minfreq)
         @@bbrc.SetType(1) if params[:feature_type] == "paths"
