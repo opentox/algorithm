@@ -5,3 +5,16 @@
 # So that we can use our old code mostly as is.
 include RDF
 
+module OpenTox
+
+    # Help function to provide the metadata= functionality.
+    # Downward compatible to opentox-ruby.
+    # @param [Hash] Key-Value pairs with the metadata
+    # @return self
+    def metadata=(hsh) 
+      hsh.each {|k,v|
+        self[k]=v
+      }
+    end
+
+end

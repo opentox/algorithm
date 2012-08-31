@@ -13,22 +13,14 @@ module OpenTox
       def check_params(params,per_mil,subjectid=nil)
         bad_request_error "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
         @training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", subjectid # AM: find is a shim
-        #puts @training_dataset.features[0].class
-        #puts @training_dataset.features[0].to_turtle
-        #puts @training_dataset.features[0].metadata
-        #puts @training_dataset.features[0].uri
-
-
         unless params[:prediction_feature] # try to read prediction_feature from dataset
           raise OpenTox::NotFoundError.new "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
           prediction_feature = OpenTox::Feature.find(@training_dataset.features.first.uri,@subjectid)
           params[:prediction_feature] = prediction_feature.uri
         end
         @prediction_feature = OpenTox::Feature.find params[:prediction_feature], subjectid # AM: find is a shim
-
         resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset_uri]}'" unless 
           @training_dataset.find_feature( params[:prediction_feature] ) # AM: find_feature is a shim
-
         unless params[:min_frequency].nil? 
           # check for percentage
           if params[:min_frequency].include? "pc"
@@ -63,7 +55,34 @@ module OpenTox
         end
       end
 
-    
+      def add_fminer_data(fminer_instance, value_map)
+        id=1
+        @training_dataset.compounds.each_with_index do |compound|
+          compound_activities = @training_dataset.find_data_entry(compound.uri, @prediction_feature.uri)
+          if compound_activities.nil?
+            $logger.warn "No activity for '#{compound.uri}' and feature '#{@prediction_feature.uri}'"
+          else
+            if @prediction_feature.feature_type == "classification"
+              activity= value_map.invert[compound_activities].to_i # activities are mapped to 1..n
+              @db_class_sizes[activity-1].nil? ? @db_class_sizes[activity-1]=1 : @db_class_sizes[activity-1]+=1 # AM effect
+            elsif @prediction_feature.feature_type == "regression"
+              activity= compound_activities.to_f 
+            end
+            begin
+              fminer_instance.AddCompound(compound.smiles,id) if fminer_instance
+              fminer_instance.AddActivity(activity, id) if fminer_instance 
+              @all_activities[id]=activity # DV: insert global information
+              @compounds[id] = compound
+              @smi[id] = compound.smiles
+              id += 1
+            rescue Exception => e
+              LOGGER.warn "Could not add " + smiles + "\t" + values[i].to_s + " to fminer"
+              LOGGER.warn e.backtrace
+            end
+          end
+        end
+        $logger.debug "Finished add_fminer_data"
+      end
 
     end
 
@@ -79,6 +98,35 @@ module OpenTox
       def initialize(uri)
         super uri
       end
+    end
+
+    # Sum of an array for Arrays.
+    # @param [Array] Array with values
+    # @return [Integer] Sum of size of values
+    def self.sum_size(array)
+      sum=0
+      array.each { |e| sum += e.size }
+      return sum
+    end
+
+    # Effect calculation
+    def self.effect(occurrences, db_instances)
+      max=0
+      max_value=0
+      nr_o = self.sum_size(occurrences)
+      nr_db = db_instances.to_scale.sum
+
+      occurrences.each_with_index { |o,i| # fminer outputs occurrences sorted reverse by activity.
+        actual = o.size.to_f/nr_o
+        expected = db_instances[i].to_f/nr_db
+        if actual > expected
+          if ((actual - expected) / actual) > max_value
+           max_value = (actual - expected) / actual # 'Schleppzeiger'
+            max = i
+          end
+        end
+      }
+      max
     end
 
   end

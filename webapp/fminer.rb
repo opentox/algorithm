@@ -141,29 +141,27 @@ module OpenTox
                             "feature '#{fminer.prediction_feature.uri}'" unless 
                              fminer.prediction_feature.accept_values
           @value_map=fminer.training_dataset.value_map(fminer.prediction_feature)
-          $logger.debug @value_map
         end
         @@bbrc.SetMinfreq(fminer.minfreq)
         @@bbrc.SetType(1) if params[:feature_type] == "paths"
         @@bbrc.SetBackbone(false) if params[:backbone] == "false"
         @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
         @@bbrc.SetConsoleOut(false)
+
     
         feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
-        feature_dataset.add_metadata({
-          DC.title => "BBRC representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
+        feature_dataset.metadata = {
+          DC.title => "BBRC representatives",
           DC.creator => url_for('/fminer/bbrc',:full),
           OT.hasSource => url_for('/fminer/bbrc', :full),
-          OT.parameters => [
+        }
+        feature_dataset.parameters = [
             { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
             { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
             { DC.title => "min_frequency", OT.paramValue => fminer.minfreq },
             { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") },
             { DC.title => "backbone", OT.paramValue => (params[:backbone] == "false" ? "false" : "true") }
-    
         ]
-        })
-        feature_dataset.save(@subjectid)
     
         fminer.compounds = []
         fminer.db_class_sizes = Array.new # AM: effect
@@ -172,19 +170,22 @@ module OpenTox
     
         # Add data to fminer
         fminer.add_fminer_data(@@bbrc, @value_map)
-    
-        g_array=fminer.all_activities.values # DV: calculation of global median for effect calculation
-        g_median=g_array.to_scale.median
-    
+        g_median=fminer.all_activities.values.to_scale.median
+
         raise "No compounds in dataset #{fminer.training_dataset.uri}" if fminer.compounds.size==0
-        task.progress 10
+        #task.progress 10
         step_width = 80 / @@bbrc.GetNoRootNodes().to_f
-        features = Set.new
+        features_smarts = Set.new
+        features = Array.new
     
         # run @@bbrc
+        
+        # prepare to receive results as hash { c => [ [f,v], ... ] }
+        fminer_results = {}
+
         (0 .. @@bbrc.GetNoRootNodes()-1).each do |j|
           results = @@bbrc.MineRoot(j)
-          task.progress 10+step_width*(j+1)
+          #task.progress 10+step_width*(j+1)
           results.each do |result|
             f = YAML.load(result)[0]
             smarts = f[0]
@@ -210,41 +211,62 @@ module OpenTox
               end
             end
     
-            feature_uri = File.join feature_dataset.uri,"feature","bbrc", features.size.to_s
-            unless features.include? smarts
-              features << smarts
-              metadata = {
+            #feature_uri = File.join feature_dataset.uri,"feature","bbrc", features.size.to_s
+            unless features_smarts.include? smarts
+              features_smarts << smarts
+
+              feature = OpenTox::Feature.new nil, @subjectid
+              feature.title = smarts
+              feature.metadata = {
                 OT.hasSource => url_for('/fminer/bbrc', :full),
                 RDF.type => [OT.Feature, OT.Substructure],
                 OT.smarts => smarts,
                 OT.pValue => p_value.to_f,
-                OT.effect => effect,
-                OT.parameters => [
+                OT.effect => effect
+              }
+              feature.parameters = [
                   { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
                   { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
               ]
-              }
-              feature_dataset.add_feature feature_uri, metadata
+              features << feature
               #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
             end
+
             id_arrs.each { |id_count_hash|
               id=id_count_hash.keys[0].to_i
               count=id_count_hash.values[0].to_i
+              fminer_results[fminer.compounds[id]] || fminer_results[fminer.compounds[id]] = {}
+              fminer_results[fminer.compounds[id]][feature.uri] || fminer_results[fminer.compounds[id]][feature.uri] = []
               if params[:nr_hits] == "true"
-                feature_dataset.add(fminer.compounds[id], feature_uri, count)
+                fminer_results[fminer.compounds[id]][feature.uri] << count
               else
-                feature_dataset.add(fminer.compounds[id], feature_uri, 1)
+                fminer_results[fminer.compounds[id]][feature.uri] << 1
               end
             }
     
           end # end of
         end   # feature parsing
-    
-        # AM: add feature values for non-present features
-        # feature_dataset.complete_data_entries
-    
-        feature_dataset.save(@subjectid)
+
+        $logger.debug features.size
+        feature_dataset = OpenTox::Dataset.new nil, @subjectid
+        feature_dataset.features = features
+
+        fminer_compounds = fminer.compounds.collect { |c| c }
+        fminer_compounds.shift if fminer_compounds[0].nil?
+        fminer_compounds.each { |c|
+          row = [ c ]
+          features.each { |f|
+            row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
+          }
+          row.collect! { |v| v ? v : 0 }
+          feature_dataset << row
+        }
+        $logger.debug "G"
+        feature_dataset.put @subjectid
+        $logger.debug "G"
+        $logger.debug feature_dataset.uri
         feature_dataset.uri
+
       end
       response['Content-Type'] = 'text/uri-list'
       raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
@@ -337,7 +359,7 @@ module OpenTox
     
         feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
         feature_dataset.add_metadata({
-          DC.title => "BBRC representatives for " + fminer.training_dataset.metadata[DC.title].to_s + "(bootstrapped)",
+          DC.title => "BBRC representatives (bootstrapped)",
           DC.creator => url_for('/fminer/bbrc/sample',:full),
           OT.hasSource => url_for('/fminer/bbrc/sample', :full)
         })
@@ -489,7 +511,7 @@ module OpenTox
     
         feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
         feature_dataset.add_metadata({
-          DC.title => "LAST representatives for " + fminer.training_dataset.metadata[DC.title].to_s,
+          DC.title => "LAST features",
           DC.creator => url_for('/fminer/last',:full),
           OT.hasSource => url_for('/fminer/last', :full),
           OT.parameters => [
