@@ -361,6 +361,8 @@ module OpenTox
 
 
           features = []
+          # prepare to receive results as hash { c => [ [f,v], ... ] }
+          fminer_results = {}
           matches.each do |smarts, ids|
             feature = OpenTox::Feature.new nil, @subjectid
             #feature.title = smarts
