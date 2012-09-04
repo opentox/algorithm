@@ -87,39 +87,41 @@ module OpenTox
         $logger.debug "Finished add_fminer_data"
       end
 
-    end
 
 
-    def calc_metadata(smarts, ids, counts, fminer_instance, feature_dataset_uri, value_map, params, p_value=nil)
-      # Either p_value or fminer instance to calculate it
-      return nil if (p_value.nil? and fminer_instance.nil?) 
-      return nil if (p_value and fminer_instance) 
-      # get activities of feature occurrences; see http://goo.gl/c68t8
-      non_zero_ids = ids.collect { |idx| idx if counts[ids.index(idx)] > 0 }
-      feat_hash = Hash[*(@@fminer.all_activities.select { |k,v| non_zero_ids.include?(k) }.flatten)] 
-      if p_value.nil? and fminer_instance.GetRegression()
-        p_value = fminer_instance.KSTest(@@fminer.all_activities.values, feat_hash.values).to_f
-        effect = (p_value > 0) ? "activating" : "deactivating"
-      else
-        p_value = fminer_instance.ChisqTest(@@fminer.all_activities.values, feat_hash.values).to_f unless p_value
-        g=Array.new
-        value_map.each { |y,act| g[y-1]=Array.new }
-        feat_hash.each  { |x,y|   g[y-1].push(x)   }
-        max = OpenTox::Algorithm.effect(g, @@fminer.db_class_sizes)
-        effect = max+1
+      def calc_metadata(smarts, ids, counts, fminer_instance, feature_dataset_uri, value_map, params, p_value=nil)
+        # Either p_value or fminer instance to calculate it
+        return nil if (p_value.nil? and fminer_instance.nil?) 
+        return nil if (p_value and fminer_instance) 
+        # get activities of feature occurrences; see http://goo.gl/c68t8
+        non_zero_ids = ids.collect { |idx| idx if counts[ids.index(idx)] > 0 }
+        feat_hash = Hash[*(all_activities.select { |k,v| non_zero_ids.include?(k) }.flatten)] 
+        if p_value.nil? and fminer_instance.GetRegression()
+          p_value = fminer_instance.KSTest(all_activities.values, feat_hash.values).to_f
+          effect = (p_value > 0) ? "activating" : "deactivating"
+        else
+          p_value = fminer_instance.ChisqTest(all_activities.values, feat_hash.values).to_f unless p_value
+          g=Array.new
+          value_map.each { |y,act| g[y-1]=Array.new }
+          feat_hash.each  { |x,y|   g[y-1].push(x)   }
+          max = OpenTox::Algorithm.effect(g, db_class_sizes)
+          effect = max+1
+        end
+
+        metadata = {
+          RDF.type => [OT.Feature, OT.Substructure],
+          OT.smarts => smarts,
+          OT.pValue => p_value.abs,
+          OT.effect => effect
+        }
+        parameters = [
+          { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
+          { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
+        ]
+        metadata[OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
+        [ metadata, parameters ]
       end
-      metadata = {
-        RDF.type => [OT.Feature, OT.Substructure],
-        OT.smarts => smarts,
-        OT.pValue => p_value.abs,
-        OT.effect => effect
-      }
-      parameters = [
-        { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-        { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-      ]
-      metadata[OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
-      [ metadata, parameters ]
+
     end
 
 

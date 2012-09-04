@@ -366,15 +366,15 @@ module OpenTox
           matches.each do |smarts, ids|
             feature = OpenTox::Feature.new nil, @subjectid
             #feature.title = smarts
-            metadata, parameters = calc_metadata(smarts, ids, counts[smarts], @@last, nil, value_map, params)
+            metadata, parameters = @@fminer.calc_metadata(smarts, ids, counts[smarts], @@last, nil, value_map, params)
             feature.metadata = metadata
             feature.parameters = parameters
             features << feature
   
             ids.each_with_index { |id,idx| 
-              fminer_results[fminer.compounds[id]] || fminer_results[fminer.compounds[id]] = {}
-              fminer_results[fminer.compounds[id]][feature.uri] || fminer_results[fminer.compounds[id]][feature.uri] = []
-              fminer_results[fminer.compounds[id]][feature.uri] << counts[smarts][idx]
+              fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}
+              fminer_results[@@fminer.compounds[id]][feature.uri] || fminer_results[@@fminer.compounds[id]][feature.uri] = []
+              fminer_results[@@fminer.compounds[id]][feature.uri] << counts[smarts][idx]
             }
           end
 
