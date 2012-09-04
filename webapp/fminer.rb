@@ -219,11 +219,11 @@ module OpenTox
                 features_smarts << smarts
 
                 feature = OpenTox::Feature.new nil, @subjectid
-                #feature.title = smarts
+                feature.title = smarts.dup
                 feature.metadata = {
                   OT.hasSource => url_for('/fminer/bbrc', :full),
                   RDF.type => [OT.Feature, OT.Substructure],
-                  OT.smarts => smarts,
+                  OT.smarts => smarts.dup,
                   OT.pValue => p_value.to_f,
                   OT.effect => effect
                 }
@@ -231,8 +231,8 @@ module OpenTox
                     { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
                     { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
                 ]
+                feature.put
                 features << feature
-                #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
               end
 
               id_arrs.each { |id_count_hash|
@@ -365,10 +365,11 @@ module OpenTox
           fminer_results = {}
           matches.each do |smarts, ids|
             feature = OpenTox::Feature.new nil, @subjectid
-            #feature.title = smarts
+            feature.title = smarts.dup
             metadata, parameters = @@fminer.calc_metadata(smarts, ids, counts[smarts], @@last, nil, value_map, params)
             feature.metadata = metadata
             feature.parameters = parameters
+            feature.put
             features << feature
   
             ids.each_with_index { |id,idx| 

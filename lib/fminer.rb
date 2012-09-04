@@ -110,7 +110,7 @@ module OpenTox
 
         metadata = {
           RDF.type => [OT.Feature, OT.Substructure],
-          OT.smarts => smarts,
+          OT.smarts => smarts.dup,
           OT.pValue => p_value.abs,
           OT.effect => effect
         }
