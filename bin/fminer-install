@@ -26,7 +26,8 @@ check_utils "git make sed"
 printf "\n%50s\n" "FMINER"
 DIR=`pwd`
 eval RUBY_INC="-I`dirname $RUBY_DIR/include/ruby*/*linux/ruby`\ -I`dirname $RUBY_DIR/include/ruby*/ruby`"
-eval OPBB_INC="-I/usr/include/openbabel-2.0"
+OPBB_INC="-I$OB_DEST/include/openbabel-2.0"
+OPBB_LIB="-L$OB_DEST/lib"
 cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
 cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
 cd "libfminer/libbbrc">>$LOG 2>&1
@@ -39,6 +40,7 @@ $GIT pull >>$LOG 2>&1
 cd - >>$LOG 2>&1
 for mylib in bbrc last; do
   cmd="$SED -i 's,^INCLUDE_OB.*,INCLUDE_OB\ =\ $OPBB_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (OB)"
+  cmd="$SED -i 's,^LDFLAGS_OB.*,LDFLAGS_OB\ =\ $OPBB_LIB,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (OB)"
   cmd="$SED -i 's,^INCLUDE_RB.*,INCLUDE_RB\ =\ $RUBY_INC,g' `pwd`/libfminer/lib$mylib/Makefile" && run_cmd "$cmd" "Makefile $mylib (RB)"
 done
 cd "libfminer/libbbrc">>$LOG 2>&1
