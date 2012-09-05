@@ -12,11 +12,15 @@ module OpenTox
       end
 
 
+      # Check parameters of a fminer call
+      # Sets training dataset, prediction feature, and minfreq instance variables
+      # @param[Hash] parameters of the REST call
+      # @param[Integer] per-mil value for min frequency
       def check_params(params,per_mil,subjectid=nil)
         bad_request_error "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
         @training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", subjectid # AM: find is a shim
         unless params[:prediction_feature] # try to read prediction_feature from dataset
-          raise OpenTox::NotFoundError.new "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
+          resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
           prediction_feature = OpenTox::Feature.find(@training_dataset.features.first.uri,@subjectid)
           params[:prediction_feature] = prediction_feature.uri
         end
@@ -49,7 +53,7 @@ module OpenTox
               bad_request=true
             end
           end
-          raise OpenTox::BadRequestError.new "Minimum frequency must be integer [n], or a percentage [n]pc, or a per-mil [n]pm , with n greater 0" if bad_request
+          bad_request_error "Minimum frequency must be integer [n], or a percentage [n]pc, or a per-mil [n]pm , with n greater 0" if bad_request
         end
         if @minfreq.nil?
           @minfreq=OpenTox::Algorithm.min_frequency(@training_dataset,per_mil)
@@ -58,6 +62,11 @@ module OpenTox
       end
 
 
+      # Add data to fminer
+      # If fminer_instance is nil, actually only administrative data is filled in
+      # Sets all_activities, compounds, and smi instance variables
+      # @param[Object] Fminer instance
+      # @param[Hash] Maps dependent variable values to Integers
       def add_fminer_data(fminer_instance, value_map)
         id=1
         @training_dataset.compounds.each_with_index do |compound|
@@ -84,11 +93,19 @@ module OpenTox
             end
           end
         end
-        $logger.debug "Finished add_fminer_data"
       end
 
 
-
+      # Calculate metadata for fminer features
+      # Used by all fminer services except BBRC
+      # @param [String] SMARTS string
+      # @param [Integer] single index into for @smi or @compounds instance variable
+      # @param [Array] Array of Arrays of indices of hits
+      # @param [Object] Fminer instance (may be nil, if p_value is not nil)
+      # @param [String] URI of feature dataset to be produced
+      # @param [Hash]  Maps dependent variable values to Integers
+      # @param [Float] p-value for the SMARTS (may be nil, if Fminer instance is not nil)
+      # @return [Array] 2-Array with metadata,parameters
       def calc_metadata(smarts, ids, counts, fminer_instance, feature_dataset_uri, value_map, params, p_value=nil)
         # Either p_value or fminer instance to calculate it
         return nil if (p_value.nil? and fminer_instance.nil?) 
@@ -121,7 +138,6 @@ module OpenTox
         metadata[OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
         [ metadata, parameters ]
       end
-
     end
 
 
@@ -139,9 +155,9 @@ module OpenTox
       end
     end
 
-    # Sum of an array for Arrays.
-    # @param [Array] Array with values
-    # @return [Integer] Sum of size of values
+    # Sum of an array for Arrays
+    # @param [Array] Array of arrays
+    # @return [Integer] Sum of size of array elements
     def self.sum_size(array)
       sum=0
       array.each { |e| sum += e.size }
@@ -149,6 +165,8 @@ module OpenTox
     end
 
     # Effect calculation
+    # Determine class bias
+    # @return [Integer] Class index of preferred class
     def self.effect(occurrences, db_instances)
       max=0
       max_value=0
