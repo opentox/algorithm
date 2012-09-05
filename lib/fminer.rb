@@ -7,8 +7,8 @@ module OpenTox
       attr_accessor :prediction_feature, :training_dataset, :minfreq, :compounds, :db_class_sizes, :all_activities, :smi
 
 
-      def initialize(uri)
-        super uri
+      def initialize(uri, subjectid=nil)
+        super(uri, subjectid)
       end
 
 
@@ -21,8 +21,7 @@ module OpenTox
         @training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", subjectid # AM: find is a shim
         unless params[:prediction_feature] # try to read prediction_feature from dataset
           resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
-          prediction_feature = OpenTox::Feature.find(@training_dataset.features.first.uri,@subjectid)
-          params[:prediction_feature] = prediction_feature.uri
+          params[:prediction_feature] = @training_dataset.features.first.uri
         end
         @prediction_feature = OpenTox::Feature.find params[:prediction_feature], subjectid # AM: find is a shim
         resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset_uri]}'" unless 

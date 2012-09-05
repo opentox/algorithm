@@ -39,7 +39,7 @@ module OpenTox
       }
       algorithm.parameters = [
           { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
+          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
           { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
           { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
           { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
@@ -60,7 +60,7 @@ module OpenTox
       }
       algorithm.parameters = [
           { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
+          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
           { DC.description => "Number of bootstrap samples", OT.paramScope => "optional", DC.title => "num_boots" },
           { DC.description => "Minimum sampling support", OT.paramScope => "optional", DC.title => "min_sampling_support" },
           { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
@@ -82,7 +82,7 @@ module OpenTox
       }
       algorithm.parameters = [
           { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
+          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
           { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
           { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
           { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" }
@@ -266,7 +266,7 @@ module OpenTox
           $logger.debug feature_dataset.uri
           feature_dataset.uri
 
-        rescue e
+        rescue => e
           $logger.debug "#{e.class}: #{e.message}"
           $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
         end
@@ -396,7 +396,7 @@ module OpenTox
           $logger.debug feature_dataset.uri
           feature_dataset.uri
 
-        rescue e
+        rescue => e
           $logger.debug "#{e.class}: #{e.message}"
           $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
         end
