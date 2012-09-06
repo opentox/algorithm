@@ -59,9 +59,8 @@ module OpenTox
         min_train_performance = params[:min_train_performance].to_f 
       end
 
-      lazar_params.inject({}) { |h,p|
-        h[p] = eval(p)
-        h
+      lazar_params.collect { |p|
+        { DC.title => p, OT.paramValue => eval(p) }
       }
     end
 

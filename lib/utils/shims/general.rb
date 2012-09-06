@@ -17,4 +17,31 @@ module OpenTox
       }
     end
 
+
+    ### Index Structures
+    
+    # Create parameter positions map
+    # @return [Hash] A hash with keys parameter names and values parameter positions
+    def build_parameter_positions
+      unless @parameter_positions
+        @parameters = parameters
+        @parameter_positions = @parameters.each_index.inject({}) { |h,idx|
+          h[@parameters[idx][DC.title.to_s]] = idx
+          h
+        }
+      end
+    end
+
+
+    ### Associative Search Operations
+    
+    # Search a model for a given parameter
+    # @param[String] The parameter title
+    # @return[Object] The parameter value
+    def find_parameter_value(title)
+      build_parameter_positions
+      res = @parameters[@parameter_positions[title]][OT.paramValue.to_s] if @parameter_positions[title]
+      res
+    end
+
 end

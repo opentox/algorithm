@@ -72,14 +72,23 @@ module OpenTox
                            "min_train_performance" 
                          ] 
 
-
-
           lazar = OpenTox::Model.new(nil, @subjectid)
-          lazar_params_values = lazar.check_params(lazar_params, params)
+          lazar.parameters = lazar.check_params(lazar_params, params)
+          lazar.metadata = { 
+            DC.title => "lazar model", 
+            OT.dependentVariables => lazar.find_parameter_value("prediction_feature_uri"),
+            OT.trainingDataset => lazar.find_parameter_value("training_dataset_uri"),
+            RDF.type => ( OpenTox::Feature.find(lazar.find_parameter_value("prediction_feature_uri")).feature_type == "classification" ? 
+              [OT.Model, OTA.ClassificationLazySingleTarget] :
+              [OT.Model, OTA.RegressionLazySingleTarget] 
+            )
+          }
+          lazar[OT.featureDataset] = lazar.find_parameter_value("feature_dataset_uri") if lazar.find_parameter_value("feature_dataset_uri")
+
           # task.progress 10
           
-          $logger.debug lazar_params_values.to_yaml
-          $logger.debug lazar.to_turtle
+          $logger.debug lazar.uri
+          lazar.put @subjectid
 
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"
