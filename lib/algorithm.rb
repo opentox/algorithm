@@ -17,5 +17,21 @@ module OpenTox
     class Neighbors
     end
 
+    class Substructure
+      # Substructure matching
+      # @param [Hash] required keys: compound, features
+      # @return [Array] Array with matching Smarts
+      def self.match(params)
+        params[:compound].match(params[:features])
+      end
+
+      # Substructure matching with number of non-unique hits
+      # @param [Hash] required keys: compound, features
+      # @return [Hash] Hash with matching Smarts and number of hits 
+      def self.match_hits(params)
+        params[:compound].match_hits(params[:features])
+      end
+    end
+
   end
 end

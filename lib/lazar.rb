@@ -12,6 +12,10 @@ module OpenTox
     end
   
 
+    # Check parameters for plausibility
+    # Prepare lazar object
+    # @param[Array] lazar parameters as strings
+    # @param[Hash] REST parameters, as input by user
 
     def check_params(lazar_params, params)
       unless training_dataset = OpenTox::Dataset.find(params[:dataset_uri], @subjectid) # AM: find is a shim
