@@ -379,7 +379,6 @@ module OpenTox
             }
           end
 
-          $logger.debug features.size
           feature_dataset.features = features
 
           fminer_compounds = @@fminer.compounds.collect { |c| c }
@@ -404,7 +403,7 @@ module OpenTox
 
       end
       response['Content-Type'] = 'text/uri-list'
-      raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
+      service_unavailable_error "Service unavailable" if task.status == "Cancelled"
       halt 202,task.uri.to_s+"\n"
     end
 

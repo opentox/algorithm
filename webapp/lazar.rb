@@ -7,8 +7,6 @@ $lazar_feature_generation_default = File.join($algorithm[:uri],"fminer","bbrc")
 $lazar_feature_calculation_default = "Substructure.match_hits" 
 $lazar_min_sim_default = 0.3
 $lazar_prediction_algorithm_default = "OpenTox::Algorithm::Neighbors.weighted_majority_vote"
-$lazar_pc_type_default = ""
-$lazar_pc_lib_default = ""
 $lazar_min_train_performance_default = 0.1
 
 
@@ -60,8 +58,9 @@ module OpenTox
 
         begin 
 
-          lazar_params = [ "training_dataset_uri", 
+         lazar_params = [ "training_dataset_uri", 
                            "prediction_feature_uri", 
+                           "feature_dataset_uri",
                            "feature_generation_uri", 
                            "feature_calculation_algorithm", 
                            "min_sim", 
@@ -78,12 +77,12 @@ module OpenTox
             DC.title => "lazar model", 
             OT.dependentVariables => lazar.find_parameter_value("prediction_feature_uri"),
             OT.trainingDataset => lazar.find_parameter_value("training_dataset_uri"),
+            OT.featureDataset => lazar.find_parameter_value("feature_dataset_uri"),
             RDF.type => ( OpenTox::Feature.find(lazar.find_parameter_value("prediction_feature_uri")).feature_type == "classification" ? 
               [OT.Model, OTA.ClassificationLazySingleTarget] :
               [OT.Model, OTA.RegressionLazySingleTarget] 
             )
           }
-          lazar[OT.featureDataset] = lazar.find_parameter_value("feature_dataset_uri") if lazar.find_parameter_value("feature_dataset_uri")
 
           # task.progress 10
           
@@ -96,6 +95,10 @@ module OpenTox
         end
 
       end
+
+      response['Content-Type'] = 'text/uri-list'
+      service_unavailable_error "Service unavailable" if task.status == "Cancelled"
+      halt 202,task.uri.to_s+"\n"
 
     end
 

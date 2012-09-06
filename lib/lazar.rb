@@ -30,6 +30,12 @@ module OpenTox
         feature_generation_uri = params[:feature_generation_uri]
       end
 
+      if params[:feature_dataset_uri]
+        feature_dataset_uri = params[:feature_dataset_uri]
+      else
+        feature_dataset_uri = OpenTox::Algorithm.new(feature_generation_uri).run(params)
+      end
+
       feature_calculation_algorithm = $lazar_feature_calculation_default
       
       min_sim = $lazar_min_sim_default
@@ -42,14 +48,15 @@ module OpenTox
         prediction_algorithm = "OpenTox::Algorithm::Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
       end
 
-      propositionalized = (prediction_algorithm=="Neighbors.weighted_majority_vote" ? false : true)
+      propositionalized = true
+      if ((prediction_algorithm =~ /majority_vote/) > 0)
+        propositionalized = false
+      end
 
-      pc_type = $lazar_pc_type_default
       if params[:pc_type]
         pc_type = params[:pc_type] 
       end
 
-      pc_lib = $lazar_pc_lib_default
       if params[:lib]
         pc_lib = params[:lib]
       end
@@ -60,8 +67,8 @@ module OpenTox
       end
 
       lazar_params.collect { |p|
-        { DC.title => p, OT.paramValue => eval(p) }
-      }
+        { DC.title => p, OT.paramValue => eval(p) } unless eval(p).nil?
+      }.compact
     end
 
   end
