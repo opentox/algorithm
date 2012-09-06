@@ -1,3 +1,7 @@
+# sinatra.rb
+# Common service
+# Author: Andreas Maunz
+
 module OpenTox
   class Application < Service
 

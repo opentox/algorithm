@@ -1,5 +1,5 @@
 # lazar.rb
-# Lazar Model Factory
+# Lazar service
 # Author: Andreas Maunz
 
 

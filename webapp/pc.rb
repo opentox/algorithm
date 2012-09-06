@@ -1,5 +1,5 @@
 # pc.rb
-# (P)hysico (C)hemical descriptor calculation
+# Physico-chemical descriptor calculation
 # Author: Andreas Maunz
 
 module OpenTox

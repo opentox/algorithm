@@ -1,5 +1,5 @@
 # fs.rb
-# Feature Selection
+# Feature selection
 # Author: Andreas Maunz
 
 module OpenTox

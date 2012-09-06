@@ -1,3 +1,7 @@
+# fminer.rb
+# Fminer library
+# Author: Andreas Maunz
+
 module OpenTox
 
   class Algorithm

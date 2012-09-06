@@ -1,3 +1,7 @@
+# algorithm.rb
+# Algorithm library
+# Author: Andreas Maunz
+
 module OpenTox
   class Algorithm
 

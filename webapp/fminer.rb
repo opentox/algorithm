@@ -1,5 +1,5 @@
 # fminer.rb
-# Substructural Descriptors
+# Substructural descriptors
 # Author: Andreas Maunz
 
 ENV['FMINER_SMARTS'] = 'true'

@@ -1,3 +1,7 @@
+# lazar.rb
+# Lazar model library
+# Author: Andreas Maunz
+
 module OpenTox
 
   class Model
@@ -7,6 +11,7 @@ module OpenTox
       super(uri, subjectid)
     end
   
+
 
     def check_params(lazar_params, params)
       unless training_dataset = OpenTox::Dataset.find(params[:dataset_uri], @subjectid) # AM: find is a shim
