@@ -31,7 +31,7 @@ module OpenTox
     # Get representation of BBRC algorithm
     # @return [String] Representation
     get "/fminer/bbrc/?" do
-      algorithm = OpenTox::Algorithm::Generic.new(url_for('/fminer/bbrc',:full))
+      algorithm = OpenTox::Algorithm.new(url_for('/fminer/bbrc',:full))
       algorithm.metadata = {
         DC.title => 'Backbone Refinement Class Representatives',
         DC.creator => "andreas@maunz.de",
@@ -52,7 +52,7 @@ module OpenTox
     # Get representation of BBRC-sample algorithm
     # @return [String] Representation
     get "/fminer/bbrc/sample/?" do
-      algorithm = OpenTox::Algorithm::Generic.new(url_for('/fminer/bbrc/sample',:full))
+      algorithm = OpenTox::Algorithm.new(url_for('/fminer/bbrc/sample',:full))
       algorithm.metadata = {
         DC.title => 'Backbone Refinement Class Representatives, obtained from samples of a dataset',
         DC.creator => "andreas@maunz.de",
@@ -74,7 +74,7 @@ module OpenTox
     # Get representation of fminer LAST-PM algorithm
     # @return [String] Representation
     get "/fminer/last/?" do
-      algorithm = OpenTox::Algorithm::Generic.new(url_for('/fminer/last',:full))
+      algorithm = OpenTox::Algorithm.new(url_for('/fminer/last',:full))
       algorithm.metadata = {
         DC.title => 'Latent Structure Pattern Mining descriptors',
         DC.creator => "andreas@maunz.de",
@@ -94,7 +94,7 @@ module OpenTox
     # Get representation of matching algorithm
     # @return [String] Representation
     get "/fminer/:method/match?" do
-      algorithm = OpenTox::Algorithm::Generic.new(url_for("/fminer/#{params[:method]}/match",:full))
+      algorithm = OpenTox::Algorithm.new(url_for("/fminer/#{params[:method]}/match",:full))
       algorithm.metadata = {
         DC.title => 'fminer feature matching',
         DC.creator => "mguetlein@gmail.com, andreas@maunz.de",

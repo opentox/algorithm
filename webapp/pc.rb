@@ -39,7 +39,7 @@ module OpenTox
   
     if descriptors 
       # Contents
-      algorithm = OpenTox::Algorithm::Generic.new(url_for("/pc/#{params[:descriptor]}",:full))
+      algorithm = OpenTox::Algorithm.new(url_for("/pc/#{params[:descriptor]}",:full))
       mmdata = {
         DC.title => params[:descriptor],
         DC.creator => "andreas@maunz.de",

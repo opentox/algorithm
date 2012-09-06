@@ -19,7 +19,7 @@ module OpenTox
     # Get representation of lazar algorithm
     # @return [String] Representation
     get '/lazar/?' do
-      algorithm = OpenTox::Algorithm::Generic.new(url_for('/lazar',:full))
+      algorithm = OpenTox::Algorithm.new(url_for('/lazar',:full))
       algorithm.metadata = {
         DC.title => 'lazar',
         DC.creator => 'helma@in-silico.ch, andreas@maunz.de',

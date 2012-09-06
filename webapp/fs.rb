@@ -15,7 +15,7 @@ module OpenTox
   # Get representation of Recursive Feature Elimination algorithm
   # @return [String] Representation
   get "/fs/rfe/?" do
-    algorithm = OpenTox::Algorithm::Generic.new(url_for('/fs/rfe',:full))
+    algorithm = OpenTox::Algorithm.new(url_for('/fs/rfe',:full))
     algorithm.metadata = {
       DC.title => 'Recursive Feature Elimination',
       DC.creator => "andreas@maunz.de",
