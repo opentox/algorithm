@@ -1,3 +1,17 @@
+# lazar.rb
+# Lazar Model Factory
+# Author: Andreas Maunz
+
+
+$lazar_feature_generation_default = File.join($algorithm[:uri],"fminer","bbrc")
+$lazar_feature_calculation_default = "Substructure.match_hits" 
+$lazar_min_sim_default = 0.3
+$lazar_prediction_algorithm_default = "OpenTox::Algorithm::Neighbors.weighted_majority_vote"
+$lazar_pc_type_default = ""
+$lazar_pc_lib_default = ""
+$lazar_min_train_performance_default = 0.1
+
+
 module OpenTox
   
   class Application < Service
@@ -23,14 +37,17 @@ module OpenTox
       format_output(algorithm)
     end
 
+
     # Create a lazar prediction model
     # @param [String] dataset_uri Training dataset URI
     # @param [optional,String] prediction_feature URI of the feature to be predicted
     # @param [optional,String] feature_generation_uri URI of the feature generation algorithm 
     # @param [optional,String] - further parameters for the feature generation service 
     # @return [text/uri-list] Task URI 
+    
     post '/lazar/?' do 
-      @feature_generation_default = File.join($algorithm[:uri],"fminer","bbrc")
+
+      
       params[:subjectid] = @subjectid
       resource_not_found_error "No dataset_uri parameter." unless params[:dataset_uri]
       task = OpenTox::Task.create(
@@ -42,34 +59,27 @@ module OpenTox
                                 ) do |task|
 
         begin 
-                 # AM: store in model as param
-          unless training_dataset = OpenTox::Dataset.find(params[:dataset_uri], @subjectid) # AM: find is a shim
-            resource_not_found_error "Dataset '#{params[:dataset_uri]}' not found." 
-          end
 
-          # Prediction feature
-          unless params[:prediction_feature] # try to read prediction_feature from dataset
-            resource_not_found_error "Please provide a prediction_feature parameter" unless training_dataset.features.size == 1
-            params[:prediction_feature] = training_dataset.features.first.uri
-          end
-          # AM: store in model as param
-          prediction_feature = OpenTox::Feature.find(params[:prediction_feature], @subjectid) # AM: find is a shim
-          resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset_uri]}'" unless
-            training_dataset.find_feature( params[:prediction_feature] ) # AM: find_feature is a shim
+          lazar_params = [ "training_dataset_uri", 
+                           "prediction_feature_uri", 
+                           "feature_generation_uri", 
+                           "feature_calculation_algorithm", 
+                           "min_sim", 
+                           "prediction_algorithm", 
+                           "propositionalized", 
+                           "pc_type", 
+                           "pc_lib", 
+                           "min_train_performance" 
+                         ] 
 
-          # Feature generation
-          # AM: store in model as param
-          feature_generation_uri = @feature_generation_default unless 
-            ( (feature_generation_uri = params[:feature_generation_uri]) || (params[:feature_dataset_uri]) )
+
 
           lazar = OpenTox::Model.new(nil, @subjectid)
-          if prediction_feature.feature_type == "regression"
-            # AM: store in model as param
-            feature_calculation_algorithm = "Substructure.match_hits" 
-            prediction_algorithm = "Neighbors.local_svm_regression" 
-          end
-
-
+          lazar_params_values = lazar.check_params(lazar_params, params)
+          # task.progress 10
+          
+          $logger.debug lazar_params_values.to_yaml
+          $logger.debug lazar.to_turtle
 
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"

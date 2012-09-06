@@ -10,5 +10,8 @@ module OpenTox
       Integer (minfreq)
     end
 
+    class Neighbors
+    end
+
   end
 end
