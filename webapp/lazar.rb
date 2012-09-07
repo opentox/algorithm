@@ -79,6 +79,7 @@ module OpenTox
           # task.progress 10
           $logger.debug lazar.uri
           lazar.put @subjectid
+          lazar.uri
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"
           $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
