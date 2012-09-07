@@ -103,13 +103,22 @@ module OpenTox
                                   $task[:uri],
                                   @subjectid,
                                   { RDF::DC.description => "Create lazar model",
-                                    RDF::DC.creator => url_for('/lazar',:full)
+                                    RDF::DC.creator => url_for('/lazar/predict',:full)
                                   }
                                 ) do |task|
         begin 
-          # task.progress 10
-          $logger.debug "LP: '#{@uri}'"
-	  $logger.debug "LP: '#{params.to_yaml}'"
+          prediction_dataset = OpenTox::Dataset.new(nil, @subjectid)
+          prediction_dataset.metadata = {
+            DC.title => "Lazar predictions",
+            DC.creator => @uri.to_s,
+            OT.hasSource => @uri.to_s
+          }
+          prediction_dataset.parameters = $lazar_params.collect { |p|
+            {DC.title => p, OT.paramValue => params[p].to_s} unless params[p].nil?
+          }
+          prediction_dataset.put
+          $logger.debug prediction_dataset.uri
+          prediction_dataset.uri
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"
           $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
