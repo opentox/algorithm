@@ -17,7 +17,7 @@ $lazar_params = [
   "min_train_performance" 
 ]
 $lazar_feature_generation_default = File.join($algorithm[:uri],"fminer","bbrc")
-$lazar_feature_calculation_default = "Substructure.match_hits" 
+$lazar_feature_calculation_default = "match_hits" 
 $lazar_min_sim_default = 0.3
 $lazar_prediction_algorithm_default = "OpenTox::Algorithm::Neighbors.weighted_majority_vote"
 $lazar_min_train_performance_default = 0.1
@@ -92,10 +92,17 @@ module OpenTox
 
 
     # Create a lazar prediction model
-    # @param [String] dataset_uri Training dataset URI
-    # @param [optional,String] prediction_feature URI of the feature to be predicted
-    # @param [optional,String] feature_generation_uri URI of the feature generation algorithm 
-    # @param [optional,String] - further parameters for the feature generation service 
+    # @param [String] compound_uri URI of compound to be predicted
+    # @param [String] training_dataset_uri URI of training dataset
+    # @param [String] prediction_feature_uri URI of prediction feature
+    # @param [String] feature_dataset_uri URI of feature dataset
+    # @param [String] feature_calculation_algorithm Name of feature calculation algorithm
+    # @param [String] min_sim Numeric value for minimum similarity
+    # @param [String] prediction_algorithm Name of prediction algorithm
+    # @param [String] propositionalized Whether propositionalization should be used 
+    # @param [optional,String] pc_type Physico-chemical descriptor type
+    # @param [optional,String] pc_lib Physico-chemical descriptor library
+    # @param [optional,String] Further parameters for the feature generation service 
     # @return [text/uri-list] Task URI 
     post '/lazar/predict/?' do 
       params[:subjectid] = @subjectid
@@ -109,13 +116,36 @@ module OpenTox
         begin 
           prediction_dataset = OpenTox::Dataset.new(nil, @subjectid)
           prediction_dataset.metadata = {
-            DC.title => "Lazar predictions",
+            DC.title => "Lazar prediction",
             DC.creator => @uri.to_s,
             OT.hasSource => @uri.to_s
           }
-          prediction_dataset.parameters = $lazar_params.collect { |p|
-            {DC.title => p, OT.paramValue => params[p].to_s} unless params[p].nil?
-          }
+
+          model_parameters = $lazar_params.collect { |p|
+            {DC.title => p.to_s, OT.paramValue => params[p].to_s} unless params[p].nil?
+          }.compact
+          prediction_dataset.parameters = model_parameters
+          
+          unless prediction_dataset.database_activity(params)
+            query_compound = OpenTox::Compound.new(params[:compound_uri])
+            feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri])
+            if feature_dataset.features.size > 0
+              hits = eval("OpenTox::Algorithm::FeatureValues").send(params[:feature_calculation_algorithm], 
+                { 
+                  :compound => query_compound,
+                  :features => feature_dataset.features.collect{ |f| f[DC.title] }
+                }
+              )
+            end
+
+            model_params_hash = model_parameters.inject({}) { |h,p| 
+              h[p[DC.title]] = p[OT.paramValue]
+              h
+            }
+            custom_model = OpenTox::Model.new(model_params_hash)
+            $logger.debug("H")
+          end
+
           prediction_dataset.put
           $logger.debug prediction_dataset.uri
           prediction_dataset.uri

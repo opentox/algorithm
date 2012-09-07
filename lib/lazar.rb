@@ -7,13 +7,33 @@ module OpenTox
   class Model
 
     
-    def initialize(uri, subjectid=nil)
-      super(uri, subjectid)
+    #def initialize(uri, subjectid=nil)
+    #  super(uri, subjectid)
+    #end
+    
+    def initialize(*args)
+      if args.size == 2
+        $logger.debug "RDF model"
+        super(*args)# We have uri and subjectid
+      end
+      if args.size == 1
+        $logger.debug "Custom model"
+        prepare_prediction_model(args[0]) # We have a hash (prediction time)
+      end
+    end
+
+
+    def prepare_prediction_model(params)
+      $logger.debug "Preparing"
+      params.each {|k,v|
+        $logger.debug("'#{k}', '#{v}'")
+        #eval("@#{k}=#{v}")
+      }
     end
   
 
     # Check parameters for plausibility
-    # Prepare lazar object
+    # Prepare lazar object (includes graph mining)
     # @param[Array] lazar parameters as strings
     # @param[Hash] REST parameters, as input by user
 
@@ -79,6 +99,7 @@ module OpenTox
         { DC.title => p, OT.paramValue => eval(p) } unless eval(p).nil?
       }.compact
     end
+
 
   end
 
