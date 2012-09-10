@@ -121,16 +121,21 @@ module OpenTox
             OT.hasSource => @uri.to_s
           }
 
-          model_parameters = $lazar_params.collect { |p|
+          # Store model parameters
+          model_params = $lazar_params.collect { |p|
             {DC.title => p.to_s, OT.paramValue => params[p].to_s} unless params[p].nil?
           }.compact
-          prediction_dataset.parameters = model_parameters
+          model_params_hash = model_params.inject({}) { |h,p| 
+            h[p[DC.title]] = p[OT.paramValue]
+            h
+          }
+          prediction_dataset.parameters = model_params
           
           unless prediction_dataset.database_activity(params)
             query_compound = OpenTox::Compound.new(params[:compound_uri])
-            feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri])
+            feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid)
             if feature_dataset.features.size > 0
-              hits = eval("OpenTox::Algorithm::FeatureValues").send(params[:feature_calculation_algorithm], 
+              compound_fingerprints = eval("OpenTox::Algorithm::FeatureValues").send(params[:feature_calculation_algorithm], 
                 { 
                   :compound => query_compound,
                   :features => feature_dataset.features.collect{ |f| f[DC.title] }
@@ -138,11 +143,17 @@ module OpenTox
               )
             end
 
-            model_params_hash = model_parameters.inject({}) { |h,p| 
-              h[p[DC.title]] = p[OT.paramValue]
-              h
-            }
+            training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
             custom_model = OpenTox::Model.new(model_params_hash)
+            $logger.debug custom_model.training_dataset_uri
+            custom_model.add_data(training_dataset, feature_dataset, params["prediction_feature_uri"], compound_fingerprints, @subjectid)
+            $logger.debug("H")
+            #$logger.debug custom_model.acts.join("\n")
+            #$logger.debug custom_model.n_prop.collect{|r| r.join(', ')}.to_a.join('\n')
+            #$logger.debug("H")
+            $logger.debug custom_model.instance_variables
+            $logger.debug custom_model.acts.size
+            $logger.debug custom_model.n_prop.size
             $logger.debug("H")
           end
 

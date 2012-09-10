@@ -26,11 +26,36 @@ module OpenTox
     def prepare_prediction_model(params)
       $logger.debug "Preparing"
       params.each {|k,v|
-        $logger.debug("'#{k}', '#{v}'")
-        #eval("@#{k}=#{v}")
+        self.class.class_eval { attr_accessor k.to_sym }
+        instance_variable_set(eval(":@"+k), v)
+      }
+      ["cmpds", "fps", "acts", "n_prop", "q_prop"].each {|k|
+        self.class.class_eval { attr_accessor k.to_sym }
+        instance_variable_set(eval(":@"+k), [])
       }
     end
-  
+
+    def add_data(training_dataset, feature_dataset, prediction_feature_uri, compound_fingerprints, subjectid)
+      training_dataset.compounds.each_with_index { |cmpd, idx|
+        fp = feature_dataset.data_entries[idx]
+        $logger.debug fp.to_yaml
+        act = training_dataset.find_data_entry(cmpd.uri,prediction_feature_uri)
+        prediction_feature = OpenTox::Feature.find(prediction_feature_uri,subjectid)
+        @acts << training_dataset.value_map(prediction_feature).invert[act]
+        $logger.debug feature_dataset.find_compound(cmpd.uri)
+        row = []; feature_dataset.features.each { |f| 
+          #$logger.debug feature_dataset.find_data_entry(cmpd.uri,f.uri)
+          #$logger.debug feature_dataset.find_data_entry(cmpd.uri,f.uri).class
+          #$logger.debug feature_dataset.find_data_entry(cmpd.uri,f.uri).to_i
+          orig_value = feature_dataset.find_data_entry(cmpd.uri,f.uri)
+          row << orig_value == "0" ? 0 : 1
+        }
+        @n_prop << row.collect.to_a
+        @cmpds << cmpd.uri
+        @fps << Marshal.load(Marshal.dump(fp))
+      }
+      feature_dataset.features.each { |f| @q_prop << compound_fingerprints[f.title] } # query structure
+    end
 
     # Check parameters for plausibility
     # Prepare lazar object (includes graph mining)

@@ -239,11 +239,10 @@ module OpenTox
                 id=id_count_hash.keys[0].to_i
                 count=id_count_hash.values[0].to_i
                 fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}
-                fminer_results[@@fminer.compounds[id]][feature.uri] || fminer_results[@@fminer.compounds[id]][feature.uri] = []
                 if params[:nr_hits] == "true"
-                  fminer_results[@@fminer.compounds[id]][feature.uri] << count
+                  fminer_results[@@fminer.compounds[id]][feature.uri] = count
                 else
-                  fminer_results[@@fminer.compounds[id]][feature.uri] << 1
+                  fminer_results[@@fminer.compounds[id]][feature.uri] = 1
                 end
               }
     
@@ -374,8 +373,7 @@ module OpenTox
   
             ids.each_with_index { |id,idx| 
               fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}
-              fminer_results[@@fminer.compounds[id]][feature.uri] || fminer_results[@@fminer.compounds[id]][feature.uri] = []
-              fminer_results[@@fminer.compounds[id]][feature.uri] << counts[smarts][idx]
+              fminer_results[@@fminer.compounds[id]][feature.uri] = counts[smarts][idx]
             }
           end
 
