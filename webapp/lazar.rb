@@ -147,14 +147,14 @@ module OpenTox
             custom_model = OpenTox::Model.new(model_params_hash)
             $logger.debug custom_model.training_dataset_uri
             custom_model.add_data(training_dataset, feature_dataset, params["prediction_feature_uri"], compound_fingerprints, @subjectid)
+            # AM: OK $logger.debug("H")
+            # AM: OK $logger.debug custom_model.acts.join("\n")
+            # AM: OK $logger.debug custom_model.n_prop.collect{|r| r.join(", ")}.join("\n")
             $logger.debug("H")
-            #$logger.debug custom_model.acts.join("\n")
-            #$logger.debug custom_model.n_prop.collect{|r| r.join(', ')}.to_a.join('\n')
-            #$logger.debug("H")
+            $logger.debug custom_model.q_prop.join(",")
+            $logger.debug("H")
+
             $logger.debug custom_model.instance_variables
-            $logger.debug custom_model.acts.size
-            $logger.debug custom_model.n_prop.size
-            $logger.debug("H")
           end
 
           prediction_dataset.put

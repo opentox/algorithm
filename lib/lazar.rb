@@ -37,24 +37,24 @@ module OpenTox
 
     def add_data(training_dataset, feature_dataset, prediction_feature_uri, compound_fingerprints, subjectid)
       training_dataset.compounds.each_with_index { |cmpd, idx|
-        fp = feature_dataset.data_entries[idx]
-        $logger.debug fp.to_yaml
+        fp = feature_dataset.data_entries.collect{ |r| r.collect{ |v| v.to_f }}
         act = training_dataset.find_data_entry(cmpd.uri,prediction_feature_uri)
         prediction_feature = OpenTox::Feature.find(prediction_feature_uri,subjectid)
         @acts << training_dataset.value_map(prediction_feature).invert[act]
-        $logger.debug feature_dataset.find_compound(cmpd.uri)
         row = []; feature_dataset.features.each { |f| 
-          #$logger.debug feature_dataset.find_data_entry(cmpd.uri,f.uri)
-          #$logger.debug feature_dataset.find_data_entry(cmpd.uri,f.uri).class
-          #$logger.debug feature_dataset.find_data_entry(cmpd.uri,f.uri).to_i
-          orig_value = feature_dataset.find_data_entry(cmpd.uri,f.uri)
-          row << orig_value == "0" ? 0 : 1
+          val = feature_dataset.find_data_entry(cmpd.uri,f.uri)
+          bad_request_error "Can not parse value '#{val}' to numeric" unless val.numeric?
+          row << val.to_f
         }
         @n_prop << row.collect.to_a
         @cmpds << cmpd.uri
         @fps << Marshal.load(Marshal.dump(fp))
       }
-      feature_dataset.features.each { |f| @q_prop << compound_fingerprints[f.title] } # query structure
+      @q_prop = feature_dataset.features.collect { |f| 
+        val = compound_fingerprints[f.title]
+        bad_request_error "Can not parse value '#{val}' to numeric" if val and !val.numeric?
+        val ? val : 0
+      } # query structure
     end
 
     # Check parameters for plausibility
