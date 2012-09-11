@@ -329,9 +329,6 @@ module OpenTox
           get_matrices # creates @n_prop, @q_prop, @acts from ordered fps
           @ids = (0..((@n_prop.length)-1)).to_a # surviving compounds; become neighbors
 
-          # Preprocessing
-          $logger.debug "AM: '#{@model.similarity_algorithm}'"
-
           if (@model.similarity_algorithm == "Similarity.cosine")
             # truncate nil-columns and -rows
             LOGGER.debug "O: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
@@ -377,7 +374,7 @@ module OpenTox
 
           # Sims between neighbors, if necessary
           gram_matrix = []
-          if !@model.propositionalized # need gram matrix for standard setting (n. prop.)
+          if !@model.propositionalized && !@model.prediction_algorithm == "weighted_majority_vote" # need gram matrix for SVM (n. prop.)
             @n_prop.each_index do |i|
               gram_matrix[i] = [] unless gram_matrix[i]
               @n_prop.each_index do |j|
@@ -480,8 +477,6 @@ module OpenTox
 
         # Executes model similarity_algorithm
         def similarity(training_props)
-          $logger.debug training_props
-          $logger.debug @q_prop
           eval("OpenTox::Algorithm::Similarity").send(@model.similarity_algorithm,training_props, @q_prop)
         end
 

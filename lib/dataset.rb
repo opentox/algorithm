@@ -13,13 +13,9 @@ module OpenTox
       db_act = find_data_entry(params[:compound_uri], params[:prediction_feature_uri])
       if db_act
         f=Feature.find(params[:prediction_feature_uri],params[:subjectid])
-        if f.feature_type == "classification"
-          db_act = value_map(f).invert[db_act]
-        end
         prediction_dataset.features = [ f ]
         prediction_dataset << [ OpenTox::Compound.new(params[:compound_uri]), db_act ]
-        prediction_dataset.put(params[:subjectid])
-        $logger.debug "Database activity #{prediction_dataset.uri}"
+        $logger.debug "Database activity for '#{params[:compound_uri]}': '#{db_act}'"
         true
       else
         false

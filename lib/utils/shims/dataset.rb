@@ -6,6 +6,8 @@ module OpenTox
   # Shims for the Dataset Class
   class Dataset
 
+    attr_accessor :feature_positions, :compound_positions
+
     # Load a dataset from URI
     # @param [String] Dataset URI
     # @return [OpenTox::Dataset] Dataset object

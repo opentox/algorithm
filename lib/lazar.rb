@@ -6,25 +6,17 @@ module OpenTox
 
   class Model
 
-    
-    #def initialize(uri, subjectid=nil)
-    #  super(uri, subjectid)
-    #end
-    
     def initialize(*args)
       if args.size == 2
-        $logger.debug "RDF model"
         super(*args)# We have uri and subjectid
       end
       if args.size == 1
-        $logger.debug "Custom model"
         prepare_prediction_model(args[0]) # We have a hash (prediction time)
       end
     end
 
-
+    # Internal use only
     def prepare_prediction_model(params)
-      $logger.debug "Preparing"
       params.each {|k,v|
         self.class.class_eval { attr_accessor k.to_sym }
         instance_variable_set(eval(":@"+k), v)
@@ -34,21 +26,27 @@ module OpenTox
         instance_variable_set(eval(":@"+k), [])
       }
     end
+    private :prepare_prediction_model
 
-    def add_data(training_dataset, feature_dataset, prediction_feature_uri, compound_fingerprints, subjectid)
+    # Fills model in with data for prediction
+    # Avoids associative lookups, since canonization to InChI takes time
+    # @param [OpenTox::Dataset] training dataset
+    # @param [OpenTox::Dataset] feature dataset
+    # @param [OpenTox::Feature] prediction feature
+    # @param [Hash] compound fingerprints
+    # @param [String] subjectid
+    def add_data(training_dataset, feature_dataset, prediction_feature, compound_fingerprints, subjectid)
+      training_dataset.build_feature_positions
+      prediction_feature_pos = training_dataset.feature_positions[prediction_feature.uri]
       training_dataset.compounds.each_with_index { |cmpd, idx|
-        fp = feature_dataset.data_entries.collect{ |r| r.collect{ |v| v.to_f }}
-        act = training_dataset.find_data_entry(cmpd.uri,prediction_feature_uri)
-        prediction_feature = OpenTox::Feature.find(prediction_feature_uri,subjectid)
+        act = training_dataset.data_entries[idx][prediction_feature_pos]
         @acts << training_dataset.value_map(prediction_feature).invert[act]
-        row = []; feature_dataset.features.each { |f| 
-          val = feature_dataset.find_data_entry(cmpd.uri,f.uri)
+        row = feature_dataset.data_entries[idx].collect { |val| 
           bad_request_error "Can not parse value '#{val}' to numeric" unless val.numeric?
-          row << val.to_f
+          val.to_f 
         }
-        @n_prop << row.collect.to_a
+        @n_prop << row
         @cmpds << cmpd.uri
-        @fps << Marshal.load(Marshal.dump(fp))
       }
       @q_prop = feature_dataset.features.collect { |f| 
         val = compound_fingerprints[f.title]

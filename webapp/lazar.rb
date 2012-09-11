@@ -117,56 +117,78 @@ module OpenTox
                                 ) do |task|
         begin 
           prediction_dataset = OpenTox::Dataset.new(nil, @subjectid)
-          prediction_dataset.metadata = {
-            DC.title => "Lazar prediction",
-            DC.creator => @uri.to_s,
-            OT.hasSource => @uri.to_s
-          }
-
           # Store model parameters
           model_params = $lazar_params.collect { |p|
             {DC.title => p.to_s, OT.paramValue => params[p].to_s} unless params[p].nil?
           }.compact
+          prediction_dataset.parameters = model_params
           model_params_hash = model_params.inject({}) { |h,p| 
             h[p[DC.title]] = p[OT.paramValue]
             h
           }
-          prediction_dataset.parameters = model_params
+          prediction_dataset.metadata = {
+            DC.title => "Lazar prediction",
+            DC.creator => @uri.to_s,
+            OT.hasSource => @uri.to_s,
+            OT.dependentVariables => model_params_hash["prediction_feature_uri"],
+            OT.predictedVariables => model_params_hash["prediction_feature_uri"]
+          }
+
+          $logger.debug "Inited p dataset"
           
           training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
-
+          prediction_feature = OpenTox::Feature.find(params[:prediction_feature_uri],@subjectid)
+          $logger.debug "Loaded t dataset"
           unless training_dataset.database_activity(prediction_dataset,params)
-
             query_compound = OpenTox::Compound.new(params[:compound_uri])
             feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
-
+            $logger.debug "Loaded f dataset"
             if feature_dataset.features.size > 0
-              compound_fingerprints = eval("OpenTox::Algorithm::FeatureValues").send(params[:feature_calculation_algorithm], 
-                { 
-                  :compound => query_compound,
-                  :features => feature_dataset.features.collect{ |f| f[DC.title] }
-                }
+              # use send, not eval, for calling the method (good backtrace)
+              compound_fingerprints = OpenTox::Algorithm::FeatureValues.send( params[:feature_calculation_algorithm], 
+                { :compound => query_compound, :features => feature_dataset.features.collect{ |f| f[DC.title] } }
               )
+              $logger.debug "Calced q fps"
             end
 
-            custom_model = OpenTox::Model.new(model_params_hash)
-            if feature_dataset.find_parameter_value("nr_hits") and custom_model.feature_calculation_algorithm =~ /match/
-              if custom_model.feature_calculation_algorithm == "match" && feature_dataset.find_parameter_value("nr_hits") == "true"
-                custom_model.feature_calculation_algorithm = "match_hits"
+            model = OpenTox::Model.new(model_params_hash)
+            if feature_dataset.find_parameter_value("nr_hits") and model.feature_calculation_algorithm =~ /match/
+              if model.feature_calculation_algorithm == "match" && feature_dataset.find_parameter_value("nr_hits") == "true"
+                model.feature_calculation_algorithm = "match_hits"
               end
-              if custom_model.feature_calculation_algorithm == "match_hits" && feature_dataset.find_parameter_value("nr_hits") == "false"
-                custom_model.feature_calculation_algorithm = "match"
+              if model.feature_calculation_algorithm == "match_hits" && feature_dataset.find_parameter_value("nr_hits") == "false"
+                model.feature_calculation_algorithm = "match"
               end
-              $logger.warn "Feature calculation overridden to '#{custom_model.feature_calculation_algorithm}' by feature dataset '#{feature_dataset.uri}'"
+              $logger.warn "Feature calculation overridden to '#{model.feature_calculation_algorithm}' by feature dataset '#{feature_dataset.uri}'"
             end
-            $logger.debug custom_model.training_dataset_uri
-            custom_model.add_data(training_dataset, feature_dataset, params["prediction_feature_uri"], compound_fingerprints, @subjectid)
-            mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(custom_model)
+            model.add_data(training_dataset, feature_dataset, prediction_feature, compound_fingerprints, @subjectid)
+            $logger.debug "Filled m data"
+            mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(model)
             mtf.transform
-            $logger.debug custom_model.neighbors.to_yaml
-            $logger.debug "H"
-          end
+            $logger.debug "Transformed m"
+            prediction = OpenTox::Algorithm::Neighbors.send(model.prediction_algorithm,  { :props => mtf.props,
+                                                          :acts => mtf.acts,
+                                                          :sims => mtf.sims,
+                                                          :value_map => training_dataset.value_map(prediction_feature),
+                                                          :min_train_performance => model.min_train_performance
+                                                        } )
+            $logger.debug "Predicted q"
+            prediction_value = prediction[:prediction].to_f
+            confidence_value = prediction[:confidence].to_f
+            prediction_value = training_dataset.value_map(prediction_feature)[prediction[:prediction].to_i] if prediction_feature.feature_type == "classification"
 
+            confidence_feature = OpenTox::Feature.new(nil, @subjectid)
+            confidence_feature.title = "Confidence"
+            confidence_feature.metadata = {
+              DC.title => "Confidence"
+            }
+            confidence_feature.put(@subjectid)
+
+            prediction_dataset.features = [ prediction_feature, confidence_feature ]
+            prediction_dataset << [ query_compound, prediction_value, confidence_value ]
+            $logger.debug "'#{params[:compound_uri]}': prediction '#{prediction_value}', confidence '#{confidence_value}'"
+           
+          end
           prediction_dataset.put
           $logger.debug prediction_dataset.uri
           prediction_dataset.uri
