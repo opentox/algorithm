@@ -45,7 +45,8 @@ module OpenTox
     def build_compound_positions
       unless @compound_positions
         @compound_positions = @compounds.each_index.inject({}) { |h,idx| 
-          h[@compounds[idx].uri] = idx 
+          inchi=OpenTox::Compound.new(@compounds[idx].uri).inchi
+          h[inchi] = idx if inchi =~ /InChI/
           h
         }
       end
@@ -69,7 +70,8 @@ module OpenTox
     # @return [OpenTox::Compound] Compound object, or nil if not present
     def find_compound(uri)
       build_compound_positions
-      res = @compounds[@compound_positions[uri]] if @compound_positions[uri]
+      inchi = OpenTox::Compound.new(uri).inchi
+      res = @compounds[@compound_positions[inchi]] if inchi =~ /InChI/ and @compound_positions[inchi]
       res
     end
 
@@ -80,8 +82,9 @@ module OpenTox
     def find_data_entry(compound_uri, feature_uri)
       build_compound_positions
       build_feature_positions
-      if @compound_positions[compound_uri] && @feature_positions[feature_uri]
-        res = data_entries[@compound_positions[compound_uri]][@feature_positions[feature_uri]]
+      inchi = OpenTox::Compound.new(compound_uri).inchi
+      if @compound_positions[inchi] && @feature_positions[feature_uri]
+        res = data_entries[@compound_positions[inchi]][@feature_positions[feature_uri]]
       end
       res
     end

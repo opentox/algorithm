@@ -133,7 +133,10 @@ module OpenTox
           }
           prediction_dataset.parameters = model_params
           
-          unless prediction_dataset.database_activity(params)
+          training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
+
+          unless training_dataset.database_activity(prediction_dataset,params)
+
             query_compound = OpenTox::Compound.new(params[:compound_uri])
             feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
 
@@ -146,7 +149,6 @@ module OpenTox
               )
             end
 
-            training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
             custom_model = OpenTox::Model.new(model_params_hash)
             if feature_dataset.find_parameter_value("nr_hits") and custom_model.feature_calculation_algorithm =~ /match/
               if custom_model.feature_calculation_algorithm == "match" && feature_dataset.find_parameter_value("nr_hits") == "true"
