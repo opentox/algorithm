@@ -29,7 +29,7 @@ module OpenTox
         self.class.class_eval { attr_accessor k.to_sym }
         instance_variable_set(eval(":@"+k), v)
       }
-      ["cmpds", "fps", "acts", "n_prop", "q_prop"].each {|k|
+      ["cmpds", "fps", "acts", "n_prop", "q_prop", "neighbors"].each {|k|
         self.class.class_eval { attr_accessor k.to_sym }
         instance_variable_set(eval(":@"+k), [])
       }
@@ -53,7 +53,7 @@ module OpenTox
       @q_prop = feature_dataset.features.collect { |f| 
         val = compound_fingerprints[f.title]
         bad_request_error "Can not parse value '#{val}' to numeric" if val and !val.numeric?
-        val ? val : 0
+        val ? val.to_f : 0.0
       } # query structure
     end
 
@@ -90,7 +90,14 @@ module OpenTox
         feature_dataset_uri = OpenTox::Algorithm.new(feature_generation_uri).run(params)
       end
 
+      # TODO: add override (e.g. lookup)
       feature_calculation_algorithm = $lazar_feature_calculation_default
+      if (params[:nr_hits] == "true") && (feature_calculation_algorithm =~ /match/)
+        feature_calculation_algorithm = "match_hits"
+      end
+
+      # TODO: add override (e.g. cosine)
+      similarity_algorithm = $lazar_similarity_default
       
       min_sim = $lazar_min_sim_default
       if params[:min_sim] and params[:min_sim].numeric?

@@ -330,6 +330,8 @@ module OpenTox
           @ids = (0..((@n_prop.length)-1)).to_a # surviving compounds; become neighbors
 
           # Preprocessing
+          $logger.debug "AM: '#{@model.similarity_algorithm}'"
+
           if (@model.similarity_algorithm == "Similarity.cosine")
             # truncate nil-columns and -rows
             LOGGER.debug "O: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
@@ -375,7 +377,7 @@ module OpenTox
 
           # Sims between neighbors, if necessary
           gram_matrix = []
-          if !@model.parameter("propositionalized") # need gram matrix for standard setting (n. prop.)
+          if !@model.propositionalized # need gram matrix for standard setting (n. prop.)
             @n_prop.each_index do |i|
               gram_matrix[i] = [] unless gram_matrix[i]
               @n_prop.each_index do |j|
@@ -397,8 +399,8 @@ module OpenTox
             @q_prop = gsl_q_prop_orig.row(0).to_a
           end
 
-          LOGGER.debug "F: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}" if (@n_prop && @n_prop[0] && @q_prop)
-          LOGGER.debug "Sims: #{@sims.size}, Acts: #{@acts.size}"
+          $logger.debug "F: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}" if (@n_prop && @n_prop[0] && @q_prop)
+          $logger.debug "Sims: #{@sims.size}, Acts: #{@acts.size}"
 
           @sims = [ gram_matrix, @sims ] 
 
@@ -421,18 +423,15 @@ module OpenTox
         def add_neighbor(training_props, idx)
 
           sim = similarity(training_props)
-          if sim > @model.parameter("min_sim")
-            if @model.activities[@cmpds[idx]]
-              @model.activities[@cmpds[idx]].each do |act|
-                @model.neighbors << {
-                  :compound => @cmpds[idx],
-                  :similarity => sim,
-                  :features => @fps[idx].keys,
-                  :activity => act
-                }
-                @sims << sim
-                @ids << idx
-              end
+          if sim > @model.min_sim.to_f
+            if @model.acts[idx]
+              @model.neighbors << {
+                :compound => @cmpds[idx],
+                :similarity => sim,
+                :activity => acts[idx]
+              }
+              @sims << sim
+              @ids << idx
             end
           end
         end
@@ -481,40 +480,24 @@ module OpenTox
 
         # Executes model similarity_algorithm
         def similarity(training_props)
-          eval("OpenTox::Algorithm::#{@model.similarity_algorithm}(training_props, @q_prop)")
+          $logger.debug training_props
+          $logger.debug @q_prop
+          eval("OpenTox::Algorithm::Similarity").send(@model.similarity_algorithm,training_props, @q_prop)
         end
 
 
         # Converts fingerprints to matrix, order of rows by fingerprints. nil values allowed.
         # Same for compound fingerprints.
         def get_matrices
-
-          @cmpds = []; @fps = []; @acts = []; @n_prop = []; @q_prop = []
-          
-          # Major BUG! Must loop over @model.compounds, hash is unordered!
-          # @model.fingerprints.each 
-          @model.compounds.each { |cmpd|
-            fp = @model.fingerprints[cmpd]
-            if @model.activities[cmpd] # row good
-              acts = @model.activities[cmpd]; @acts += acts
-              LOGGER.debug "#{acts.size} activities for '#{cmpd}'" if acts.size > 1
-              row = []; @model.features.each { |f| row << fp[f] } # nils for non-existent f's
-              acts.size.times { # multiple additions for multiple activities
-                @n_prop << row.collect
-                @cmpds << cmpd
-                @fps << Marshal.load(Marshal.dump(fp))
-              } 
-            else
-              LOGGER.warn "No activity found for compound '#{cmpd}' in model '#{@model.uri}'"
-            end
-          }
-
-          @model.features.each { |f| @q_prop << @model.compound_fingerprints[f] } # query structure
-
+          @cmpds = @model.cmpds
+          @fps = @model.fps
+          @acts = @model.acts
+          @n_prop = @model.n_prop
+          @q_prop = @model.q_prop
         end
 
         def props
-          @model.parameter("propositionalized") ? [ @n_prop, @q_prop ] : nil
+          @model.propositionalized ? [ @n_prop, @q_prop ] : nil
         end
 
       end

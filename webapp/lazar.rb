@@ -9,6 +9,7 @@ $lazar_params = [
   "feature_dataset_uri",
   "feature_generation_uri", 
   "feature_calculation_algorithm", 
+  "similarity_algorithm",
   "min_sim", 
   "prediction_algorithm", 
   "propositionalized", 
@@ -17,9 +18,10 @@ $lazar_params = [
   "min_train_performance" 
 ]
 $lazar_feature_generation_default = File.join($algorithm[:uri],"fminer","bbrc")
-$lazar_feature_calculation_default = "match_hits" 
+$lazar_feature_calculation_default = "match" 
+$lazar_similarity_default = "tanimoto"
 $lazar_min_sim_default = 0.3
-$lazar_prediction_algorithm_default = "OpenTox::Algorithm::Neighbors.weighted_majority_vote"
+$lazar_prediction_algorithm_default = "weighted_majority_vote"
 $lazar_min_train_performance_default = 0.1
 
 
@@ -133,7 +135,8 @@ module OpenTox
           
           unless prediction_dataset.database_activity(params)
             query_compound = OpenTox::Compound.new(params[:compound_uri])
-            feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid)
+            feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
+
             if feature_dataset.features.size > 0
               compound_fingerprints = eval("OpenTox::Algorithm::FeatureValues").send(params[:feature_calculation_algorithm], 
                 { 
@@ -145,16 +148,21 @@ module OpenTox
 
             training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
             custom_model = OpenTox::Model.new(model_params_hash)
+            if feature_dataset.find_parameter_value("nr_hits") and custom_model.feature_calculation_algorithm =~ /match/
+              if custom_model.feature_calculation_algorithm == "match" && feature_dataset.find_parameter_value("nr_hits") == "true"
+                custom_model.feature_calculation_algorithm = "match_hits"
+              end
+              if custom_model.feature_calculation_algorithm == "match_hits" && feature_dataset.find_parameter_value("nr_hits") == "false"
+                custom_model.feature_calculation_algorithm = "match"
+              end
+              $logger.warn "Feature calculation overridden to '#{custom_model.feature_calculation_algorithm}' by feature dataset '#{feature_dataset.uri}'"
+            end
             $logger.debug custom_model.training_dataset_uri
             custom_model.add_data(training_dataset, feature_dataset, params["prediction_feature_uri"], compound_fingerprints, @subjectid)
-            # AM: OK $logger.debug("H")
-            # AM: OK $logger.debug custom_model.acts.join("\n")
-            # AM: OK $logger.debug custom_model.n_prop.collect{|r| r.join(", ")}.join("\n")
-            $logger.debug("H")
-            $logger.debug custom_model.q_prop.join(",")
-            $logger.debug("H")
-
-            $logger.debug custom_model.instance_variables
+            mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(custom_model)
+            mtf.transform
+            $logger.debug custom_model.neighbors.to_yaml
+            $logger.debug "H"
           end
 
           prediction_dataset.put

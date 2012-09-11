@@ -17,6 +17,27 @@ module OpenTox
     class Neighbors
     end
 
+
+
+    class Similarity
+      # Tanimoto similarity
+      # @param [Hash, Array] fingerprints of first compound
+      # @param [Hash, Array] fingerprints of second compound
+      # @return [Float] (Weighted) tanimoto similarity
+      def self.tanimoto(fingerprints_a,fingerprints_b,weights=nil,params=nil)
+        common_p_sum = 0.0
+        all_p_sum = 0.0
+        size = [ fingerprints_a.size, fingerprints_b.size ].min
+        LOGGER.warn "fingerprints don't have equal size" if fingerprints_a.size != fingerprints_b.size
+        (0...size).each { |idx|
+          common_p_sum += [ fingerprints_a[idx], fingerprints_b[idx] ].min
+          all_p_sum += [ fingerprints_a[idx], fingerprints_b[idx] ].max
+        }
+        (all_p_sum > 0.0) ? (common_p_sum/all_p_sum) : 0.0
+      end
+    end
+
+
     class FeatureValues
       # Substructure matching
       # @param [Hash] keys: compound, features, values: OpenTox::Compound, Array of SMARTS strings
