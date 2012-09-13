@@ -110,7 +110,7 @@ class TransformTest < Test::Unit::TestCase
      bar = svd.transform bar # alias for svd.transform_instance bar 
      sim = []
      svd.uk.each_row { |x|
-       sim << OpenTox::Algorithm::Similarity.cosine_num(x,bar.row(0))
+       sim << OpenTox::Algorithm::Similarity.cosine(x,bar.row(0))
      }
      
      # # # NO AUTOSCALE
@@ -134,7 +134,7 @@ class TransformTest < Test::Unit::TestCase
      foo = svd.transform_feature foo
      sim = []
      svd.vk.each_row { |x|
-       sim << OpenTox::Algorithm::Similarity.cosine_num(x,foo.row(0))
+       sim << OpenTox::Algorithm::Similarity.cosine(x,foo.row(0))
      }
 
      # # # NO AUTOSCALE

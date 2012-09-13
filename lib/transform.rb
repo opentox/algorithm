@@ -12,7 +12,7 @@ module OpenTox
       class AutoScale 
         attr_accessor :vs, :mean, :stdev
 
-        # @param [GSL::Vector] values to transform using AutoScaling.
+        # @param [GSL::Vector] values Values to transform using AutoScaling.
         def initialize values
           begin
             raise "Cannot transform, values empty." if values.size==0
@@ -27,7 +27,7 @@ module OpenTox
           end
         end
 
-        # @param [GSL::Vector] values to transform.
+        # @param [GSL::Vector] values Values to transform.
         # @return [GSL::Vector] transformed values.
         def transform values
           begin
@@ -39,7 +39,7 @@ module OpenTox
           end
         end
 
-        # @param [GSL::Vector] Values to restore.
+        # @param [GSL::Vector] values Values to restore.
         # @return [GSL::Vector] transformed values.
         def restore values
           begin
@@ -68,8 +68,8 @@ module OpenTox
 
         # Creates a transformed dataset as GSL::Matrix.
         #
-        # @param [GSL::Matrix] Data matrix.
-        # @param [Float] Compression ratio from [0,1], default 0.05.
+        # @param [GSL::Matrix] data_matrix Data matrix.
+        # @param [Float] compression Compression ratio from [0,1], default 0.05.
         # @return [GSL::Matrix] Data transformed matrix.
         def initialize data_matrix, compression=0.05, maxcols=(1.0/0.0)
 
@@ -139,7 +139,7 @@ module OpenTox
 
         # Transforms data to feature space found by PCA.
         #
-        # @param [GSL::Matrix] Data matrix.
+        # @param [GSL::Matrix] values Data matrix.
         # @return [GSL::Matrix] Transformed data matrix.
         def transform values
           begin
@@ -158,7 +158,6 @@ module OpenTox
 
         # Restores data in the original feature space (possibly with compression loss).
         #
-        # @param [GSL::Matrix] Transformed data matrix.
         # @return [GSL::Matrix] Data matrix.
         def restore
           begin 
@@ -183,8 +182,8 @@ module OpenTox
 
         # Creates a transformed dataset as GSL::Matrix.
         #
-        # @param [GSL::Matrix] Data matrix
-        # @param [Float] Compression ratio from [0,1], default 0.05
+        # @param [GSL::Matrix] data_matrix Data matrix
+        # @param [Float] compression Compression ratio from [0,1], default 0.05
         # @return [GSL::Matrix] Data transformed matrix
 
         def initialize data_matrix, compression=0.05
@@ -232,7 +231,7 @@ module OpenTox
 
         # Transforms data instance (1 row) to feature space found by SVD.
         #
-        # @param [GSL::Matrix] Data matrix (1 x m).
+        # @param [GSL::Matrix] values Data matrix (1 x m).
         # @return [GSL::Matrix] Transformed data matrix.
         def transform_instance values
           begin
@@ -246,7 +245,7 @@ module OpenTox
 
         # Transforms data feature (1 column) to feature space found by SVD.
         #
-        # @param [GSL::Matrix] Data matrix (1 x n).
+        # @param [GSL::Matrix] values Data matrix (1 x n).
         # @return [GSL::Matrix] Transformed data matrix.
         def transform_feature values
           begin
@@ -260,7 +259,6 @@ module OpenTox
 
         # Restores data in the original feature space (possibly with compression loss).
         #
-        # @param [GSL::Matrix] Transformed data matrix.
         # @return [GSL::Matrix] Data matrix.
         def restore
           begin 
@@ -281,12 +279,13 @@ module OpenTox
       class ModelTransformer
         attr_accessor :model, :similarity_algorithm, :acts, :sims
 
-        # @params[OpenTox::Model] model to transform
+        # @params[OpenTox::Model] model Model to transform
         def initialize model
           @model = model
           @similarity_algorithm = @model.similarity_algorithm
         end
 
+        # Transforms the model
         def transform
           get_matrices # creates @n_prop, @q_prop, @acts from ordered fps
           @ids = (0..((@n_prop.length)-1)).to_a # surviving compounds; become neighbors
@@ -378,9 +377,9 @@ module OpenTox
 
 
         # Adds a neighbor to @neighbors if it passes the similarity threshold
-        # adjusts @ids to signal the
+        # @param[Array] training_props Propositionalized data for this neighbor
+        # @param[Integer] Index of neighbor
         def add_neighbor(training_props, idx)
-
           sim = similarity(training_props)
           if sim > @model.min_sim.to_f
             if @model.acts[idx]
@@ -438,6 +437,8 @@ module OpenTox
 
 
         # Executes model similarity_algorithm
+        # @param[Array] A propositionalized data entry
+        # @return[Float] Similarity to query structure
         def similarity(training_props)
           eval("OpenTox::Algorithm::Similarity").send(@model.similarity_algorithm,training_props, @q_prop)
         end
@@ -453,6 +454,8 @@ module OpenTox
           @q_prop = @model.q_prop
         end
 
+        # Returns propositionalized data, if appropriate, or nil
+        # @return [Array] Propositionalized data, or nil
         def props
           @model.propositionalized ? [ @n_prop, @q_prop ] : nil
         end
