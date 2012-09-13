@@ -196,7 +196,7 @@ module OpenTox
     
               if (!@@bbrc.GetRegression)
                 id_arrs = f[2..-1].flatten
-                max = OpenTox::Algorithm.effect(f[2..-1].reverse, @@fminer.db_class_sizes) # f needs reversal for bbrc
+                max = OpenTox::Algorithm::Fminer.effect(f[2..-1].reverse, @@fminer.db_class_sizes) # f needs reversal for bbrc
                 effect = max+1
               else #regression part
                 id_arrs = f[2]

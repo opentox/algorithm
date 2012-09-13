@@ -10,7 +10,6 @@ module OpenTox
     class Fminer < Algorithm
       attr_accessor :prediction_feature, :training_dataset, :minfreq, :compounds, :db_class_sizes, :all_activities, :smi
 
-
       def initialize(uri, subjectid=nil)
         super(uri, subjectid)
       end
@@ -20,6 +19,7 @@ module OpenTox
       # Sets training dataset, prediction feature, and minfreq instance variables
       # @param[Hash] parameters of the REST call
       # @param[Integer] per-mil value for min frequency
+      
       def check_params(params,per_mil,subjectid=nil)
         bad_request_error "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
         @training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", subjectid # AM: find is a shim
@@ -64,12 +64,38 @@ module OpenTox
         end
       end
 
+      # Effect calculation
+      # Determine class bias
+      # @param [Array] 2-Array of per-class occurrences
+      # @param [Array] number of database instances per class
+      # @return [Integer] Class index of preferred class
+
+      def self.effect(occurrences, db_instances)
+        max=0
+        max_value=0
+        nr_o = occurrences.sum_size
+        nr_db = db_instances.to_scale.sum
+  
+        occurrences.each_with_index { |o,i| # fminer outputs occurrences sorted reverse by activity.
+          actual = o.size.to_f/nr_o
+          expected = db_instances[i].to_f/nr_db
+          if actual > expected
+            if ((actual - expected) / actual) > max_value
+             max_value = (actual - expected) / actual # 'Schleppzeiger'
+              max = i
+            end
+          end
+        }
+        max
+      end
+
 
       # Add data to fminer
       # If fminer_instance is nil, actually only administrative data is filled in
       # Sets all_activities, compounds, and smi instance variables
       # @param[Object] Fminer instance
       # @param[Hash] Maps dependent variable values to Integers
+      
       def add_fminer_data(fminer_instance, value_map)
         id=1
         @training_dataset.compounds.each_with_index do |compound|
@@ -109,6 +135,7 @@ module OpenTox
       # @param [Hash]  Maps dependent variable values to Integers
       # @param [Float] p-value for the SMARTS (may be nil, if Fminer instance is not nil)
       # @return [Array] 2-Array with metadata,parameters
+
       def calc_metadata(smarts, ids, counts, fminer_instance, feature_dataset_uri, value_map, params, p_value=nil)
         # Either p_value or fminer instance to calculate it
         return nil if (p_value.nil? and fminer_instance.nil?) 
@@ -124,7 +151,7 @@ module OpenTox
           g=Array.new
           value_map.each { |y,act| g[y-1]=Array.new }
           feat_hash.each  { |x,y|   g[y-1].push(x)   }
-          max = OpenTox::Algorithm.effect(g, db_class_sizes)
+          max = OpenTox::Algorithm::Fminer.effect(g, db_class_sizes)
           effect = max+1
         end
 
@@ -143,51 +170,6 @@ module OpenTox
       end
     end
 
-
-    # Backbone Refinement Class mining (http://bbrc.maunz.de/)
-    class BBRC < Fminer
-      def initialize(uri)
-        super uri
-      end
-    end
-
-    # LAtent STructure Pattern Mining (http://last-pm.maunz.de)
-    class LAST < Fminer
-      def initialize(uri)
-        super uri
-      end
-    end
-
-    # Sum of an array for Arrays
-    # @param [Array] Array of arrays
-    # @return [Integer] Sum of size of array elements
-    def self.sum_size(array)
-      sum=0
-      array.each { |e| sum += e.size }
-      return sum
-    end
-
-    # Effect calculation
-    # Determine class bias
-    # @return [Integer] Class index of preferred class
-    def self.effect(occurrences, db_instances)
-      max=0
-      max_value=0
-      nr_o = self.sum_size(occurrences)
-      nr_db = db_instances.to_scale.sum
-
-      occurrences.each_with_index { |o,i| # fminer outputs occurrences sorted reverse by activity.
-        actual = o.size.to_f/nr_o
-        expected = db_instances[i].to_f/nr_db
-        if actual > expected
-          if ((actual - expected) / actual) > max_value
-           max_value = (actual - expected) / actual # 'Schleppzeiger'
-            max = i
-          end
-        end
-      }
-      max
-    end
 
   end
 

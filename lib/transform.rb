@@ -1,51 +1,12 @@
+# transform.rb
+# Transformer library
+# Author: Andreas Maunz
+
 module OpenTox
     module Transform
 
     # Uses Statsample Library (http://ruby-statsample.rubyforge.org/) by C. Bustos
     
-      # LogAutoScaler for GSL vectors.
-      # Take log and scale.
-      class LogAutoScale
-        attr_accessor :vs, :offset, :autoscaler
-
-        # @param [GSL::Vector] Values to transform using LogAutoScaling.
-        def initialize values
-          @distance_to_zero = 1.0
-          begin
-            raise "Cannot transform, values empty." if values.size==0
-            vs = values.clone
-            @offset = vs.min - @distance_to_zero
-            @autoscaler = OpenTox::Transform::AutoScale.new mvlog(vs)
-            @vs = @autoscaler.vs
-          rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
-          end
-        end
-
-        # @param [GSL::Vector] values to restore.
-        # @return [GSL::Vector] transformed values.
-        def restore values
-          begin
-            raise "Cannot transform, values empty." if values.size==0
-            vs = values.clone
-            rv = @autoscaler.restore(vs)
-            rv.to_a.collect { |v| (10**v) + @offset }.to_gv
-          rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
-          end
-        end
-
-        # @param [GSL::Vector] values to transform.
-        # @return [GSL::Vector] transformed values.
-        def mvlog values 
-          values.to_a.collect { |v| Math::log10(v - @offset) }.to_gv
-        end
-
-      end
-
-
       # Auto-Scaler for GSL vectors.
       # Center on mean and divide by standard deviation.
       class AutoScale 
@@ -61,8 +22,8 @@ module OpenTox
             @stdev = 0.0 if @stdev.nan? 
             @vs = transform vs
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -73,8 +34,8 @@ module OpenTox
             raise "Cannot transform, values empty." if values.size==0
             autoscale values.clone
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -86,8 +47,8 @@ module OpenTox
             rv_ss = values.clone.to_scale * @stdev unless @stdev == 0.0
             (rv_ss + @mean).to_gsl
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -170,8 +131,8 @@ module OpenTox
             @data_transformed_matrix = (@eigenvector_matrix.transpose * @data_matrix_scaled.transpose).transpose
 
           rescue Exception => e
-              LOGGER.debug "#{e.class}: #{e.message}"
-              LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+              $logger.debug "#{e.class}: #{e.message}"
+              $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -189,8 +150,8 @@ module OpenTox
             }
             (@eigenvector_matrix.transpose * data_matrix_scaled.transpose).transpose
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -207,8 +168,8 @@ module OpenTox
             }
             data_matrix_restored
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -262,8 +223,8 @@ module OpenTox
             # @data_matrix * @vk * @eigk_inv
 
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -276,8 +237,8 @@ module OpenTox
           begin
             values * @vk * @eigk_inv
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
         alias :transform :transform_instance # make this the default (see PCA interface)
@@ -290,8 +251,8 @@ module OpenTox
           begin
             values * @uk * @eigk_inv
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -304,8 +265,8 @@ module OpenTox
           begin 
             @data_transformed_matrix * @eigk * @vk.transpose  # reverse svd
           rescue Exception => e
-            LOGGER.debug "#{e.class}: #{e.message}"
-            LOGGER.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           end
         end
 
@@ -331,16 +292,16 @@ module OpenTox
 
           if (@model.similarity_algorithm == "Similarity.cosine")
             # truncate nil-columns and -rows
-            LOGGER.debug "O: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
+            $logger.debug "O: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
             while @q_prop.size>0
               idx = @q_prop.index(nil)
               break if idx.nil?
               @q_prop.slice!(idx)
               @n_prop.each { |r| r.slice!(idx) }
             end
-            LOGGER.debug "Q: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
+            $logger.debug "Q: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
             remove_nils  # removes nil cells (for cosine); alters @n_props, @q_props, cuts down @ids to survivors
-            LOGGER.debug "M: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
+            $logger.debug "M: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
 
             # adjust rest
             fps_tmp = []; @ids.each { |idx| fps_tmp << @fps[idx] }; @fps = fps_tmp
@@ -359,7 +320,7 @@ module OpenTox
             svd = OpenTox::Algorithm::Transform::SVD.new(gsl_n_prop, 0.0)
             @n_prop = svd.data_transformed_matrix.to_a
             @q_prop = svd.transform(gsl_q_prop).row(0).to_a
-            LOGGER.debug "S: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
+            $logger.debug "S: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
           else
             convert_nils # convert nil cells (for tanimoto); leave @n_props, @q_props, @ids untouched
           end
