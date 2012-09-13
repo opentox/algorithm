@@ -72,6 +72,7 @@ module OpenTox
         # @param [Float] Compression ratio from [0,1], default 0.05.
         # @return [GSL::Matrix] Data transformed matrix.
         def initialize data_matrix, compression=0.05, maxcols=(1.0/0.0)
+
           begin
             @data_matrix = data_matrix.clone
             @compression = compression.to_f
@@ -84,7 +85,7 @@ module OpenTox
             raise "Error! PCA needs at least two dimensions." if data_matrix.size2 < 2
             @data_matrix_selected = nil
             (0..@data_matrix.size2-1).each { |i|
-              if !Algorithm::zero_variance?(@data_matrix.col(i).to_a)
+              if !@data_matrix.col(i).to_a.zero_variance?
                 if @data_matrix_selected.nil?
                   @data_matrix_selected = GSL::Matrix.alloc(@data_matrix.size1, 1) 
                   @data_matrix_selected.col(0)[0..@data_matrix.size1-1] = @data_matrix.col(i)

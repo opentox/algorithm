@@ -229,10 +229,12 @@ module OpenTox
 
 
     class Similarity
+
       # Tanimoto similarity
       # @param [Hash, Array] fingerprints of first compound
       # @param [Hash, Array] fingerprints of second compound
       # @return [Float] (Weighted) tanimoto similarity
+      
       def self.tanimoto(fingerprints_a,fingerprints_b,weights=nil,params=nil)
         common_p_sum = 0.0
         all_p_sum = 0.0
@@ -244,6 +246,48 @@ module OpenTox
         }
         (all_p_sum > 0.0) ? (common_p_sum/all_p_sum) : 0.0
       end
+
+
+
+      # Cosine similarity
+      # @param [Hash] properties_a key-value properties of first compound
+      # @param [Hash] properties_b key-value properties of second compound
+      # @return [Float] cosine of angle enclosed between vectors induced by keys present in both a and b
+      def self.cosine(fingerprints_a,fingerprints_b,weights=nil)
+
+        # fingerprints are hashes
+        if fingerprints_a.class == Hash && fingerprints_b.class == Hash
+          a = []; b = []
+          common_features = fingerprints_a.keys & fingerprints_b.keys
+          if common_features.size > 1
+            common_features.each do |p|
+              a << fingerprints_a[p]
+              b << fingerprints_b[p]
+            end
+          end
+
+        # fingerprints are arrays
+        elsif fingerprints_a.class == Array && fingerprints_b.class == Array
+          a = fingerprints_a
+          b = fingerprints_b
+        end
+
+        (a.size > 0 && b.size > 0) ? self.cosine_num(a.to_gv, b.to_gv) : 0.0
+
+      end
+
+      # Cosine similarity
+      # @param [GSL::Vector] a
+      # @param [GSL::Vector] b
+      # @return [Float] cosine of angle enclosed between a and b
+      def self.cosine_num(a, b)
+        if a.size>12 && b.size>12
+          a = a[0..11]
+          b = b[0..11]
+        end
+        a.dot(b) / (a.norm * b.norm)
+      end
+
     end
 
 
