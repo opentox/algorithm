@@ -5,7 +5,8 @@ Bundler.require
 require 'gsl'
 require 'test/unit'
 
-require '../lib/transform.rb'
+require '../lib/algorithm/transform.rb'
+require '../lib/algorithm/similarity.rb'
 require '../lib/algorithm.rb'
 
 class Float
@@ -30,7 +31,7 @@ class TransformTest < Test::Unit::TestCase
   
     # Lossy
     2.times do # repeat to ensure idempotency
-      pca = OpenTox::Transform::PCA.new(d, 0.05)
+      pca = OpenTox::Algorithm::Transform::PCA.new(d, 0.05)
       assert_equal pca.data_matrix, d
       assert_equal pca.data_transformed_matrix, td
       assert_equal pca.transform(d), td
@@ -44,7 +45,7 @@ class TransformTest < Test::Unit::TestCase
   
     # Lossless
     2.times do
-      pca = OpenTox::Transform::PCA.new(d, 0.0)
+      pca = OpenTox::Algorithm::Transform::PCA.new(d, 0.0)
       assert_equal pca.data_matrix, d
       assert_equal pca.data_transformed_matrix, td
       assert_equal pca.transform(d), td
@@ -57,7 +58,7 @@ class TransformTest < Test::Unit::TestCase
     ev = GSL::Matrix.alloc([0.707106781186548, 0.707106781186548], 2, 1)
     # Lossy, but using maxcols constraint
     2.times do
-      pca = OpenTox::Transform::PCA.new(d, 0.0, 1) # 1 column
+      pca = OpenTox::Algorithm::Transform::PCA.new(d, 0.0, 1) # 1 column
       assert_equal pca.data_matrix, d
       assert_equal pca.data_transformed_matrix, td
       assert_equal pca.transform(d), td
@@ -85,11 +86,11 @@ class TransformTest < Test::Unit::TestCase
      # AutoScale (mean and center) to improve on representation
      nr_cases, nr_features = m.size1, m.size2
      (0..nr_features-1).each { |i|
-        autoscaler = OpenTox::Transform::AutoScale.new(m.col(i))
+        autoscaler = OpenTox::Algorithm::Transform::AutoScale.new(m.col(i))
         m.col(i)[0..nr_cases-1] = autoscaler.vs
         bar.col(i)[0..0] = autoscaler.transform bar.col(i)
      }
-     autoscaler = OpenTox::Transform::AutoScale.new(foo.transpose.col(0))
+     autoscaler = OpenTox::Algorithm::Transform::AutoScale.new(foo.transpose.col(0))
      foo = GSL::Matrix[autoscaler.vs]
 
      #puts

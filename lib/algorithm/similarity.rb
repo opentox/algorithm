@@ -1,0 +1,42 @@
+module OpenTox
+  class Algorithm
+
+    class Similarity
+
+      # Tanimoto similarity
+      # @param [Array] a fingerprints of first compound
+      # @param [Array] b fingerprints of second compound
+      # @return [Float] Tanimoto similarity
+      def self.tanimoto(a,b)
+        common_p_sum = 0.0
+        all_p_sum = 0.0
+        size = [ a.size, b.size ].min
+        $logger.warn "fingerprints don't have equal size" if a.size != b.size
+        (0...size).each { |idx|
+          common_p_sum += [ a[idx], b[idx] ].min
+          all_p_sum += [ a[idx], b[idx] ].max
+        }
+        (all_p_sum > 0.0) ? (common_p_sum/all_p_sum) : 0.0
+      end
+
+
+      # Cosine similarity
+      # @param [Array] a fingerprints of first compound
+      # @param [Array] b fingerprints of second compound
+      # @return [Float] Cosine similarity, the cosine of angle enclosed between vectors a and b
+      def self.cosine(a, b)
+        val = 0.0
+        if a.size>0 and b.size>0
+          if a.size>12 && b.size>12
+            a = a[0..11]
+            b = b[0..11]
+          end
+          val=a.dot(b) / (a.norm * b.norm)
+        end
+        val
+      end
+
+    end
+
+  end
+end

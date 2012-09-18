@@ -11,6 +11,7 @@ require File.join(File.expand_path(File.dirname(__FILE__)), 'last-utils/lu.rb')
 $logger.debug "Algorithm booting: #{$algorithm.collect{ |k,v| "#{k}: '#{v}'"} }"
 Dir['./lib/utils/shims/*.rb'].each { |f| $logger.debug f; require f } # Shims for legacy code
 Dir['./lib/utils/*.rb'].each { |f| $logger.debug f; require f } # Utils for Libs
+Dir['./lib/algorithm/*.rb'].each { |f| $logger.debug f; require f } # Libs
 Dir['./lib/*.rb'].each { |f| $logger.debug f; require f } # Libs
 Dir['./webapp/*.rb'].each { |f| $logger.debug f; require f } # Webapps
 

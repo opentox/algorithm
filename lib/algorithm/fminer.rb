@@ -3,7 +3,6 @@
 # Author: Andreas Maunz
 
 module OpenTox
-
   class Algorithm
 
     # Fminer algorithms (https://github.com/amaunz/fminer2)

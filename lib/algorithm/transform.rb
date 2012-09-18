@@ -3,8 +3,9 @@
 # Author: Andreas Maunz
 
 module OpenTox
-    module Transform
+  class Algorithm
 
+    class Transform
     # Uses Statsample Library (http://ruby-statsample.rubyforge.org/) by C. Bustos
     
       # Auto-Scaler for GSL vectors.
@@ -100,7 +101,7 @@ module OpenTox
             # PCA uses internal centering on 0
             @data_matrix_scaled = GSL::Matrix.alloc(@data_matrix_selected.size1, @cols.size)
             (0..@cols.size-1).each { |i|
-              as = OpenTox::Transform::AutoScale.new(@data_matrix_selected.col(i))
+              as = OpenTox::Algorithm::Transform::AutoScale.new(@data_matrix_selected.col(i))
               @data_matrix_scaled.col(i)[0..@data_matrix.size1-1] = as.vs * as.stdev # re-adjust by stdev
               @mean << as.mean
               @autoscaler << as
@@ -313,7 +314,7 @@ module OpenTox
             gsl_n_prop = GSL::Matrix.alloc(@n_prop.flatten, nr_cases, nr_features); gsl_n_prop_orig = gsl_n_prop.clone # make backup
             gsl_q_prop = GSL::Matrix.alloc(@q_prop.flatten, 1, nr_features); gsl_q_prop_orig = gsl_q_prop.clone # make backup
             (0...nr_features).each { |i|
-               autoscaler = OpenTox::Transform::AutoScale.new(gsl_n_prop.col(i))
+               autoscaler = OpenTox::Algorithm::Transform::AutoScale.new(gsl_n_prop.col(i))
                gsl_n_prop.col(i)[0..nr_cases-1] = autoscaler.vs
                gsl_q_prop.col(i)[0..0] = autoscaler.transform gsl_q_prop.col(i)
             }
@@ -340,7 +341,7 @@ module OpenTox
               gram_matrix[i] = [] unless gram_matrix[i]
               @n_prop.each_index do |j|
                 if (j>i)
-                  sim = eval("OpenTox::Algorithm::#{@similarity_algorithm}(@n_prop[i], @n_prop[j])")
+                  sim = eval("OpenTox::Algorithm::Similarity::#{@similarity_algorithm}(@n_prop[i], @n_prop[j])")
                   gram_matrix[i][j] = sim
                   gram_matrix[j] = [] unless gram_matrix[j]
                   gram_matrix[j][i] = gram_matrix[i][j]
@@ -463,4 +464,6 @@ module OpenTox
       end
 
     end
+
+  end
 end
