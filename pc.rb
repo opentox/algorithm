@@ -82,9 +82,10 @@ post '/pc/AllDescriptors' do
     byteArray = Rjb::import('java.io.ByteArrayOutputStream'); printStream = Rjb::import('java.io.PrintStream'); 
     out = byteArray.new() ; Rjb::import('java.lang.System').out = printStream.new(out) # joelib is too verbose
     s = Rjb::import('JoelibFc') # import main class
+    t = Rjb::import('ApplyCDKDescriptors')
 
     LOGGER.debug "Running PC with pc_type '#{params[:pc_type]}' and lib '#{params[:lib]}'"
-    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :rjb => s, :add_uri => true, :task => task, :lib => params[:lib], :subjectid => @subjectid} )
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :rjb => {:jl=>s, :cdk => t}, :add_uri => true, :task => task, :lib => params[:lib], :subjectid => @subjectid} )
   end
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
@@ -106,7 +107,8 @@ post '/pc/:descriptor' do
     byteArray = Rjb::import('java.io.ByteArrayOutputStream'); printStream = Rjb::import('java.io.PrintStream'); 
     out = byteArray.new() ; Rjb::import('java.lang.System').out = printStream.new(out) # joelib is too verbose
     s = Rjb::import('JoelibFc') # import main class
-    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :descriptor => params[:descriptor], :rjb => s, :add_uri => false, :task => task, :subjectid => @subjectid} )
+    t = Rjb::import('ApplyCDKDescriptors')
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => params[:dataset_uri], :pc_type => params[:pc_type], :descriptor => params[:descriptor], :rjb => {:jl=>s, :cdk => t}, :add_uri => false, :task => task, :subjectid => @subjectid} )
   end
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"

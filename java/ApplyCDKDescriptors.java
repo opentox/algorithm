@@ -58,14 +58,14 @@ public class ApplyCDKDescriptors
 	//{
 	//	String inpath = "hamster_3d.sdf";
   //  String outpath = "hamster_desc.csv";
-  //  getDescriptorCSV(inpath,outpath,"KappaShapeIndicesDescriptor");
+  //  getDescriptorCSV(inpath,outpath,"");
 	//}
 
  public static void getDescriptorCSV(String sdfInputPath, String csvOutputPath, String descNamesStr) throws java.io.IOException  {
     List<IMolecule> mols = readMolecules(sdfInputPath);
-		System.out.println("read " + mols.size() + " compounds");
+		System.err.println("read " + mols.size() + " compounds");
 		List<IDescriptor> descriptors = ENGINE.getDescriptorInstances();
-		System.out.println("found " + descriptors.size() + " descriptors");
+		System.err.println("found " + descriptors.size() + " descriptors");
 
     List<String> descNames = Arrays.asList(descNamesStr.split(","));
     ArrayList<String> colNames = new ArrayList<String>();
@@ -75,9 +75,13 @@ public class ApplyCDKDescriptors
         continue;
       String tname = desc.getClass().getName();
       String[] tnamebits = tname.split("\\.");
-      if (!descNames.contains(tnamebits[tnamebits.length-1]))
+      tname = tnamebits[tnamebits.length-1];
+      if ((descNamesStr.length()>0) && (!descNames.contains(tname)))
         continue;
       String[] colNamesArr = desc.getDescriptorNames();
+      for (int idx=0; idx<colNamesArr.length; idx++) {
+        colNamesArr[idx] = tname + "-" + colNamesArr[idx];
+      }
       colNames.addAll(Arrays.asList(colNamesArr));
       List<Double[]> valuesList = computeLists(mols, (IMolecularDescriptor) desc);
       values.addAll(valuesList);
