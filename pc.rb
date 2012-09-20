@@ -79,8 +79,11 @@ post '/pc/AllDescriptors' do
 
   task = OpenTox::Task.create("PC descriptor calculation for dataset ", @uri) do |task|
     Rjb.load(nil,["-Xmx64m"]) # start vm
-    byteArray = Rjb::import('java.io.ByteArrayOutputStream'); printStream = Rjb::import('java.io.PrintStream'); 
-    out = byteArray.new() ; Rjb::import('java.lang.System').out = printStream.new(out) # joelib is too verbose
+    byteArray = Rjb::import('java.io.ByteArrayOutputStream')
+    printStream = Rjb::import('java.io.PrintStream')
+    out = byteArray.new() 
+    Rjb::import('java.lang.System').out = printStream.new(out) # suppress java output
+    Rjb::import('java.lang.System').err = printStream.new(out) # suppress java output
     s = Rjb::import('JoelibFc') # import main class
     t = Rjb::import('ApplyCDKDescriptors')
 
