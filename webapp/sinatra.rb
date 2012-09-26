@@ -40,7 +40,7 @@ module OpenTox
         case @accept
           when "application/rdf+xml"
             content_type "application/rdf+xml"
-            obj
+            obj.to_rdfxml
           when /text\/html/
             content_type "text/html"
             OpenTox.text_to_html obj.to_turtle
