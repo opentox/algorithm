@@ -59,8 +59,13 @@ public class ApplyCDKDescriptors {
   */
 	public static void main(String args[]) throws java.io.IOException 
 	{
-		String inpath = "hamster_3d.sdf";
-    String outpath = "hamster_desc.csv";
+    int length = args.length;
+    if (length != 2) {
+      System.out.println("Enter two file names: <input.sdf> <output.csv>");
+      System.exit(1);
+    }
+		String inpath = args[0];
+    String outpath = args[1];
     getDescriptorCSV(inpath,outpath,"");
 	}
 
