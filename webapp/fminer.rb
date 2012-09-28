@@ -272,7 +272,7 @@ module OpenTox
 
       end
       response['Content-Type'] = 'text/uri-list'
-      service_unavailable_error "Service unavailable" if task.status == "Cancelled"
+      service_unavailable_error "Service unavailable" if task.cancelled?
       halt 202,task.uri.to_s+"\n"
     end
     
@@ -401,7 +401,7 @@ module OpenTox
 
       end
       response['Content-Type'] = 'text/uri-list'
-      service_unavailable_error "Service unavailable" if task.status == "Cancelled"
+      service_unavailable_error "Service unavailable" if task.cancelled?
       halt 202,task.uri.to_s+"\n"
     end
 
