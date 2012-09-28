@@ -334,10 +334,20 @@ post '/fminer/bbrc/?' do
     end
     
     # Add fminer results to feature dataset along owd
+    all_compounds_owd = @@fminer.training_dataset.compounds.collect { |v|
+      times_in_fminer_compounds_owd = fminer_compounds_owd.count(v)
+      times_in_fminer_compounds_owd == 0 ? v : Array.new(times_in_fminer_compounds_owd,v)
+    }.flatten 
+    if (params[:complete_entries] == "true")
+      all_compounds_owd.each { |compound|
+        feature_dataset.add_compound(compound) # add compounds *in order*
+      }
+    end
+
     which_row = @@fminer.training_dataset.compounds.inject({}) { |h,id| h[id]=0; h }
     unused_compounds = fminer_compounds_owd - fminer_results.keys
     (fminer_compounds_owd - unused_compounds).each { |compound|
-      feature_dataset.add_compound(compound) # add compounds *in order*
+      feature_dataset.add_compound(compound) unless (params[:complete_entries] == "true")
       fminer_results[compound].each { |feature, values|
         feature_dataset.add( compound, feature, values[which_row[compound]] )
       }
@@ -617,7 +627,16 @@ post '/fminer/last/?' do
     matches, counts, used_compounds = lu.match_rb(@@fminer.smi,smarts,hit_count,complete_entries)       # creates instantiations
 
     # Collect compounds, in order with duplicates (owd) and put in dataset
-    used_compounds.each { |idx| feature_dataset.add_compound(@@fminer.compounds[idx]) }
+    fminer_compounds_owd = used_compounds.collect { |idx| @@fminer.compounds[idx] }
+    if (complete_entries)
+      all_compounds_owd = @@fminer.training_dataset.compounds.collect { |v|
+        times_in_fminer_compounds_owd = fminer_compounds_owd.count(v)
+        times_in_fminer_compounds_owd == 0 ? v : Array.new(times_in_fminer_compounds_owd,v)
+      }.flatten 
+      all_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
+    else
+      fminer_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
+    end
 
     matches.each do |smarts, ids|
       metadata = calc_metadata (smarts, ids, counts[smarts], @@last, nil, value_map, params)
@@ -687,7 +706,16 @@ post '/fminer/:method/match?' do
     matches, counts, used_compounds = LU.new.match_rb(@@fminer.smi, smarts, hit_count, complete_entries) if smarts.size>0
 
     # Collect compounds, in order with duplicates (owd) and put in dataset
-    used_compounds.each { |idx| feature_dataset.add_compound(@@fminer.compounds[idx]) }
+    fminer_compounds_owd = used_compounds.collect { |idx| @@fminer.compounds[idx] }
+    if (complete_entries)
+      all_compounds_owd = @@fminer.training_dataset.compounds.collect { |v|
+        times_in_fminer_compounds_owd = fminer_compounds_owd.count(v)
+        times_in_fminer_compounds_owd == 0 ? v : Array.new(times_in_fminer_compounds_owd,v)
+      }.flatten 
+      all_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
+    else
+      fminer_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
+    end
 
     matches.each do |smarts, ids|
       metadata = calc_metadata (smarts, ids, counts[smarts], @@last, feature_dataset.uri, value_map, params)
