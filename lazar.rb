@@ -104,6 +104,9 @@ post '/lazar/?' do
     min_train_performance = params[:min_train_performance].to_f if params[:min_train_performance]
     min_train_performance = 0.1 unless params[:min_train_performance]
 
+    # Weights option
+    weights_option = params[:weights_option] if params[:weights_option]
+
 
     task.progress 10
 
@@ -281,6 +284,7 @@ post '/lazar/?' do
       {DC.title => "nr_hits", OT.paramValue => nr_hits},
       {DC.title => "min_sim", OT.paramValue => min_sim},
       {DC.title => "min_train_performance", OT.paramValue => min_train_performance},
+      {DC.title => "weights_option", OT.paramValue => weights_option},
 
     ]
 		
