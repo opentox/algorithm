@@ -42,6 +42,8 @@ post '/lazar/?' do
   raise OpenTox::NotFoundError.new "No dataset_uri parameter." unless params[:dataset_uri]
 	dataset_uri = params[:dataset_uri]
 
+  LOGGER.debug "Creating lazar model with params #{params.inspect}"
+
 
   task = OpenTox::Task.create("Create lazar model",url_for('/lazar',:full)) do |task|
 
@@ -181,15 +183,18 @@ post '/lazar/?' do
  
     # Creating InChi/URI Hash from trainig_feature for comparison with training_dataset to avoid missmatches caused by different URI authorities
     feature_compounds = {}
+    which_row={}
     training_features.compounds.each {|f_c_uri|
       f_compound = OpenTox::Compound.new(f_c_uri)
       feature_compounds[f_compound.to_inchi] = f_c_uri
+      which_row[f_compound.to_inchi] = 0
     }
    
     training_dataset.compounds.each do |t_c_uri|
 
       t_compound = OpenTox::Compound.new(t_c_uri)
       entry = training_features.data_entries[feature_compounds[t_compound.to_inchi]]
+      row_idx = which_row[t_compound.to_inchi]
       
       if entry.nil? # Training compound not found in feature dataset
         del_master_compounds << t_c_uri # Delete if training compound not found in feature dataset
@@ -201,12 +206,8 @@ post '/lazar/?' do
           if (lazar.feature_calculation_algorithm == "Substructure.match") || (lazar.feature_calculation_algorithm == "Substructure.match_hits")
             if training_features.features[feature]
               smarts = training_features.features[feature][OT.smarts]
-              #lazar.fingerprints[compound] << smarts
-              if lazar.feature_calculation_algorithm == "Substructure.match_hits"
-                lazar.fingerprints[t_c_uri][smarts] = entry[feature].flatten.first * training_features.features[feature][OT.pValue]
-              else
-                lazar.fingerprints[t_c_uri][smarts] = 1 * training_features.features[feature][OT.pValue]
-              end
+              lazar.fingerprints[t_c_uri][smarts] = [] unless lazar.fingerprints[t_c_uri][smarts]
+              lazar.fingerprints[t_c_uri][smarts] << entry[feature][row_idx] * training_features.features[feature][OT.pValue]
               unless lazar.features.include? smarts
                 lazar.features << smarts
                 lazar.p_values[smarts] = training_features.features[feature][OT.pValue]
@@ -216,17 +217,18 @@ post '/lazar/?' do
 
           # CASE 2: Others
           elsif entry[feature].flatten.size == 1
-            lazar.fingerprints[t_c_uri][feature] = entry[feature].flatten.first
+            lazar.fingerprints[t_c_uri][feature] = [] unless lazar.fingerprints[t_c_uri][feature]
+            lazar.fingerprints[t_c_uri][feature] << entry[feature][row_idx]
             lazar.features << feature unless lazar.features.include? feature
-          else
-            LOGGER.warn "More than one entry (#{entry[feature].inspect}) for compound #{t_c_uri}, feature #{feature}"
           end
+
         end
       end
+      which_row[t_compound.to_inchi] += 1
     end
 
     task.progress 80
-    
+
     # Show compounds without feature information
     if del_master_compounds.size>0
       del_master_compounds.each{|compound| LOGGER.info "Compound: '#{compound.to_s}' not found in feature dataset and will be removed from compound list."}
@@ -235,26 +237,15 @@ post '/lazar/?' do
     lazar.compounds=training_dataset.compounds.collect - del_master_compounds # Add only compounds with fingerprints 
     
     # # # Activities
-    if prediction_feature.feature_type == "regression"
-      lazar.compounds.each do |compound| 
-        entry = training_dataset.data_entries[compound] 
-        lazar.activities[compound] = [] unless lazar.activities[compound]
-        unless entry[prediction_feature.uri].empty?
-          entry[prediction_feature.uri].each do |value|
-            lazar.activities[compound] << value
-          end
-        end
+    which_row=lazar.compounds.inject({}) {|h,c| h[c]=0; h}
+    lazar.compounds.each do |compound| 
+      entry = training_dataset.data_entries[compound] 
+      lazar.activities[compound] = [] unless lazar.activities[compound]
+      if entry[prediction_feature.uri]
+        value = entry[prediction_feature.uri][which_row[compound]]
+        lazar.activities[compound] << ( prediction_feature.feature_type == "classification" ? lazar.value_map.invert[value] : value )
       end
-    elsif prediction_feature.feature_type == "classification"
-      lazar.compounds.each do |compound| 
-        entry = training_dataset.data_entries[compound] 
-        lazar.activities[compound] = [] unless lazar.activities[compound]
-        unless entry[prediction_feature.uri].empty?
-          entry[prediction_feature.uri].each do |value|
-            lazar.activities[compound] << lazar.value_map.invert[value] # insert mapped values, not originals
-          end
-        end
-      end
+      which_row[compound] += 1
     end
     task.progress 90
 

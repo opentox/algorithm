@@ -302,56 +302,30 @@ post '/fminer/bbrc/?' do
           ]
           }
           feature_dataset.add_feature feature_uri, metadata
-          #feature_dataset.add_feature_parameters feature_uri, feature_dataset.parameters
         end
-        id_arrs.each { |id_count_hash|
-          id=id_count_hash.keys[0].to_i
-          count=id_count_hash.values[0].to_i
-          fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}
-          fminer_results[@@fminer.compounds[id]][feature_uri] || fminer_results[@@fminer.compounds[id]][feature_uri] = []
-          if params[:nr_hits] == "true"
-            fminer_results[@@fminer.compounds[id]][feature_uri] << count
-          else
-            fminer_results[@@fminer.compounds[id]][feature_uri] << 1
+
+        # re-format to one big hash id_arr
+        id_arr = {}; id_arrs.each { |id_count_hash| id_arr[id_count_hash.keys[0]] = id_count_hash.values[0] }
+        @@fminer.compounds.collect.each_with_index { |cmpd,id| # This collects all cmpds that have an activity
+          val = id_arr[id] ? ( params[:nr_hits] == "true" ? id_arr[id].to_i : 1 ) : 0
+          if (val != 0 or params[:complete_entries] == "true")
+            fminer_results[cmpd] || fminer_results[cmpd] = {}
+            fminer_results[cmpd][feature_uri] || fminer_results[cmpd][feature_uri] = []
+            fminer_results[cmpd][feature_uri] << val 
           end
         }
-
-      end # end of
+        
+      end # end of 
     end   # feature parsing
 
-    # Collect compounds, in order with duplicates (owd)
-    fminer_compounds_owd = @@fminer.compounds.collect 
-    fminer_compounds_owd.shift if fminer_compounds_owd[0].nil?
-
-    # Complete fminer_results, s.t. it contains entries for any training compound
-    if (params[:complete_entries] == "true")
-      myhelpfeature = File.join(feature_dataset.uri,"feature","bbrc", (features.size-1).to_s)
-      (fminer_compounds_owd - fminer_results.keys).each { |cmpd| # add possibly multiple entries
-        fminer_results[cmpd] || fminer_results[cmpd] = {}
-        fminer_results[cmpd][myhelpfeature] || fminer_results[cmpd][myhelpfeature] = []
-        fminer_results[cmpd][myhelpfeature] << 0
-      }
-    end
-    
-    # Add fminer results to feature dataset along owd
-    all_compounds_owd = @@fminer.training_dataset.compounds.collect { |v|
-      times_in_fminer_compounds_owd = fminer_compounds_owd.count(v)
-      times_in_fminer_compounds_owd == 0 ? v : Array.new(times_in_fminer_compounds_owd,v)
-    }.flatten 
-    if (params[:complete_entries] == "true")
-      all_compounds_owd.each { |compound|
-        feature_dataset.add_compound(compound) # add compounds *in order*
-      }
-    end
-
     which_row = @@fminer.training_dataset.compounds.inject({}) { |h,id| h[id]=0; h }
-    unused_compounds = fminer_compounds_owd - fminer_results.keys
-    (fminer_compounds_owd - unused_compounds).each { |compound|
-      feature_dataset.add_compound(compound) unless (params[:complete_entries] == "true")
-      fminer_results[compound].each { |feature, values|
-        feature_dataset.add( compound, feature, values[which_row[compound]] )
+    @@fminer.training_dataset.compounds.each { |cmpd|
+      feature_dataset.add_compound(cmpd) # *unconditionally* add compounds *in order*
+      i = which_row[cmpd]
+      fminer_results[cmpd] && fminer_results[cmpd].each { |feature, values|
+        feature_dataset.add_data_entry( cmpd, feature, values[i] )
       }
-      which_row[compound] += 1
+      which_row[cmpd] += 1
     }
     # AM: add feature values for non-present features
     # feature_dataset.complete_data_entries
@@ -515,8 +489,7 @@ post '/fminer/bbrc/sample/?' do
     params[:nr_hits] == "true" ? hit_count=true: hit_count=false
     matches, counts, used_compounds = lu.match_rb(@@fminer.smi,smarts,hit_count,true) # last arg: always create complete entries for sampling
 
-    # Collect compounds, in order with duplicates (owd) and put in dataset
-    used_compounds.each { |idx| feature_dataset.add_compound(@@fminer.compounds[idx]) }
+    @@fminer.training_dataset.compounds.each { |cmpd| feature_dataset.add_compound(cmpd) }
     
     feature_dataset.add_metadata({
           OT.parameters => [
@@ -539,11 +512,8 @@ post '/fminer/bbrc/sample/?' do
       metadata = calc_metadata (smarts, ids, counts[smarts], nil, nil , value_map, params, smarts_p_values[smarts])
       feature_uri = File.join feature_dataset.uri,"feature","last", feature_dataset.features.size.to_s
       feature_dataset.add_feature feature_uri, metadata
-      ids.each_with_index { |id,idx| feature_dataset.add(@@fminer.compounds[id], feature_uri, counts[smarts][idx])}
+      ids.each_with_index { |id,idx| feature_dataset.add_data_entry(@@fminer.compounds[id], feature_uri, counts[smarts][idx])}
     end
-
-    # AM: add feature values for non-present features
-    # feature_dataset.complete_data_entries
 
     feature_dataset.save(@subjectid)
     feature_dataset.uri
@@ -624,29 +594,18 @@ post '/fminer/last/?' do
     smarts=lu.smarts_rb(dom,'nls')          # converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
     params[:nr_hits] == "true" ? hit_count=true : hit_count=false
     params[:complete_entries] == "true" ? complete_entries=true : complete_entries=false
-    matches, counts, used_compounds = lu.match_rb(@@fminer.smi,smarts,hit_count,complete_entries)       # creates instantiations
+    matches, counts = lu.match_rb(@@fminer.smi,smarts,hit_count,complete_entries)       # creates instantiations
 
-    # Collect compounds, in order with duplicates (owd) and put in dataset
-    fminer_compounds_owd = used_compounds.collect { |idx| @@fminer.compounds[idx] }
-    if (complete_entries)
-      all_compounds_owd = @@fminer.training_dataset.compounds.collect { |v|
-        times_in_fminer_compounds_owd = fminer_compounds_owd.count(v)
-        times_in_fminer_compounds_owd == 0 ? v : Array.new(times_in_fminer_compounds_owd,v)
-      }.flatten 
-      all_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
-    else
-      fminer_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
-    end
-
+    @@fminer.training_dataset.compounds.each { |cmpd| feature_dataset.add_compound(cmpd)  }
     matches.each do |smarts, ids|
       metadata = calc_metadata (smarts, ids, counts[smarts], @@last, nil, value_map, params)
       feature_uri = File.join feature_dataset.uri,"feature","last", feature_dataset.features.size.to_s
       feature_dataset.add_feature feature_uri, metadata
-      ids.each_with_index { |id,idx| feature_dataset.add(@@fminer.compounds[id], feature_uri, counts[smarts][idx])}
+      @@fminer.compounds.collect.each_with_index { |cmpd,id| # This collects all cmpds that have an activity
+        count_idx = matches[smarts].index(id)
+        feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) if count_idx
+      }
     end
-
-    # AM: add feature values for non-present features
-    # feature_dataset.complete_data_entries
 
     feature_dataset.save(@subjectid)
     feature_dataset.uri
@@ -703,25 +662,17 @@ post '/fminer/:method/match?' do
     smarts = f_dataset.features.collect { |f,m| m[OT.smarts] }
     params[:nr_hits] == "true" ? hit_count=true : hit_count=false
     params[:complete_entries] == "true" ? complete_entries=true : complete_entries=false
-    matches, counts, used_compounds = LU.new.match_rb(@@fminer.smi, smarts, hit_count, complete_entries) if smarts.size>0
+    matches, counts = LU.new.match_rb(@@fminer.smi, smarts, hit_count, complete_entries) if smarts.size>0
 
-    # Collect compounds, in order with duplicates (owd) and put in dataset
-    fminer_compounds_owd = used_compounds.collect { |idx| @@fminer.compounds[idx] }
-    if (complete_entries)
-      all_compounds_owd = @@fminer.training_dataset.compounds.collect { |v|
-        times_in_fminer_compounds_owd = fminer_compounds_owd.count(v)
-        times_in_fminer_compounds_owd == 0 ? v : Array.new(times_in_fminer_compounds_owd,v)
-      }.flatten 
-      all_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
-    else
-      fminer_compounds_owd.each { |compound| feature_dataset.add_compound(compound) }
-    end
-
+    @@fminer.training_dataset.compounds.each { |cmpd| feature_dataset.add_compound(cmpd)  }
     matches.each do |smarts, ids|
-      metadata = calc_metadata (smarts, ids, counts[smarts], @@last, feature_dataset.uri, value_map, params)
-      feature_uri = File.join feature_dataset.uri,"feature","bbrc","match", feature_dataset.features.size.to_s
+      metadata = calc_metadata (smarts, ids, counts[smarts], @@last, nil, value_map, params)
+      feature_uri = File.join feature_dataset.uri,"feature",params[:method], feature_dataset.features.size.to_s
       feature_dataset.add_feature feature_uri, metadata
-      ids.each_with_index { |id,idx| feature_dataset.add(@@fminer.compounds[id], feature_uri, counts[smarts][idx]) }
+      @@fminer.compounds.collect.each_with_index { |cmpd,id| # This collects all cmpds that have an activity
+        count_idx = matches[smarts].index(id)
+        feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) if count_idx
+      }
     end
 
     feature_dataset.save @subjectid
