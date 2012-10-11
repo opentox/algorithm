@@ -37,7 +37,7 @@ module OpenTox
     
     # Search a model for a given parameter
     # @param[String] The parameter title
-    # @return[Object] The parameter value
+    # @return[Object] The parameter value, or nil
     def find_parameter_value(title)
       build_parameter_positions
       res = @parameters[@parameter_positions[title]][OT.paramValue.to_s] if @parameter_positions[title]

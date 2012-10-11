@@ -55,12 +55,18 @@ module OpenTox
       } # query structure
     end
 
+
     # Check parameters for plausibility
     # Prepare lazar object (includes graph mining)
     # @param[Array] lazar parameters as strings
     # @param[Hash] REST parameters, as input by user
-
     def check_params(lazar_params, params)
+
+      unless params[:feature_generation_uri]
+        bad_request_error "Please provide a feature generation uri" 
+      end
+      feature_generation_uri = params[:feature_generation_uri]
+
       unless training_dataset = OpenTox::Dataset.find(params[:dataset_uri], @subjectid) # AM: find is a shim
         resource_not_found_error "Dataset '#{params[:dataset_uri]}' not found." 
       end
@@ -77,38 +83,43 @@ module OpenTox
       prediction_feature = OpenTox::Feature.find(params[:prediction_feature], @subjectid) # AM: find is a shim
       prediction_feature_uri = prediction_feature.uri
 
-      feature_generation_uri = $lazar_feature_generation_default
-      if params[:feature_generation_uri]
-        feature_generation_uri = params[:feature_generation_uri]
-      end
-
       if params[:feature_dataset_uri]
         feature_dataset_uri = params[:feature_dataset_uri]
       else
         feature_dataset_uri = OpenTox::Algorithm.new(feature_generation_uri).run(params)
       end
 
-      # TODO: add override (e.g. lookup)
-      feature_calculation_algorithm = $lazar_feature_calculation_default
-      if (params[:nr_hits] == "true") && (feature_calculation_algorithm =~ /match/)
-        feature_calculation_algorithm = "match_hits"
+      if (feature_generation_uri =~ /fminer/)
+        feature_calculation_algorithm = "match"
+        if (params[:nr_hits] == "true")
+          feature_calculation_algorithm = "match_hits"
+        end
+      elsif feature_generation_uri =~ /dataset.*\/pc/
+        feature_calculation_algorithm = "lookup"
       end
 
-      # TODO: add override (e.g. cosine)
-      similarity_algorithm = $lazar_similarity_default
-      
-      min_sim = $lazar_min_sim_default
+      if feature_calculation_algorithm == "lookup"
+        similarity_algorithm = "cosine"
+        min_sim = 0.7
+      elsif feature_calculation_algorithm =~ /match/
+        similarity_algorithm = "tanimoto"
+        min_sim = 0.3
+      end
       if params[:min_sim] and params[:min_sim].numeric?
-        min_sim = params[:min_sim].to_f 
+        min_sim = params[:min_sim].to_f # AM: frequent manual option
       end
 
-      prediction_algorithm = $lazar_prediction_algorithm_default
+      if prediction_feature.feature_type == "classification"
+        prediction_algorithm = "weighted_majority_vote"
+      elsif prediction_feature.feature_type == "regression"
+        prediction_algorithm = "local_svm_regression"
+      end
       if params[:prediction_algorithm] and OpenTox::Algorithm::Neighbors.respond_to? params[:prediction_algorithm]
-        prediction_algorithm = "OpenTox::Algorithm::Neighbors.#{params[:prediction_algorithm]}" if params[:prediction_algorithm]
+        prediction_algorithm = params[:prediction_algorithm] # AM: frequent manual option
       end
 
       propositionalized = true
-      if ((prediction_algorithm =~ /majority_vote/) > 0)
+      if prediction_algorithm =~ /majority_vote/
         propositionalized = false
       end
 
@@ -117,16 +128,18 @@ module OpenTox
       end
 
       if params[:lib]
-        pc_lib = params[:lib]
+        lib = params[:lib]
       end
 
       min_train_performance = $lazar_min_train_performance_default
       if params[:min_train_performance] and params[:min_train_performance].numeric?
-        min_train_performance = params[:min_train_performance].to_f 
+        min_train_performance = params[:min_train_performance].to_f # AM: frequent manual option
       end
 
+
       lazar_params.collect { |p|
-        { DC.title => p, OT.paramValue => eval(p) } unless eval(p).nil?
+        val = eval(p)
+        { DC.title => p, OT.paramValue => (val.nil? ? "" : val) }
       }.compact
     end
 

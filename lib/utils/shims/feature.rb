@@ -16,6 +16,24 @@ module OpenTox
       f
     end
 
+    # Load a feature given its title, create if not present, using metadata
+    # @param[String] title
+    # @return [OpenTox::Feature] Feature object with the full data
+    def self.find_by_title(title, metadata)
+      feature_uri = nil
+      sparql = "SELECT DISTINCT ?feature WHERE { ?feature <#{RDF.type}> <#{RDF::OT['feature'.capitalize]}>. ?feature <#{RDF::DC.title}> '#{title.to_s}' }"
+      feature_uri = OpenTox::Backend::FourStore.query(sparql,"text/uri-list").split("\n").first # is nil for non-existing feature
+      unless feature_uri
+        feature = OpenTox::Feature.new feature_uri, @subjectid
+        feature.title = title
+        feature.metadata = metadata
+        feature.put
+      else    
+        feature = OpenTox::Feature.find(feature_uri, @subjectid)
+      end     
+      feature
+    end
+
     # Find out feature type
     # Classification takes precedence
     # @return [String] Feature type

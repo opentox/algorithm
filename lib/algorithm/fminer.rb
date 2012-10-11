@@ -99,6 +99,12 @@ module OpenTox
         id=1
         @training_dataset.compounds.each_with_index do |compound|
           compound_activities = @training_dataset.find_data_entry(compound.uri, @prediction_feature.uri)
+          if @prediction_feature.feature_type == "classification"
+            compound_activities = compound_activities.to_scale.mode
+          else
+            compound_activities = compound_activities.to_scale.median
+          end
+
           if compound_activities.nil?
             $logger.warn "No activity for '#{compound.uri}' and feature '#{@prediction_feature.uri}'"
           else

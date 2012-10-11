@@ -31,7 +31,9 @@ module OpenTox
             a = a[0..11]
             b = b[0..11]
           end
-          val=a.dot(b) / (a.norm * b.norm)
+          a_vec = a.to_gv
+          b_vec = b.to_gv
+          val = a_vec.dot(b_vec) / (a_vec.norm * b_vec.norm)
         end
         val
       end

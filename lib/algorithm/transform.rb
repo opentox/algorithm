@@ -291,7 +291,7 @@ module OpenTox
           get_matrices # creates @n_prop, @q_prop, @acts from ordered fps
           @ids = (0..((@n_prop.length)-1)).to_a # surviving compounds; become neighbors
 
-          if (@model.similarity_algorithm == "Similarity.cosine")
+          if (@model.similarity_algorithm =~ /cosine/)
             # truncate nil-columns and -rows
             $logger.debug "O: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
             while @q_prop.size>0

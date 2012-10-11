@@ -7,6 +7,16 @@ module OpenTox
     
     class Neighbors
 
+      # Get confidence.
+      # @param[Hash] Required keys: :sims, :acts
+      # @return[Float] Confidence
+      def self.get_confidence(params)
+        conf = params[:sims].inject{|sum,x| sum + x }
+        confidence = conf/params[:sims].size
+        #$logger.debug "Confidence: '" + confidence.to_s + "'."
+        return confidence
+      end
+
       # Classification with majority vote from neighbors weighted by similarity
       # @param [Hash] params Keys `:acts, :sims, :value_map` are required
       # @return [Numeric] A prediction value.
@@ -43,9 +53,9 @@ module OpenTox
           prediction = (neighbor_contribution/confidence_sum).round  unless params[:acts].size==0  # AM: new multinomial prediction
         end 
 
-        $logger.debug "Prediction is: '" + prediction.to_s + "'." unless prediction.nil?
+        #$logger.debug "Prediction: '" + prediction.to_s + "'." unless prediction.nil?
         confidence = (confidence_sum/params[:acts].size).abs if params[:acts].size > 0
-        $logger.debug "Confidence is: '" + confidence.to_s + "'." unless prediction.nil?
+        #$logger.debug "Confidence: '" + confidence.to_s + "'." unless prediction.nil?
         return {:prediction => prediction, :confidence => confidence.abs}
       end
 
@@ -63,14 +73,14 @@ module OpenTox
           $logger.debug "Local SVM."
           if params[:acts].size>0
             if params[:props]
-              n_prop = params[:props][0].collect
-              q_prop = params[:props][1].collect
+              n_prop = params[:props][0].collect.to_a
+              q_prop = params[:props][1].collect.to_a
               props = [ n_prop, q_prop ]
             end
-            acts = params[:acts].collect
+            acts = params[:acts].collect.to_a
             prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
             prediction = nil if (!prediction.nil? && prediction.infinite?)
-            $logger.debug "Prediction is: '" + prediction.to_s + "'."
+            #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
             confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
             confidence = 0.0 if prediction.nil?
           end
@@ -95,16 +105,16 @@ module OpenTox
           $logger.debug "Local SVM."
           if params[:acts].size>0
             if params[:props]
-              n_prop = params[:props][0].collect
-              q_prop = params[:props][1].collect
+              n_prop = params[:props][0].collect.to_a
+              q_prop = params[:props][1].collect.to_a
               props = [ n_prop, q_prop ]
             end
-            acts = params[:acts].collect
+            acts = params[:acts].collect.to_a
             acts = acts.collect{|v| "Val" + v.to_s} # Convert to string for R to recognize classification
             prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
-            prediction = prediction.sub(/Val/,"") if prediction # Convert back to Float
+            prediction = prediction.sub(/Val/,"") if prediction # Convert back
             confidence = 0.0 if prediction.nil?
-            $logger.debug "Prediction is: '" + prediction.to_s + "'."
+            #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
             confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
           end
           {:prediction => prediction, :confidence => confidence}
@@ -131,7 +141,7 @@ module OpenTox
         q_prop = props[1] # is an Array.
 
         prediction = nil
-        if Algorithm::zero_variance? acts
+        if acts.uniq.size == 1
           prediction = acts[0]
         else
           #$logger.debug gram_matrix.to_yaml
@@ -160,7 +170,7 @@ module OpenTox
               if (class(y) == 'character') { 
                 y = factor(y)
                 suppressPackageStartupMessages(library('class')) 
-                #weights=unlist(as.list(prop.table(table(y))))
+                weights=unlist(as.list(prop.table(table(y))))
               }
             EOR
 
@@ -180,14 +190,10 @@ module OpenTox
             # model + support vectors
             $logger.debug "Creating R SVM model ..."
             train_success = @r.eval <<-EOR
-              # AM: TODO: evaluate class weight effect by altering:
-              # AM: comment in 'weights' above run and class.weights=weights vs. class.weights=1-weights
-              # AM: vs
-              # AM: comment out 'weights' above (status quo), thereby disabling weights
               model = train(prop_matrix,y,
                              method="svmradial",
                              preProcess=c("center", "scale"),
-                             class.weights=weights,
+                             class.weights=1.0-weights,
                              trControl=trainControl(method="LGOCV",number=10),
                              tuneLength=8
                            )
@@ -197,19 +203,21 @@ module OpenTox
 
             # prediction
             $logger.debug "Predicting ..."
-            @r.eval "p = predict(model,q_prop)"
+            @r.eval "predict(model,q_prop); p = predict(model,q_prop)" # kernlab bug: predict twice
             @r.eval "if (class(y)!='numeric') p = as.character(p)"
             prediction = @r.p
 
             # censoring
-            prediction = nil if ( @r.perf.nan? || @r.perf < min_train_performance )
+            prediction = nil if ( @r.perf.nan? || @r.perf < min_train_performance.to_f )
+            prediction = nil if prediction =~ /NA/
             prediction = nil unless train_success
-            $logger.debug "Performance: #{sprintf("%.2f", @r.perf)}"
+            $logger.debug "Performance: '#{sprintf("%.2f", @r.perf)}'"
           rescue Exception => e
             $logger.debug "#{e.class}: #{e.message}"
             $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+          ensure
+            @r.quit # free R
           end
-          @r.quit # free R
         end
         prediction
       end
