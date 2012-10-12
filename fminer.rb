@@ -603,7 +603,11 @@ post '/fminer/last/?' do
       feature_dataset.add_feature feature_uri, metadata
       @@fminer.compounds.collect.each_with_index { |cmpd,id| # This collects all cmpds that have an activity
         count_idx = matches[smarts].index(id)
-        feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) if count_idx
+        if count_idx
+          feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) 
+        elsif complete_entries
+          feature_dataset.add_data_entry(cmpd, feature_uri, 0) 
+        end
       }
     end
 
@@ -671,7 +675,11 @@ post '/fminer/:method/match?' do
       feature_dataset.add_feature feature_uri, metadata
       @@fminer.compounds.collect.each_with_index { |cmpd,id| # This collects all cmpds that have an activity
         count_idx = matches[smarts].index(id)
-        feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) if count_idx
+        if count_idx
+          feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) 
+        elsif complete_entries
+          feature_dataset.add_data_entry(cmpd, feature_uri, 0) 
+        end
       }
     end
 
