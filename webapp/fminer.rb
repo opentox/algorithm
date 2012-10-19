@@ -251,14 +251,14 @@ module OpenTox
 
           feature_dataset.features = features
 
-          fminer_compounds = @@fminer.compounds.collect { |c| c }
-          fminer_compounds.shift if fminer_compounds[0].nil?
+          fminer_compounds = @@fminer.training_dataset.compounds.collect { |c| c }
+          fminer_noact_compounds = fminer_compounds - @@fminer.compounds
           fminer_compounds.each { |c|
             row = [ c ]
             features.each { |f|
               row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
             }
-            row.collect! { |v| v ? v : 0 }
+            row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
             feature_dataset << row
           }
           feature_dataset.put @subjectid
@@ -287,7 +287,6 @@ module OpenTox
     #   - min_frequency freq  Minimum frequency (default 5)
     #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
     #   - nr_hits Set to "true" to get hit count instead of presence
-    #   - complete_entries Set to "true" to obtain data entries for each compound
     # @return [text/uri-list] Task URI
     post '/fminer/last/?' do
     
@@ -355,9 +354,7 @@ module OpenTox
           dom=lu.read(xml)                        # parse GraphML
           smarts=lu.smarts_rb(dom,'nls')          # converts patterns to LAST-SMARTS using msa variant (see last-pm.maunz.de)
           params[:nr_hits] == "true" ? hit_count=true : hit_count=false
-          params[:complete_entries] == "true" ? complete_entries=true : complete_entries=false
-          matches, counts, used_compounds = lu.match_rb(@@fminer.smi,smarts,hit_count,complete_entries)       # creates instantiations
-
+          matches, counts = lu.match_rb(@@fminer.smi,smarts,hit_count,true)       # creates instantiations
 
           features = []
           # prepare to receive results as hash { c => [ [f,v], ... ] }
@@ -379,14 +376,14 @@ module OpenTox
 
           feature_dataset.features = features
 
-          fminer_compounds = @@fminer.compounds.collect { |c| c }
-          fminer_compounds.shift if fminer_compounds[0].nil?
+          fminer_compounds = @@fminer.training_dataset.compounds.collect { |c| c }
+          fminer_noact_compounds = fminer_compounds - @@fminer.compounds
           fminer_compounds.each { |c|
             row = [ c ]
             features.each { |f|
               row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
             }
-            row.collect! { |v| v ? v : 0 }
+            row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
             feature_dataset << row
           }
           feature_dataset.put @subjectid

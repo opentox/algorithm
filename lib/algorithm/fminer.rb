@@ -97,12 +97,16 @@ module OpenTox
       
       def add_fminer_data(fminer_instance, value_map)
         id=1
-        @training_dataset.compounds.each_with_index do |compound|
+        @training_dataset.compounds.each do |compound|
           compound_activities = @training_dataset.find_data_entry(compound.uri, @prediction_feature.uri)
-          if @prediction_feature.feature_type == "classification"
-            compound_activities = compound_activities.to_scale.mode
-          else
-            compound_activities = compound_activities.to_scale.median
+          begin
+            if @prediction_feature.feature_type == "classification"
+              compound_activities = compound_activities.to_scale.mode
+            else
+              compound_activities = compound_activities.to_scale.median
+            end
+          rescue
+            compound_activities = nil
           end
 
           if compound_activities.nil?

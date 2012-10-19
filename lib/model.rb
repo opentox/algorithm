@@ -41,11 +41,7 @@ module OpenTox
       training_dataset.compounds.each_with_index { |cmpd, idx|
         act = training_dataset.data_entries[idx][prediction_feature_pos]
         @acts << training_dataset.value_map(prediction_feature).invert[act]
-        row = feature_dataset.data_entries[idx].collect { |val| 
-          bad_request_error "Can not parse value '#{val}' to numeric" unless val.numeric?
-          val.to_f 
-        }
-        @n_prop << row
+        @n_prop << feature_dataset.data_entries[idx].collect.to_a
         @cmpds << cmpd.uri
       }
       @q_prop = feature_dataset.features.collect { |f| 
