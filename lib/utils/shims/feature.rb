@@ -16,14 +16,16 @@ module OpenTox
       f
     end
 
-    # Load a feature given its title, create if not present, using metadata
-    # @param[String] title
-    # @return [OpenTox::Feature] Feature object with the full data
+    # Load a feature given its title. create it if not present, using metadata.
+    # When metadata is empty, nil is returned
+    # @param[String] title Feature title
+    # @param[Hash] metadata Feature metadata
+    # @return [OpenTox::Feature] Feature object with the full data, or nil, if not found
     def self.find_by_title(title, metadata)
       feature_uri = nil
       sparql = "SELECT DISTINCT ?feature WHERE { ?feature <#{RDF.type}> <#{RDF::OT['feature'.capitalize]}>. ?feature <#{RDF::DC.title}> '#{title.to_s}' }"
       feature_uri = OpenTox::Backend::FourStore.query(sparql,"text/uri-list").split("\n").first # is nil for non-existing feature
-      unless feature_uri
+      if feature_uri.nil? and metadata.size>0
         feature = OpenTox::Feature.new feature_uri, @subjectid
         feature.title = title
         feature.metadata = metadata

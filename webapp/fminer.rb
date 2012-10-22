@@ -218,6 +218,7 @@ module OpenTox
               unless features_smarts.include? smarts
                 features_smarts << smarts
 
+                # AM: always creating new features due to p-Value, effect
                 feature = OpenTox::Feature.new nil, @subjectid
                 feature.title = smarts.dup
                 feature.metadata = {
