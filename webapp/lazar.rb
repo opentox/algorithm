@@ -101,7 +101,13 @@ module OpenTox
     # @param [optional,String] Further parameters for the feature generation service 
     # @return [text/uri-list] Task URI 
     post '/lazar/predict/?' do 
+
       params[:subjectid] = @subjectid
+      if ( (params[:compound_uri] and params[:dataset_uri]) or 
+           (!params[:compound_uri] and !params[:dataset_uri])
+         )
+        bad_request_error "Submit either compound uri or dataset uri"
+      end
       task = OpenTox::Task.create(
                                   $task[:uri],
                                   @subjectid,
@@ -110,94 +116,127 @@ module OpenTox
                                   }
                                 ) do |task|
         begin 
-          prediction_dataset = OpenTox::Dataset.new(nil, @subjectid)
-          # Store model parameters
-          model_params = $lazar_params.collect { |p|
-            {DC.title => p.to_s, OT.paramValue => params[p].to_s} unless params[p].nil?
-          }.compact
-          prediction_dataset.parameters = model_params
-          model_params_hash = model_params.inject({}) { |h,p| 
-            h[p[DC.title]] = p[OT.paramValue]
-            h
-          }
-          prediction_dataset.metadata = {
-            DC.title => "Lazar prediction",
-            DC.creator => @uri.to_s,
-            OT.hasSource => @uri.to_s,
-            OT.dependentVariables => model_params_hash["prediction_feature_uri"],
-            OT.predictedVariables => model_params_hash["prediction_feature_uri"]
-          }
 
-          $logger.debug "Loading t dataset"
-          training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
-          prediction_feature = OpenTox::Feature.find(params[:prediction_feature_uri],@subjectid)
-          unless training_dataset.database_activity(prediction_dataset,params)
-            query_compound = OpenTox::Compound.new(params[:compound_uri])
-            $logger.debug "Loading f dataset"
-            feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
-
-            model = OpenTox::Model.new(model_params_hash)
-
-            # AM: adjust feature constraints
-            case feature_dataset.find_parameter_value("nr_hits")
-              when "true" then model.feature_calculation_algorithm = "match_hits"
-              when "false" then model.feature_calculation_algorithm = "match"
-            end
-            pc_type = feature_dataset.find_parameter_value("pc_type")
-            model.pc_type = pc_type unless pc_type.nil?
-            lib = feature_dataset.find_parameter_value("lib")
-            model.lib = lib unless lib.nil?
-
-            # AM: transform to cosine space
-            model.min_sim = (model.min_sim.to_f*2.0-1.0).to_s if model.similarity_algorithm =~ /cosine/
-            
-            if feature_dataset.features.size > 0
-              compound_params = { 
-                :compound => query_compound, 
-                :feature_dataset => feature_dataset,
-                :pc_type => model.pc_type,
-                :lib => model.lib
-              }
-              # use send, not eval, for calling the method (good backtrace)
-              $logger.debug "Calculating q fps"
-              compound_fingerprints = OpenTox::Algorithm::FeatureValues.send( model.feature_calculation_algorithm, compound_params, @subjectid )
-            else
-              bad_request_error "No features found"
-            end
-
-
-
-            model.add_data(training_dataset, feature_dataset, prediction_feature, compound_fingerprints, @subjectid)
-            mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(model)
-            mtf.transform
-            $logger.debug "Predicting q"
-            prediction = OpenTox::Algorithm::Neighbors.send(model.prediction_algorithm,  { :props => mtf.props,
-                                                          :acts => mtf.acts,
-                                                          :sims => mtf.sims,
-                                                          :value_map => training_dataset.value_map(prediction_feature),
-                                                          :min_train_performance => model.min_train_performance
-                                                        } )
-
-            # AM: transform to float
-            prediction_value = prediction[:prediction].to_f
-            confidence_value = prediction[:confidence].to_f
-
-            # AM: transform to original space
-            confidence_value = ((confidence_value+1.0)/2.0).abs if model.similarity_algorithm =~ /cosine/
-            prediction_value = training_dataset.value_map(prediction_feature)[prediction[:prediction].to_i] if prediction_feature.feature_type == "classification"
-
-            $logger.debug "Prediction: '#{prediction_value}'"
-            $logger.debug "Confidence: '#{confidence_value}'"
-
-            metadata = { DC.title => "Confidence" }
-            confidence_feature = OpenTox::Feature.find_by_title("Confidence", metadata)
-            prediction_dataset.features = [ prediction_feature, confidence_feature ]
-            prediction_dataset << [ query_compound, prediction_value, confidence_value ]
-          
+          if params[:dataset_uri]
+            $logger.debug params[:dataset_uri]
+            compounds = OpenTox::Dataset.find(params[:dataset_uri]).compounds
+          else
+            compounds = [ OpenTox::Compound.new(params[:compound_uri]) ]
           end
-          prediction_dataset.put
-          $logger.debug prediction_dataset.uri
-          prediction_dataset.uri
+
+          compounds.each { |query_compound|
+            params[:compound_uri] = query_compound.uri
+
+            unless @prediction_dataset
+              @prediction_dataset = OpenTox::Dataset.new(nil, @subjectid) 
+              # Store model parameters
+              model_params = $lazar_params.collect { |p|
+                {DC.title => p.to_s, OT.paramValue => params[p].to_s} unless params[p].nil?
+              }.compact
+              @prediction_dataset.parameters = model_params
+              @model_params_hash = model_params.inject({}) { |h,p| 
+                h[p[DC.title]] = p[OT.paramValue]
+                h
+              }
+              @prediction_dataset.metadata = {
+                DC.title => "Lazar prediction",
+                DC.creator => @uri.to_s,
+                OT.hasSource => @uri.to_s,
+                OT.dependentVariables => @model_params_hash["prediction_feature_uri"],
+                OT.predictedVariables => @model_params_hash["prediction_feature_uri"]
+              }
+
+              $logger.debug "Loading t dataset"
+              @training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
+              $logger.debug "Loading f dataset"
+              @feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
+              @prediction_feature = OpenTox::Feature.find(params[:prediction_feature_uri],@subjectid)
+              @confidence_feature = OpenTox::Feature.find_by_title("confidence", {RDF.type => [RDF::OT.NumericFeature]})
+              @similarity_feature = OpenTox::Feature.find_by_title("similarity", {RDF.type => [RDF::OT.NumericFeature]})
+              @prediction_dataset.features = [ @prediction_feature, @confidence_feature, @similarity_feature ]
+            end
+            
+            database_activity = @training_dataset.database_activity(params)
+            if database_activity
+              prediction_value = database_activity.to_f
+              confidence_value = 1.0
+            else
+              @model = OpenTox::Model.new(@model_params_hash)
+              case @feature_dataset.find_parameter_value("nr_hits")
+                when "true" then @model.feature_calculation_algorithm = "match_hits"
+                when "false" then @model.feature_calculation_algorithm = "match"
+              end
+              pc_type = @feature_dataset.find_parameter_value("pc_type")
+              @model.pc_type = pc_type unless pc_type.nil?
+              lib = @feature_dataset.find_parameter_value("lib")
+              @model.lib = lib unless lib.nil?
+
+              # AM: transform to cosine space
+              @model.min_sim = (@model.min_sim.to_f*2.0-1.0).to_s if @model.similarity_algorithm =~ /cosine/
+              if @feature_dataset.features.size > 0
+                compound_params = { 
+                  :compound => query_compound, 
+                  :feature_dataset => @feature_dataset,
+                  :pc_type => @model.pc_type,
+                  :lib => @model.lib
+                }
+                # use send, not eval, for calling the method (good backtrace)
+                $logger.debug "Calculating q fps"
+                compound_fingerprints = OpenTox::Algorithm::FeatureValues.send( @model.feature_calculation_algorithm, compound_params, @subjectid )
+              else
+                bad_request_error "No features found"
+              end
+
+              @model.add_data(@training_dataset, @feature_dataset, @prediction_feature, compound_fingerprints, @subjectid)
+              mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(@model)
+              mtf.transform
+              $logger.debug "Predicting q"
+              prediction = OpenTox::Algorithm::Neighbors.send(@model.prediction_algorithm,  { :props => mtf.props,
+                                                            :acts => mtf.acts,
+                                                            :sims => mtf.sims,
+                                                            :value_map => @training_dataset.value_map(@prediction_feature),
+                                                            :min_train_performance => @model.min_train_performance
+                                                          } )
+
+              # AM: transform to float
+              prediction_value = prediction[:prediction].to_f
+              confidence_value = prediction[:confidence].to_f
+
+              # AM: transform to original space
+              confidence_value = ((confidence_value+1.0)/2.0).abs if @model.similarity_algorithm =~ /cosine/
+              prediction_value = @training_dataset.value_map(@prediction_feature)[prediction[:prediction].to_i] if @prediction_feature.feature_type == "classification"
+
+              $logger.debug "Prediction: '#{prediction_value}'"
+              $logger.debug "Confidence: '#{confidence_value}'"
+            end
+
+            # AM: prediction datasets
+            # ---------------------------------------------------
+            # | compound | prediction | confidence | 1.0        | Query compound
+            # | compound | dbactivity | nil        | similarity | Neighbor 1
+            # | [...]    | [...]      | [...]      | [...]      | More neighbors
+            # ---------------------------------------------------
+            # [ ... ]            Repeat for dataset predictions | 
+            # ---------------------------------------------------
+            @prediction_dataset << [ 
+              query_compound, 
+              prediction_value, 
+              confidence_value, 
+              1.0 
+            ]
+            @model.neighbors.each { |neighbor|
+              @prediction_dataset << [ 
+                OpenTox::Compound.new(neighbor[:compound]), 
+                @training_dataset.value_map(@prediction_feature)[neighbor[:activity]], 
+                nil, 
+                neighbor[:similarity] 
+              ]
+            }
+
+          }
+          @prediction_dataset.put
+          $logger.debug @prediction_dataset.uri
+          @prediction_dataset.uri
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"
           $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
