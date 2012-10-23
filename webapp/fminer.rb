@@ -217,22 +217,14 @@ module OpenTox
               #feature_uri = File.join feature_dataset.uri,"feature","bbrc", features.size.to_s
               unless features_smarts.include? smarts
                 features_smarts << smarts
-
-                # AM: always creating new features due to p-Value, effect
-                feature = OpenTox::Feature.new nil, @subjectid
-                feature.title = smarts.dup
-                feature.metadata = {
+                metadata = {
                   OT.hasSource => url_for('/fminer/bbrc', :full),
                   RDF.type => [OT.Feature, OT.Substructure],
                   OT.smarts => smarts.dup,
-                  OT.pValue => p_value.to_f,
+                  OT.pValue => p_value.to_f.abs.round(5),
                   OT.effect => effect
                 }
-                feature.parameters = [
-                    { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-                    { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-                ]
-                feature.put
+                feature = OpenTox::Feature.find_by_title(smarts.dup,metadata)
                 features << feature
               end
 
@@ -361,14 +353,9 @@ module OpenTox
           # prepare to receive results as hash { c => [ [f,v], ... ] }
           fminer_results = {}
           matches.each do |smarts, ids|
-            feature = OpenTox::Feature.new nil, @subjectid
-            feature.title = smarts.dup
             metadata, parameters = @@fminer.calc_metadata(smarts, ids, counts[smarts], @@last, nil, value_map, params)
-            feature.metadata = metadata
-            feature.parameters = parameters
-            feature.put
+            feature = OpenTox::Feature.find_by_title(smarts.dup,metadata)
             features << feature
-  
             ids.each_with_index { |id,idx| 
               fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}
               fminer_results[@@fminer.compounds[id]][feature.uri] = counts[smarts][idx]
