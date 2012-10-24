@@ -167,10 +167,11 @@ module OpenTox
             $logger.debug "Preparing R data ..."
             @r.eval <<-EOR
               weights=NULL
-              if (class(y) == 'character') { 
+              if (!(class(y) == 'numeric')) { 
                 y = factor(y)
                 suppressPackageStartupMessages(library('class')) 
                 weights=unlist(as.list(prop.table(table(y))))
+                weights=(weights-1)^2
               }
             EOR
 
@@ -193,7 +194,7 @@ module OpenTox
               model = train(prop_matrix,y,
                              method="svmradial",
                              preProcess=c("center", "scale"),
-                             class.weights=1.0-weights,
+                             class.weights=weights,
                              trControl=trainControl(method="LGOCV",number=10),
                              tuneLength=8
                            )
