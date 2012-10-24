@@ -1,5 +1,10 @@
-# Shims for translation to the new architecture (TM).
-# Author: Andreas Maunz, 2012
+=begin
+* Name: task.rb
+* Description: Task shims
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
+
 
 module OpenTox
 

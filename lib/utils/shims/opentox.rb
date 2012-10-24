@@ -1,5 +1,9 @@
-# Shims for translation to the new architecture (TM).
-# Author: Andreas Maunz, 2012
+=begin
+* Name: opentox.rb
+* Description: Architecture shims
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 # This avoids having to prefix everything with "RDF::" (e.g. "RDF::DC").
 # So that we can use our old code mostly as is.
@@ -37,7 +41,7 @@ module OpenTox
     
     # Search a model for a given parameter
     # @param[String] The parameter title
-    # @return[Object] The parameter value, or nil
+    # @return[Object] The parameter value
     def find_parameter_value(title)
       build_parameter_positions
       res = @parameters[@parameter_positions[title]][OT.paramValue.to_s] if @parameter_positions[title]

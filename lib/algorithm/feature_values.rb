@@ -1,6 +1,9 @@
-# feature_values.rb
-# Feature Value library
-# Author: Andreas Maunz
+=begin
+* Name: feature_values.rb
+* Description: Feature value calculation
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
   class Algorithm

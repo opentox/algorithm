@@ -1,6 +1,9 @@
-# fs.rb
-# Feature selection
-# Author: Andreas Maunz
+=begin
+* Name: fs.rb
+* Description: feature selection
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
   class Application < Service

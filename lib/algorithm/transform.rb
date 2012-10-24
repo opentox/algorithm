@@ -1,6 +1,9 @@
-# transform.rb
-# Transformer library
-# Author: Andreas Maunz
+=begin
+* Name: transform.rb
+* Description: Transformation algorithms
+* Author: Andreas Maunz <andreas@maunz.de
+* Date: 10/2012
+=end
 
 module OpenTox
   class Algorithm

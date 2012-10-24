@@ -1,10 +1,12 @@
-# algorithm.rb
-# Algorithm library
-# Author: Andreas Maunz
+=begin
+* Name: algorithm.rb
+* Description: General algorithms
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
   class Algorithm
-
 
     # Minimum Frequency
     # @param [Integer] per-mil value

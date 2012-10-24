@@ -1,6 +1,9 @@
-# lazar.rb
-# Lazar model library
-# Author: Andreas Maunz
+=begin
+* Name: lazar.rb
+* Description: Lazar model representation
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
 

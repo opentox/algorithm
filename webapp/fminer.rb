@@ -1,6 +1,9 @@
-# fminer.rb
-# Substructural descriptors
-# Author: Andreas Maunz
+=begin
+* Name: fminer.rb
+* Description: Subgraph descriptor calculation 
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 ENV['FMINER_SMARTS'] = 'true'
 ENV['FMINER_NO_AROMATIC'] = 'true'

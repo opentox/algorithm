@@ -1,6 +1,9 @@
-# neighbors.rb
-# Neighbor library
-# Author: Andreas Maunz
+=begin
+* Name: neighbors.rb
+* Description: Prediction algorithms library
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
   class Algorithm

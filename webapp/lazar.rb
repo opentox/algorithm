@@ -1,7 +1,9 @@
-# lazar.rb
-# Lazar service
-# Author: Andreas Maunz
-
+=begin
+* Name: lazar.rb
+* Description: Lazar
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 $lazar_params = [ 
   "training_dataset_uri", 

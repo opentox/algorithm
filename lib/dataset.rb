@@ -1,9 +1,11 @@
-# dataset.rb
-# Dataset library
-# Author: Andreas Maunz
+=begin
+* Name: dataset.rb
+* Description: Dataset algorithms
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
-
   class Dataset
 
     # Find database activities and calculate a consens
@@ -23,11 +25,8 @@ module OpenTox
       else
         nil
       end
-
     end
 
   end
-
 end
-
 

@@ -1,6 +1,9 @@
-# sinatra.rb
-# Common service
-# Author: Andreas Maunz
+=begin
+* Name: sinatra.rb
+* Description: Helper code for sinatra
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
   class Application < Service

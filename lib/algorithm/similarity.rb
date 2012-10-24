@@ -1,3 +1,10 @@
+=begin
+* Name: similarity.rb
+* Description: Similarity algorithms
+* Author: Andreas Maunz <andreas@maunz.de
+* Date: 10/2012
+=end
+
 module OpenTox
   class Algorithm
 
