@@ -108,36 +108,35 @@ module OpenTox
          )
         bad_request_error "Submit either compound uri or dataset uri"
       end
+
       task = OpenTox::Task.create(
-                                  $task[:uri],
-                                  @subjectid,
-                                  { RDF::DC.description => "Create lazar model",
-                                    RDF::DC.creator => url_for('/lazar/predict',:full)
-                                  }
-                                ) do |task|
+        $task[:uri],
+        @subjectid,
+        { 
+          RDF::DC.description => "Create lazar model",
+          RDF::DC.creator => url_for('/lazar/predict',:full)
+        }
+      ) do |task|
+
         begin 
 
           if params[:dataset_uri]
-            $logger.debug params[:dataset_uri]
             compounds = OpenTox::Dataset.find(params[:dataset_uri]).compounds
           else
             compounds = [ OpenTox::Compound.new(params[:compound_uri]) ]
           end
 
           compounds.each { |query_compound|
-            params[:compound_uri] = query_compound.uri
-
-            unless @prediction_dataset
+            params[:compound_uri] = query_compound.uri # AM: store compound in params hash
+            unless @prediction_dataset # AM: only once for dataset predictions
               @prediction_dataset = OpenTox::Dataset.new(nil, @subjectid) 
-              # Store model parameters
-              model_params = $lazar_params.collect { |p|
-                {DC.title => p.to_s, OT.paramValue => params[p].to_s} unless params[p].nil?
-              }.compact
-              @prediction_dataset.parameters = model_params
-              @model_params_hash = model_params.inject({}) { |h,p| 
-                h[p[DC.title]] = p[OT.paramValue]
+
+              @model_params_hash = $lazar_params.inject({}){ |h,p|
+                h[p] = params[p].to_s unless params[p].nil?
                 h
               }
+              @model = OpenTox::Model.new(@model_params_hash)
+
               @prediction_dataset.metadata = {
                 DC.title => "Lazar prediction",
                 DC.creator => @uri.to_s,
@@ -148,8 +147,6 @@ module OpenTox
 
               $logger.debug "Loading t dataset"
               @training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
-              $logger.debug "Loading f dataset"
-              @feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
               @prediction_feature = OpenTox::Feature.find(params[:prediction_feature_uri],@subjectid)
               @confidence_feature = OpenTox::Feature.find_by_title("confidence", {RDF.type => [RDF::OT.NumericFeature]})
               @similarity_feature = OpenTox::Feature.find_by_title("similarity", {RDF.type => [RDF::OT.NumericFeature]})
@@ -158,10 +155,18 @@ module OpenTox
             
             database_activity = @training_dataset.database_activity(params)
             if database_activity
+
               prediction_value = database_activity.to_f
               confidence_value = 1.0
+
             else
               @model = OpenTox::Model.new(@model_params_hash)
+
+              unless @feature_dataset
+                $logger.debug "Loading f dataset"
+                @feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
+              end
+
               case @feature_dataset.find_parameter_value("nr_hits")
                 when "true" then @model.feature_calculation_algorithm = "match_hits"
                 when "false" then @model.feature_calculation_algorithm = "match"
@@ -173,6 +178,7 @@ module OpenTox
 
               # AM: transform to cosine space
               @model.min_sim = (@model.min_sim.to_f*2.0-1.0).to_s if @model.similarity_algorithm =~ /cosine/
+
               if @feature_dataset.features.size > 0
                 compound_params = { 
                   :compound => query_compound, 
@@ -197,8 +203,6 @@ module OpenTox
                                                             :value_map => @training_dataset.value_map(@prediction_feature),
                                                             :min_train_performance => @model.min_train_performance
                                                           } )
-
-              # AM: transform to float
               prediction_value = prediction[:prediction].to_f
               confidence_value = prediction[:confidence].to_f
 
@@ -210,19 +214,11 @@ module OpenTox
               $logger.debug "Confidence: '#{confidence_value}'"
             end
 
-            # AM: prediction datasets
-            # ---------------------------------------------------
-            # | compound | prediction | confidence | 1.0        | Query compound
-            # | compound | dbactivity | nil        | similarity | Neighbor 1
-            # | [...]    | [...]      | [...]      | [...]      | More neighbors
-            # ---------------------------------------------------
-            # [ ... ]            Repeat for dataset predictions | 
-            # ---------------------------------------------------
             @prediction_dataset << [ 
               query_compound, 
               prediction_value, 
               confidence_value, 
-              1.0 
+              nil
             ]
             @model.neighbors.each { |neighbor|
               @prediction_dataset << [ 
@@ -234,13 +230,20 @@ module OpenTox
             }
 
           }
+
+         @prediction_dataset.parameters = $lazar_params.collect { |p|
+           {DC.title => p, OT.paramValue => @model.instance_variable_get("@#{p}")} unless  @model.instance_variable_get("@#{p}").nil?
+         }
+
           @prediction_dataset.put
           $logger.debug @prediction_dataset.uri
           @prediction_dataset.uri
+
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"
           $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
         end
+
       end
       response['Content-Type'] = 'text/uri-list'
       service_unavailable_error "Service unavailable" if task.cancelled?
