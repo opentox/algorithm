@@ -168,7 +168,7 @@ module OpenTox
         end
 
         metadata = {
-          RDF.type => [OT.Feature, OT.Substructure],
+          RDF.type => [OT.Feature, OT.Substructure, OT.NumericFeature],
           OT.smarts => smarts.dup,
           OT.pValue => p_value.abs.round(5),
           OT.effect => effect

@@ -222,7 +222,7 @@ module OpenTox
                 features_smarts << smarts
                 metadata = {
                   OT.hasSource => url_for('/fminer/bbrc', :full),
-                  RDF.type => [OT.Feature, OT.Substructure],
+                  RDF.type => [OT.Feature, OT.Substructure, OT.NumericFeature],
                   OT.smarts => smarts.dup,
                   OT.pValue => p_value.to_f.abs.round(5),
                   OT.effect => effect

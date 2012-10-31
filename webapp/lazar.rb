@@ -166,7 +166,7 @@ module OpenTox
 
               unless @feature_dataset
                 $logger.debug "Loading f dataset"
-                @feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid) # This takes time
+                @feature_dataset = OpenTox::Dataset.find(params[:feature_dataset_uri], @subjectid)
               end
 
               case @feature_dataset.find_parameter_value("nr_hits")
