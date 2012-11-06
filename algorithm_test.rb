@@ -53,23 +53,43 @@ class AlgorithmTest < Test::Unit::TestCase
       ##dataset_uri = "http://local-ot/dataset/1488"
       #prediction_feature = "http://local-ot/dataset/1315/feature/Rodent%20carcinogenicity"
       
-      #kazius 250 no features
-      dataset_uri = "http://local-ot/dataset/9264"
-      prediction_feature = dataset_uri+"/feature/endpoint"
-      feature_dataset_uri = "http://local-ot/dataset/91409"
+      #EPAFHM 580compounds no features
+      #dataset_uri = "http://local-ot/dataset/119310"
+      #prediction_feature = "http://local-ot/dataset/119310/feature/LC50_mmol_LOG"
+      
+      ##kazius 250 no features
+      #dataset_uri = "http://local-ot/dataset/12086"
+      #prediction_feature = dataset_uri+"/feature/endpoint"
+      #feature_dataset_uri = "http://local-ot/dataset/91409"
+      
+      dataset_uri = "http://virtual4:8004/dataset/200615"
+      prediction_feature = "http://virtual4:8004/dataset/3/feature/Outcome"
       
       params = {:dataset_uri=>dataset_uri,
                 :prediction_feature=>prediction_feature,
-                :min_frequency=>7, :max_num_features=>300} #multi: 10=>4, 5=>>3000
+                :min_frequency=>24, :max_num_features=>1000} #multi: 10=>4, 5=>>3000
       
+      post "/fminer/bbrc",params
+      uri = wait_for_task(last_response.body)
+      puts uri
+      exit
+      
+      #uri = "http://local-ot/dataset/12117"
+      uri = "http://local-ot/dataset/12086" 
+      
+      d = OpenTox::Dataset.find(uri)
+      r = OpenTox::RUtil.new()
+      puts r.dataset_to_dataframe(d,"0")
+      r.quit_r
+      
+      exit 
       
 #      params = {:dataset_uri=>dataset_uri,
 #        :prediction_feature=>prediction_feature, :feature_dataset_uri=>feature_dataset_uri}
 #      post "/lazar",params
       
       #post "/fminer/bbrc",params
-      #uri = wait_for_task(last_response.body)
-      #puts uri
+      
       
       #puts OpenTox::RestClientWrapper.post(File.join(CONFIG[:services]["opentox-algorithm"],"fminer/bbrc"),params)
       
