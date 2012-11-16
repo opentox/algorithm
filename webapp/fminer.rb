@@ -47,7 +47,8 @@ module OpenTox
           { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
           { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
           { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
-          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" }
+          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+          { DC.description => "Set to 'true' to obtain target variables as a feature", OT.paramScope => "optional", DC.title => "get_target" }
       ]
       format_output(algorithm)
     end
@@ -88,7 +89,8 @@ module OpenTox
           { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
           { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
           { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" }
+          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+          { DC.description => "Set to 'true' to obtain target variables as a feature", OT.paramScope => "optional", DC.title => "get_target" }
       ]
       format_output(algorithm)
     end
@@ -122,6 +124,7 @@ module OpenTox
     #   - backbone BBRC classes, pass 'false' to switch off mining for BBRC representatives. (default "true")
     #   - min_chisq_significance Significance threshold (between 0 and 1)
     #   - nr_hits Set to "true" to get hit count instead of presence
+    #   - get_target Set to "true" to obtain target variable as feature
     # @return [text/uri-list] Task URI
     post '/fminer/bbrc/?' do
     
@@ -245,12 +248,23 @@ module OpenTox
             end # end of
           end   # feature parsing
 
-          feature_dataset.features = features
-
-          fminer_compounds = @@fminer.training_dataset.compounds.collect { |c| c }
+          fminer_compounds = @@fminer.training_dataset.compounds.collect.to_a
+          @@fminer.training_dataset.build_feature_positions
+          prediction_feature_idx = @@fminer.training_dataset.feature_positions[@@fminer.prediction_feature.uri]
+          prediction_feature_all_acts = fminer_compounds.each_with_index.collect { |c,idx| 
+            @@fminer.training_dataset.data_entries[idx][prediction_feature_idx] 
+          }
           fminer_noact_compounds = fminer_compounds - @@fminer.compounds
-          fminer_compounds.each { |c|
+
+          feature_dataset.features = features
+          if (params[:get_target] == "true")
+            feature_dataset.features = [ @@fminer.prediction_feature ] + feature_dataset.features
+          end
+          fminer_compounds.each_with_index { |c,idx|
             row = [ c ]
+            if (params[:get_target] == "true")
+              row = row + [ prediction_feature_all_acts[idx] ]
+            end
             features.each { |f|
               row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
             }
@@ -283,6 +297,7 @@ module OpenTox
     #   - min_frequency freq  Minimum frequency (default 5)
     #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
     #   - nr_hits Set to "true" to get hit count instead of presence
+    #   - get_target Set to "true" to obtain target variable as feature
     # @return [text/uri-list] Task URI
     post '/fminer/last/?' do
     
@@ -365,12 +380,23 @@ module OpenTox
             }
           end
 
-          feature_dataset.features = features
-
-          fminer_compounds = @@fminer.training_dataset.compounds.collect { |c| c }
+          fminer_compounds = @@fminer.training_dataset.compounds.collect.to_a
+          @@fminer.training_dataset.build_feature_positions
+          prediction_feature_idx = @@fminer.training_dataset.feature_positions[@@fminer.prediction_feature.uri]
+          prediction_feature_all_acts = fminer_compounds.each_with_index.collect { |c,idx| 
+            @@fminer.training_dataset.data_entries[idx][prediction_feature_idx] 
+          }
           fminer_noact_compounds = fminer_compounds - @@fminer.compounds
-          fminer_compounds.each { |c|
+
+          feature_dataset.features = features
+          if (params[:get_target] == "true")
+            feature_dataset.features = [ @@fminer.prediction_feature ] + feature_dataset.features
+          end
+          fminer_compounds.each_with_index { |c,idx|
             row = [ c ]
+            if (params[:get_target] == "true")
+              row = row + [ prediction_feature_all_acts[idx] ]
+            end
             features.each { |f|
               row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
             }
