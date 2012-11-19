@@ -77,6 +77,7 @@ module OpenTox
           }
           # task.progress 10
           lazar.put @subjectid
+          $logger.debug lazar.uri
           lazar.uri
         rescue => e
           $logger.debug "#{e.class}: #{e.message}"
