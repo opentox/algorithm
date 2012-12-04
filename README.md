@@ -48,12 +48,15 @@ REST operations
                                                          [feature_type=trees],
                                                          [backbone=true],
                                                          [min_chisq_significance=0.95],
-                                                         [nr_hits=false]
+                                                         [nr_hits=false],
+                                                         [get_target=false]
+                                                         [weight_feature]
     Create last features         POST  /fminer/last      dataset_uri,                   URI for feature dataset   200,400,404,500
                                                          prediction_feature,
                                                          [min_frequency=8 %],
                                                          [feature_type=trees],
-                                                         [nr_hits=false]
+                                                         [nr_hits=false],
+                                                         [get_target=false]
     Create features              POST /pc/AllDescriptors dataset_uri,                   URI for dataset           200,400,404,500
                                                          [pc_type=constitutional,
                                                          topological,geometrical,

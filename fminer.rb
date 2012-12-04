@@ -77,6 +77,8 @@ get "/fminer/bbrc/?" do
       { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
       { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+      { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "get_target" },
+      { DC.description => "Feature URI for weight feature", OT.paramScope => "optional", DC.title => "weight_feature" }
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -141,6 +143,7 @@ get "/fminer/last/?" do
       { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
+      { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "get_target" },
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -201,6 +204,8 @@ end
 #   - min_chisq_significance Significance threshold (between 0 and 1)
 #   - nr_hits Set to "true" to get hit count instead of presence
 #   - complete_entries Set to "true" to obtain data entries for each compound
+#   - get_target Set to "true" to obtain target variable as feature
+#   - weight_feature weight_feature URI of the weight feature
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do
 
@@ -223,7 +228,7 @@ post '/fminer/bbrc/?' do
     @@bbrc.SetConsoleOut(false)
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
-    feature_dataset.add_metadata({
+    metadata={
       DC.title => "BBRC representatives for " + @@fminer.training_dataset.metadata[DC.title].to_s,
       DC.creator => url_for('/fminer/bbrc',:full),
       OT.hasSource => url_for('/fminer/bbrc', :full),
@@ -233,9 +238,12 @@ post '/fminer/bbrc/?' do
         { DC.title => "min_frequency", OT.paramValue => @@fminer.minfreq },
         { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") },
         { DC.title => "backbone", OT.paramValue => (params[:backbone] == "false" ? "false" : "true") }
-
-    ]
-    })
+      ]
+    }
+    if @@fminer.weight_feature 
+      metadata[OT.parameters] << {DC.title => "weight_feature", OT.paramValue => params[:weight_feature]}
+    end
+    feature_dataset.add_metadata(metadata)
     feature_dataset.save(@subjectid)
 
     @@fminer.compounds = []
@@ -245,6 +253,9 @@ post '/fminer/bbrc/?' do
 
     # Add data to fminer
     @@fminer.add_fminer_data(@@bbrc, value_map)
+    if (params[:get_target] == "true")
+      feature_dataset.add_feature @@fminer.prediction_feature.uri, @@fminer.prediction_feature.metadata
+    end
 
     g_array=@@fminer.all_activities.values # DV: calculation of global median for effect calculation
     g_median=g_array.to_scale.median
@@ -299,8 +310,9 @@ post '/fminer/bbrc/?' do
             OT.parameters => [
               { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
               { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-          ]
+            ]
           }
+          
           feature_dataset.add_feature feature_uri, metadata
         end
 
@@ -322,6 +334,9 @@ post '/fminer/bbrc/?' do
     @@fminer.training_dataset.compounds.each { |cmpd|
       feature_dataset.add_compound(cmpd) # *unconditionally* add compounds *in order*
       i = which_row[cmpd]
+      if (params[:get_target] == "true")
+        feature_dataset.add_data_entry ( cmpd, @@fminer.prediction_feature.uri, @@fminer.training_dataset.data_entries[cmpd][@@fminer.prediction_feature.uri][i] )
+      end
       fminer_results[cmpd] && fminer_results[cmpd].each { |feature, values|
         feature_dataset.add_data_entry( cmpd, feature, values[i] )
       }
@@ -532,6 +547,7 @@ end
 #   - feature_type Feature type, can be 'paths' or 'trees' (default "trees")
 #   - nr_hits Set to "true" to get hit count instead of presence
 #   - complete_entries Set to "true" to obtain data entries for each compound
+#   - get_target Set to "true" to obtain target variable as feature
 # @return [text/uri-list] Task URI
 post '/fminer/last/?' do
 
@@ -573,6 +589,9 @@ post '/fminer/last/?' do
 
     # Add data to fminer
     @@fminer.add_fminer_data(@@last, value_map)
+    if (params[:get_target] == "true")
+      feature_dataset.add_feature @@fminer.prediction_feature.uri, @@fminer.prediction_feature.metadata
+    end
 
     raise "No compounds in dataset #{@@fminer.training_dataset.uri}" if @@fminer.compounds.size==0
 
@@ -596,7 +615,23 @@ post '/fminer/last/?' do
     params[:complete_entries] == "true" ? complete_entries=true : complete_entries=false
     matches, counts = lu.match_rb(@@fminer.smi,smarts,hit_count,complete_entries)       # creates instantiations
 
-    @@fminer.training_dataset.compounds.each { |cmpd| feature_dataset.add_compound(cmpd)  }
+
+    which_row = @@fminer.training_dataset.compounds.inject({}) { |h,id| h[id]=0; h }
+
+    all_target_vals = []
+    if (params[:get_target] == "true")
+      @@fminer.training_dataset.compounds.each { |cmpd| 
+        all_target_vals << @@fminer.training_dataset.data_entries[cmpd][@@fminer.prediction_feature.uri][which_row[cmpd]]
+        which_row[cmpd] += 1
+      }
+    end
+
+    @@fminer.training_dataset.compounds.each_with_index { |cmpd,idx| 
+      feature_dataset.add_compound(cmpd)  
+      if (params[:get_target] == "true")
+        feature_dataset.add_data_entry ( cmpd, @@fminer.prediction_feature.uri, all_target_vals[idx] )
+      end
+    }
     matches.each do |smarts, ids|
       metadata = calc_metadata (smarts, ids, counts[smarts], @@last, nil, value_map, params)
       feature_uri = File.join feature_dataset.uri,"feature","last", feature_dataset.features.size.to_s
@@ -618,7 +653,7 @@ post '/fminer/last/?' do
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
-
+  
 # Matches features of a a feature dataset onto instances of another dataset. 
 # The latter is referred to as 'training dataset', since p-values are computed,
 # if user passes a prediction feature, or if the training dataset has only one feature.
