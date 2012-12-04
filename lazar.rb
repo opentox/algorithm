@@ -183,13 +183,17 @@ post '/lazar/?' do
  
     # Creating InChi/URI Hash from trainig_feature for comparison with training_dataset to avoid missmatches caused by different URI authorities
     feature_compounds = {}
-    which_row={}
     training_features.compounds.each {|f_c_uri|
       f_compound = OpenTox::Compound.new(f_c_uri)
       feature_compounds[f_compound.to_inchi] = f_c_uri
-      which_row[f_compound.to_inchi] = 0
     }
-   
+
+    which_row=training_dataset.compounds.inject({}) { |h,c| 
+      t_compound = OpenTox::Compound.new(c)
+      h[t_compound.to_inchi]=0
+      h
+    }
+
     training_dataset.compounds.each do |t_c_uri|
 
       t_compound = OpenTox::Compound.new(t_c_uri)
@@ -201,7 +205,6 @@ post '/lazar/?' do
       else
         lazar.fingerprints[t_c_uri] = {} unless lazar.fingerprints[t_c_uri]
         entry.keys.each do |feature|
-
           # CASE 1: Substructure
           if (lazar.feature_calculation_algorithm == "Substructure.match") || (lazar.feature_calculation_algorithm == "Substructure.match_hits")
             if training_features.features[feature]
@@ -214,16 +217,15 @@ post '/lazar/?' do
                 lazar.effects[smarts] = training_features.features[feature][OT.effect]
               end
             end
-
           # CASE 2: Others
           elsif entry[feature].flatten.size == 1
             lazar.fingerprints[t_c_uri][feature] = [] unless lazar.fingerprints[t_c_uri][feature]
             lazar.fingerprints[t_c_uri][feature] << entry[feature][row_idx]
             lazar.features << feature unless lazar.features.include? feature
           end
-
         end
       end
+
       which_row[t_compound.to_inchi] += 1
     end
 
