@@ -674,6 +674,7 @@ post '/fminer/:method/match?' do
       feature_uri = File.join feature_dataset.uri,"feature",params[:method], feature_dataset.features.size.to_s
       feature_dataset.add_feature feature_uri, metadata
       @@fminer.compounds.collect.each_with_index { |cmpd,id| # This collects all cmpds that have an activity
+        next if id==0
         count_idx = matches[smarts].index(id)
         if count_idx
           feature_dataset.add_data_entry(cmpd, feature_uri, counts[smarts][count_idx]) 
