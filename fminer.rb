@@ -78,6 +78,7 @@ get "/fminer/bbrc/?" do
       { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
       { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "nr_hits" },
+      { DC.description => "Feature URI for weight feature", OT.paramScope => "optional", DC.title => "weight_feature" }
   ]
   }
   case request.env['HTTP_ACCEPT']
@@ -204,6 +205,7 @@ end
 #   - nr_hits Set to "true" to get hit count instead of presence
 #   - complete_entries Set to "true" to obtain data entries for each compound
 #   - get_target Set to "true" to obtain target variable as feature
+#   - weight_feature weight_feature URI of the weight feature
 # @return [text/uri-list] Task URI
 post '/fminer/bbrc/?' do
 
@@ -226,7 +228,7 @@ post '/fminer/bbrc/?' do
     @@bbrc.SetConsoleOut(false)
 
     feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
-    feature_dataset.add_metadata({
+    metadata={
       DC.title => "BBRC representatives for " + @@fminer.training_dataset.metadata[DC.title].to_s,
       DC.creator => url_for('/fminer/bbrc',:full),
       OT.hasSource => url_for('/fminer/bbrc', :full),
@@ -236,9 +238,12 @@ post '/fminer/bbrc/?' do
         { DC.title => "min_frequency", OT.paramValue => @@fminer.minfreq },
         { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") },
         { DC.title => "backbone", OT.paramValue => (params[:backbone] == "false" ? "false" : "true") }
-
-    ]
-    })
+      ]
+    }
+    if @@fminer.weight_feature 
+      metadata[OT.parameters] << {DC.title => "weight_feature", OT.paramValue => params[:weight_feature]}
+    end
+    feature_dataset.add_metadata(metadata)
     feature_dataset.save(@subjectid)
 
     @@fminer.compounds = []
@@ -305,8 +310,9 @@ post '/fminer/bbrc/?' do
             OT.parameters => [
               { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
               { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
-          ]
+            ]
           }
+          
           feature_dataset.add_feature feature_uri, metadata
         end
 
@@ -647,7 +653,7 @@ post '/fminer/last/?' do
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
-
+  
 # Matches features of a a feature dataset onto instances of another dataset. 
 # The latter is referred to as 'training dataset', since p-values are computed,
 # if user passes a prediction feature, or if the training dataset has only one feature.
