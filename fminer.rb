@@ -77,7 +77,7 @@ get "/fminer/bbrc/?" do
       { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
       { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
-      { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "nr_hits" },
+      { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "get_target" },
       { DC.description => "Feature URI for weight feature", OT.paramScope => "optional", DC.title => "weight_feature" }
   ]
   }
@@ -143,7 +143,7 @@ get "/fminer/last/?" do
       { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
       { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
       { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
-      { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "nr_hits" },
+      { DC.description => "Set to 'true' to obtain target variable as a feature", OT.paramScope => "optional", DC.title => "get_target" },
   ]
   }
   case request.env['HTTP_ACCEPT']
