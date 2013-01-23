@@ -69,29 +69,24 @@ module OpenTox
       # @return [Numeric] A prediction value.
       def self.local_svm_regression(params)
 
-        begin
-          confidence = 0.0
-          prediction = nil
+        confidence = 0.0
+        prediction = nil
 
-          $logger.debug "Local SVM."
-          if params[:acts].size>0
-            if params[:props]
-              n_prop = params[:props][0].collect.to_a
-              q_prop = params[:props][1].collect.to_a
-              props = [ n_prop, q_prop ]
-            end
-            acts = params[:acts].collect.to_a
-            prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
-            prediction = nil if (!prediction.nil? && prediction.infinite?)
-            #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
-            confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
-            confidence = 0.0 if prediction.nil?
+        $logger.debug "Local SVM."
+        if params[:acts].size>0
+          if params[:props]
+            n_prop = params[:props][0].collect.to_a
+            q_prop = params[:props][1].collect.to_a
+            props = [ n_prop, q_prop ]
           end
-          {:prediction => prediction, :confidence => confidence}
-        rescue Exception => e
-          $logger.debug "#{e.class}: #{e.message}"
-          $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+          acts = params[:acts].collect.to_a
+          prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
+          prediction = nil if (!prediction.nil? && prediction.infinite?)
+          #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
+          confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
+          confidence = 0.0 if prediction.nil?
         end
+        {:prediction => prediction, :confidence => confidence}
 
       end
 
@@ -101,30 +96,25 @@ module OpenTox
       # @return [Numeric] A prediction value.
       def self.local_svm_classification(params)
 
-        begin
-          confidence = 0.0
-          prediction = nil
+        confidence = 0.0
+        prediction = nil
 
-          $logger.debug "Local SVM."
-          if params[:acts].size>0
-            if params[:props]
-              n_prop = params[:props][0].collect.to_a
-              q_prop = params[:props][1].collect.to_a
-              props = [ n_prop, q_prop ]
-            end
-            acts = params[:acts].collect.to_a
-            acts = acts.collect{|v| "Val" + v.to_s} # Convert to string for R to recognize classification
-            prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
-            prediction = prediction.sub(/Val/,"") if prediction # Convert back
-            confidence = 0.0 if prediction.nil?
-            #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
-            confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
+        $logger.debug "Local SVM."
+        if params[:acts].size>0
+          if params[:props]
+            n_prop = params[:props][0].collect.to_a
+            q_prop = params[:props][1].collect.to_a
+            props = [ n_prop, q_prop ]
           end
-          {:prediction => prediction, :confidence => confidence}
-        rescue Exception => e
-          $logger.debug "#{e.class}: #{e.message}"
-          $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+          acts = params[:acts].collect.to_a
+          acts = acts.collect{|v| "Val" + v.to_s} # Convert to string for R to recognize classification
+          prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
+          prediction = prediction.sub(/Val/,"") if prediction # Convert back
+          confidence = 0.0 if prediction.nil?
+          #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
+          confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
         end
+        {:prediction => prediction, :confidence => confidence}
 
       end
 
@@ -216,9 +206,9 @@ module OpenTox
             prediction = nil if prediction =~ /NA/
             prediction = nil unless train_success
             $logger.debug "Performance: '#{sprintf("%.2f", @r.perf)}'"
-          rescue Exception => e
-            $logger.debug "#{e.class}: #{e.message}"
-            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+          #rescue Exception => e
+            #$logger.debug "#{e.class}: #{e.message}"
+            #$logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           ensure
             @r.quit # free R
           end

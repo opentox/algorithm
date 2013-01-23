@@ -2,8 +2,6 @@
 # Loads sub-repositories, library code, and webapps.
 # Author: Andreas Maunz
 
-require 'sinatra/url_for'
-
 # Require sub-Repositories
 require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/libbbrc/bbrc') # include before openbabel
 require File.join(File.expand_path(File.dirname(__FILE__)), 'libfminer/liblast/last') # 
@@ -19,14 +17,14 @@ Dir['./webapp/*.rb'].each { |f| require f } # Webapps
 module OpenTox
   class Application < Service
     get '/?' do
-      list = [ url_for('/lazar', :full), 
-               url_for('/fminer/bbrc', :full), 
-               url_for('/fminer/bbrc/sample', :full), 
-               url_for('/fminer/last', :full), 
-               url_for('/fminer/bbrc/match', :full), 
-               url_for('/fminer/last/match', :full), 
-               url_for('/fs/rfe', :full), 
-               url_for('/pc', :full) ].join("\n") + "\n"
+      list = [ to('/lazar', :full), 
+               to('/fminer/bbrc', :full), 
+               to('/fminer/bbrc/sample', :full), 
+               to('/fminer/last', :full), 
+               to('/fminer/bbrc/match', :full), 
+               to('/fminer/last/match', :full), 
+               to('/fs/rfe', :full), 
+               to('/pc', :full) ].join("\n") + "\n"
       format_output (list)
     end
   end

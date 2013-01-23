@@ -20,6 +20,7 @@ module OpenTox
 
     # Internal use only
     def prepare_prediction_model(params)
+      puts params.inspect
       params.each {|k,v|
         self.class.class_eval { attr_accessor k.to_sym }
         instance_variable_set(eval(":@"+k), v)

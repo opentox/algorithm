@@ -8,9 +8,6 @@
 module OpenTox
   class Application < Service
 
-    # Get url_for support
-    helpers Sinatra::UrlForHelper
-
     # Put any code here that should be executed immediately before 
     # request is processed
     before {
