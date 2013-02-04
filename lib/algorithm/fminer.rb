@@ -122,17 +122,12 @@ module OpenTox
             elsif @prediction_feature.feature_type == "regression"
               activity= compound_activities.to_f 
             end
-            begin
-              fminer_instance.AddCompound(compound.smiles,id) if fminer_instance
-              fminer_instance.AddActivity(activity, id) if fminer_instance 
-              @all_activities[id]=activity # DV: insert global information
-              @compounds[id] = compound
-              @smi[id] = compound.smiles
-              id += 1
-            rescue Exception => e
-              LOGGER.warn "Could not add " + smiles + "\t" + values[i].to_s + " to fminer"
-              LOGGER.warn e.backtrace
-            end
+            fminer_instance.AddCompound(compound.smiles,id) if fminer_instance
+            fminer_instance.AddActivity(activity, id) if fminer_instance 
+            @all_activities[id]=activity # DV: insert global information
+            @compounds[id] = compound
+            @smi[id] = compound.smiles
+            id += 1
           end
         end
       end

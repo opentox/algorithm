@@ -11,14 +11,14 @@ module OpenTox
   # Get list of feature selection algorithms
   # @return [text/uri-list] URIs
   get '/fs/?' do
-    list = [ url_for('/fs/rfe', :full) ].join("\n") + "\n"
+    list = [ to('/fs/rfe', :full) ].join("\n") + "\n"
     format_output(list)
   end
   
   # Get representation of Recursive Feature Elimination algorithm
   # @return [String] Representation
   get "/fs/rfe/?" do
-    algorithm = OpenTox::Algorithm.new(url_for('/fs/rfe',:full))
+    algorithm = OpenTox::Algorithm.new(to('/fs/rfe',:full))
     algorithm.metadata = {
       DC.title => 'Recursive Feature Elimination',
       DC.creator => "andreas@maunz.de",
