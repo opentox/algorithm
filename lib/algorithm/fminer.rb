@@ -117,6 +117,7 @@ module OpenTox
           else
             if @prediction_feature.feature_type == "classification"
               activity= value_map.invert[compound_activities].to_i # activities are mapped to 1..n
+              raise "activity could not be mapped, is #{compound_activities} (#{compound_activities.class}), available: #{value_map.values} (#{value_map.values.collect{|k| k.class}})" if activity<1
               @db_class_sizes[activity-1].nil? ? @db_class_sizes[activity-1]=1 : @db_class_sizes[activity-1]+=1 # AM effect
             elsif @prediction_feature.feature_type == "regression"
               activity= compound_activities.to_f 

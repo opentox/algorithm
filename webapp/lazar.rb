@@ -45,6 +45,14 @@ module OpenTox
       format_output(algorithm)
     end
 
+    def predicted_variable(prediction_feature)
+      OpenTox::Feature.find_by_title("predicted_variable", {RDF.type => prediction_feature[RDF.type]})
+    end
+    
+    def predicted_confidence
+      OpenTox::Feature.find_by_title("predicted_confidence", {RDF.type => [RDF::OT.NumericFeature]})
+    end
+
 
     # Create a lazar prediction model
     # @param [String] dataset_uri Training dataset URI
@@ -65,12 +73,14 @@ module OpenTox
         begin 
           lazar = OpenTox::Model.new(nil, @subjectid)
           lazar.parameters = lazar.check_params($lazar_params, params)
+          prediction_feature = OpenTox::Feature.find(lazar.find_parameter_value("prediction_feature_uri"))
           lazar.metadata = { 
             DC.title => "lazar model", 
             OT.dependentVariables => lazar.find_parameter_value("prediction_feature_uri"),
+            OT.predictedVariables => [ predicted_variable(prediction_feature).uri, predicted_confidence.uri ],
             OT.trainingDataset => lazar.find_parameter_value("training_dataset_uri"),
             OT.featureDataset => lazar.find_parameter_value("feature_dataset_uri"),
-            RDF.type => ( OpenTox::Feature.find(lazar.find_parameter_value("prediction_feature_uri")).feature_type == "classification" ? 
+            RDF.type => ( prediction_feature.feature_type == "classification" ? 
               [OT.Model, OTA.ClassificationLazySingleTarget] :
               [OT.Model, OTA.RegressionLazySingleTarget] 
             )
@@ -116,7 +126,7 @@ module OpenTox
         $task[:uri],
         @subjectid,
         { 
-          RDF::DC.description => "Create lazar model",
+          RDF::DC.description => "Apply lazar model",
           RDF::DC.creator => url_for('/lazar/predict',:full)
         }
       ) do |task|
@@ -140,26 +150,28 @@ module OpenTox
               }
               @model = OpenTox::Model.new(@model_params_hash)
 
+              $logger.debug "Loading t dataset"
+              @training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
+              @prediction_feature = OpenTox::Feature.find(params[:prediction_feature_uri],@subjectid)
+              @predicted_variable = predicted_variable(@prediction_feature)
+              @predicted_confidence = predicted_confidence
+              @similarity_feature = OpenTox::Feature.find_by_title("similarity", {RDF.type => [RDF::OT.NumericFeature]})
+              @prediction_dataset.features = [ @prediction_feature, @predicted_variable, @predicted_confidence, @similarity_feature ]
+              
               @prediction_dataset.metadata = {
                 DC.title => "Lazar prediction",
                 DC.creator => @uri.to_s,
                 OT.hasSource => @uri.to_s,
                 OT.dependentVariables => @model_params_hash["prediction_feature_uri"],
-                OT.predictedVariables => @model_params_hash["prediction_feature_uri"]
+                OT.predictedVariables => [@predicted_variable.uri,@predicted_confidence.uri]
               }
-
-              $logger.debug "Loading t dataset"
-              @training_dataset = OpenTox::Dataset.find(params[:training_dataset_uri], @subjectid)
-              @prediction_feature = OpenTox::Feature.find(params[:prediction_feature_uri],@subjectid)
-              @confidence_feature = OpenTox::Feature.find_by_title("confidence", {RDF.type => [RDF::OT.NumericFeature]})
-              @similarity_feature = OpenTox::Feature.find_by_title("similarity", {RDF.type => [RDF::OT.NumericFeature]})
-              @prediction_dataset.features = [ @prediction_feature, @confidence_feature, @similarity_feature ]
             end
             
             database_activity = @training_dataset.database_activity(params)
             if database_activity
 
-              prediction_value = database_activity.to_f
+              orig_value = database_activity.to_f
+              predicted_value = orig_value
               confidence_value = 1.0
 
             else
@@ -200,33 +212,38 @@ module OpenTox
               mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(@model)
               mtf.transform
               $logger.debug "Predicting q"
-              prediction = OpenTox::Algorithm::Neighbors.send(@model.prediction_algorithm,  { :props => mtf.props,
-                                                            :acts => mtf.acts,
-                                                            :sims => mtf.sims,
-                                                            :value_map => @training_dataset.value_map(@prediction_feature),
-                                                            :min_train_performance => @model.min_train_performance
-                                                          } )
-              prediction_value = prediction[:prediction].to_f
+              prediction = OpenTox::Algorithm::Neighbors.send(@model.prediction_algorithm, 
+                { :props => mtf.props,
+                  :acts => mtf.acts,
+                  :sims => mtf.sims,
+                  :value_map => @prediction_feature.feature_type=="classification" ?
+                    @training_dataset.value_map(@prediction_feature) : nil,
+                  :min_train_performance => @model.min_train_performance
+                  } )
+              orig_value = nil
+              predicted_value = prediction[:prediction].to_f
               confidence_value = prediction[:confidence].to_f
 
               # AM: transform to original space
               confidence_value = ((confidence_value+1.0)/2.0).abs if @model.similarity_algorithm =~ /cosine/
-              prediction_value = @training_dataset.value_map(@prediction_feature)[prediction[:prediction].to_i] if @prediction_feature.feature_type == "classification"
+              predicted_value = @training_dataset.value_map(@prediction_feature)[prediction[:prediction].to_i] if @prediction_feature.feature_type == "classification"
 
-              $logger.debug "Prediction: '#{prediction_value}'"
+              $logger.debug "Prediction: '#{predicted_value}'"
               $logger.debug "Confidence: '#{confidence_value}'"
             end
 
             @prediction_dataset << [ 
               query_compound, 
-              prediction_value, 
+              orig_value,
+              predicted_value, 
               confidence_value, 
               nil
             ]
             @model.neighbors.each { |neighbor|
               @prediction_dataset << [ 
                 OpenTox::Compound.new(neighbor[:compound]), 
-                @training_dataset.value_map(@prediction_feature)[neighbor[:activity]], 
+                @training_dataset.value_map(@prediction_feature)[neighbor[:activity]],
+                nil, 
                 nil, 
                 neighbor[:similarity] 
               ]

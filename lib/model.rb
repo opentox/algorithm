@@ -43,7 +43,8 @@ module OpenTox
       prediction_feature_pos = training_dataset.feature_positions[prediction_feature.uri]
       training_dataset.compounds.each_with_index { |cmpd, idx|
         act = training_dataset.data_entries[idx][prediction_feature_pos]
-        @acts << training_dataset.value_map(prediction_feature).invert[act]
+        @acts << (prediction_feature.feature_type=="classification" ? 
+          training_dataset.value_map(prediction_feature).invert[act] : nil)
         @n_prop << feature_dataset.data_entries[idx].collect.to_a
         @cmpds << cmpd.uri
       }

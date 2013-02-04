@@ -271,6 +271,8 @@ module OpenTox
             row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
             feature_dataset << row
           }
+          
+          $logger.debug "fminer found #{feature_dataset.features.size} features for #{feature_dataset.compounds.size} compounds"
           feature_dataset.put @subjectid
           $logger.debug feature_dataset.uri
           feature_dataset.uri
