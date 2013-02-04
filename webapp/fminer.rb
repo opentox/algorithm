@@ -267,25 +267,14 @@ module OpenTox
           features.each { |f|
             row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
           }
-<<<<<<< HEAD
-          
-          $logger.debug "fminer found #{feature_dataset.features.size} features for #{feature_dataset.compounds.size} compounds"
-          feature_dataset.put @subjectid
-          $logger.debug feature_dataset.uri
-          feature_dataset.uri
-
-        rescue => e
-          $logger.debug "#{e.class}: #{e.message}"
-          $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
-        end
-=======
           row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
           feature_dataset << row
         }
+          
+        $logger.debug "fminer found #{feature_dataset.features.size} features for #{feature_dataset.compounds.size} compounds"
         feature_dataset.put @subjectid
         $logger.debug feature_dataset.uri
         feature_dataset.uri
->>>>>>> 424c542130ef5b8ebd8f95403d21fd8df515bcd0
 
       end
       response['Content-Type'] = 'text/uri-list'
