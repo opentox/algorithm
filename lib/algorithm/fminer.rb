@@ -36,7 +36,7 @@ module OpenTox
           # check for percentage
           if params[:min_frequency].include? "pc"
             per_mil=params[:min_frequency].gsub(/pc/,"")
-            if OpenTox::Algorithm.numeric? per_mil
+            if per_mil.numeric?
               per_mil = per_mil.to_i * 10
             else
               bad_request=true
@@ -44,14 +44,14 @@ module OpenTox
           # check for per-mil
           elsif params[:min_frequency].include? "pm"
             per_mil=params[:min_frequency].gsub(/pm/,"")
-            if OpenTox::Algorithm.numeric? per_mil
+            if per_mil.numeric?
               per_mil = per_mil.to_i
             else
               bad_request=true
             end
           # set minfreq directly
           else
-            if OpenTox::Algorithm.numeric? params[:min_frequency]
+            if params[:min_frequency].numeric?
               @minfreq=params[:min_frequency].to_i
               $logger.debug "min_frequency #{@minfreq}"
             else
