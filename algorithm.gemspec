@@ -23,8 +23,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'nokogiri', "~>1.4.4"
   s.add_runtime_dependency 'statsample', "~>1.1"
   s.add_runtime_dependency 'gsl', "~>1.14"
-  s.add_runtime_dependency 'emk-sinatra-url-for', "~>0.2.1"
-#  s.add_runtime_dependency '', "~>"
   s.add_runtime_dependency "openbabel", "~>2.3.1.5"
+  s.add_runtime_dependency "rjb" ,"1.4.3" # error in 1.4.5
   s.post_install_message = "Please configure your service in ~/.opentox/config/algorithm.rb"
 end

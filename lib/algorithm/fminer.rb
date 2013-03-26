@@ -22,16 +22,16 @@ module OpenTox
       # @param[Hash] parameters of the REST call
       # @param[Integer] per-mil value for min frequency
       
-      def check_params(params,per_mil,subjectid=nil)
+      def check_params(params,per_mil)
         bad_request_error "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-        @training_dataset = OpenTox::Dataset.find "#{params[:dataset_uri]}", subjectid # AM: find is a shim
+        @training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid 
         unless params[:prediction_feature] # try to read prediction_feature from dataset
           resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
           params[:prediction_feature] = @training_dataset.features.first.uri
         end
-        @prediction_feature = OpenTox::Feature.find params[:prediction_feature], subjectid # AM: find is a shim
+        @prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid 
         resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset_uri]}'" unless 
-          @training_dataset.find_feature( params[:prediction_feature] ) # AM: find_feature is a shim
+          @training_dataset.find_feature_uri( params[:prediction_feature] ) 
         unless params[:min_frequency].nil? 
           # check for percentage
           if params[:min_frequency].include? "pc"
@@ -101,7 +101,7 @@ module OpenTox
       def add_fminer_data(fminer_instance, value_map)
         id=1
         @training_dataset.compounds.each do |compound|
-          compound_activities = @training_dataset.find_data_entry(compound.uri, @prediction_feature.uri)
+          compound_activities = @training_dataset.values(compound, @prediction_feature)
           begin
             if @prediction_feature.feature_type == "classification"
               compound_activities = compound_activities.to_scale.mode
@@ -164,20 +164,19 @@ module OpenTox
         end
 
         metadata = {
-          RDF.type => [OT.Feature, OT.Substructure, OT.NumericFeature],
-          OT.smarts => smarts.dup,
-          OT.pValue => p_value.abs.round(5),
-          OT.effect => effect
+          RDF.type => [RDF::OT.Feature, RDF::OT.Substructure, RDF::OT.NumericFeature],
+          RDF::OT.smarts => smarts.dup,
+          RDF::OT.pValue => p_value.abs.round(5),
+          RDF::OT.effect => effect
         }
         parameters = [
-          { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-          { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] }
+          { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] },
+          { RDF::DC.title => "prediction_feature", RDF::OT.paramValue => params[:prediction_feature] }
         ]
-        metadata[OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
+        metadata[RDF::OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
         [ metadata, parameters ]
       end
     end
-
 
   end
 

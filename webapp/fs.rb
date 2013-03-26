@@ -20,15 +20,15 @@ module OpenTox
   get "/fs/rfe/?" do
     algorithm = OpenTox::Algorithm.new(to('/fs/rfe',:full))
     algorithm.metadata = {
-      DC.title => 'Recursive Feature Elimination',
-      DC.creator => "andreas@maunz.de",
-      RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+      RDF::DC.title => 'Recursive Feature Elimination',
+      RDF::DC.creator => "andreas@maunz.de",
+      RDF.type => [RDF::OT.Algorithm,RDF::OTA.PatternMiningSupervised]
     }
     algorithm.parameters = [
-        { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-        { DC.description => "Prediction Feature URI", OT.paramScope => "mandatory", DC.title => "prediction_feature" },
-        { DC.description => "Feature Dataset URI", OT.paramScope => "mandatory", DC.title => "feature_dataset_uri" },
-        { DC.description => "Delete Instances with missing values", OT.paramScope => "optional", DC.title => "del_missing" }
+        { RDF::DC.description => "Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "dataset_uri" },
+        { RDF::DC.description => "Prediction Feature URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "prediction_feature" },
+        { RDF::DC.description => "Feature Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "feature_dataset_uri" },
+        { RDF::DC.description => "Delete Instances with missing values", RDF::OT.paramScope => "optional", RDF::DC.title => "del_missing" }
     ]
     format_output(algorithm)
   end

@@ -13,7 +13,8 @@ module OpenTox
       # @param [Hash] keys: compound, feature_dataset, values: OpenTox::Compound, Array of SMARTS strings
       # @return [Array] Array with matching Smarts
       def self.match(params, subjectid)
-        features = params[:feature_dataset].features.collect{ |f| f[DC.title] }
+        features = params[:feature_dataset].features.collect{ |f| f[RDF::DC.title] }
+        puts features.inspect
         params[:compound].match(features)
       end
 
@@ -21,7 +22,7 @@ module OpenTox
       # @param [Hash] keys: compound, feature_dataset, values: OpenTox::Compound, Array of SMARTS strings
       # @return [Hash] Hash with matching Smarts and number of hits 
       def self.match_hits(params, subjectid)
-        features = params[:feature_dataset].features.collect{ |f| f[DC.title] },
+        features = params[:feature_dataset].features.collect{ |f| f[RDF::DC.title] },
         params[:compound].match_hits(features)
       end
 
@@ -37,7 +38,7 @@ module OpenTox
         }.compact
         if cmpd_idxs.size > 0 # We have entries
           cmpd_numeric_f = ds.features.collect { |f|
-            f if f[RDF.type].include? OT.NumericFeature
+            f if f[RDF.type].include? RDF::OT.NumericFeature
           }.compact
           cmpd_data_entries = cmpd_idxs.collect { |idx|
             ds.data_entries[idx]
@@ -61,7 +62,7 @@ module OpenTox
           params[:subjectid] = subjectid
           [:compound, :feature_dataset].each { |p| params.delete(p) }; [:pc_type, :lib].each { |p| params.delete(p) if params[p] == "" }
           single_cmpd_ds = OpenTox::Dataset.new(nil,subjectid)
-          single_cmpd_ds.parse_rdfxml(RestClient.post("#{$compound[:uri]}/#{cmpd_inchi}/pc", params, {:accept => "application/rdf+xml"}))
+          single_cmpd_ds.parse_rdfxml(RestClientWrapper.post(File.join($compound[:uri],cmpd_inchi,"pc"), params, {:accept => "application/rdf+xml"}))
           single_cmpd_ds.get(true)
           single_cmpd_ds.build_feature_positions
           cmpd_fingerprints = single_cmpd_ds.features.inject({}) { |h,f|

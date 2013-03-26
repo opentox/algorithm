@@ -13,8 +13,7 @@ module OpenTox
     # return [Integer] min-frequency
     def self.min_frequency(training_dataset,prediction_feature,per_mil)
       nr_labeled_cmpds=0
-      training_dataset.build_feature_positions
-      f_idx=training_dataset.feature_positions[prediction_feature.uri]
+      f_idx=training_dataset.features.collect{|f| f.uri}.index prediction_feature.uri
       training_dataset.compounds.each_with_index { |cmpd, c_idx|
         if ( training_dataset.data_entries[c_idx] )
              unless training_dataset.data_entries[c_idx][f_idx].nil?

@@ -334,8 +334,13 @@ module OpenTox
         # @param[Array] training_props Propositionalized data for this neighbor
         # @param[Integer] Index of neighbor
         def add_neighbor(training_props, idx)
+          puts idx
+          #puts training_props.inspect
+          #puts @q_prop.inspect
+          #puts @model.acts[idx].to_s
           unless @model.acts[idx].nil?
             sim = similarity(training_props)
+            puts sim
             if sim > @model.min_sim.to_f
                 @model.neighbors << {
                   :compound => @cmpds[idx],
@@ -380,7 +385,6 @@ module OpenTox
             idx_rows = row_nr_nils.index(m_rows)
           end
         end
-
 
         # Replaces nils by zeroes in n_prop and q_prop
         # Enables the use of Tanimoto similarities with arrays (rows of n_prop and q_prop)

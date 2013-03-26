@@ -14,7 +14,6 @@ ENV['FMINER_NR_HITS'] = 'true'
 @@bbrc = Bbrc::Bbrc.new
 @@last = Last::Last.new
 
-
 module OpenTox
   
   class Application < Service
@@ -22,11 +21,11 @@ module OpenTox
     # Get list of fminer algorithms
     # @return [text/uri-list] URIs
     get '/fminer/?' do
-      list = [ to('/fminer/bbrc', :full), 
-               to('/fminer/bbrc/sample', :full), 
-               to('/fminer/last', :full), 
-               to('/fminer/bbrc/match', :full), 
-               to('/fminer/last/match', :full) 
+      list = [ uri('/fminer/bbrc'), 
+               uri('/fminer/bbrc/sample'), 
+               uri('/fminer/last'), 
+               uri('/fminer/bbrc/match'), 
+               uri('/fminer/last/match') 
              ].join("\n") + "\n"
       format_output(list)
     end
@@ -36,19 +35,19 @@ module OpenTox
     get "/fminer/bbrc/?" do
       algorithm = OpenTox::Algorithm.new(to('/fminer/bbrc',:full))
       algorithm.metadata = {
-        DC.title => 'Backbone Refinement Class Representatives',
-        DC.creator => "andreas@maunz.de",
-        RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+        RDF::DC.title => 'Backbone Refinement Class Representatives',
+        RDF::DC.creator => "andreas@maunz.de",
+        RDF.type => [RDF::OT.Algorithm,RDF::OTA.PatternMiningSupervised]
       }
       algorithm.parameters = [
-          { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
-          { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
-          { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-          { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
-          { DC.description => "Significance threshold (between 0 and 1)", OT.paramScope => "optional", DC.title => "min_chisq_significance" },
-          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
-          { DC.description => "Set to 'true' to obtain target variables as a feature", OT.paramScope => "optional", DC.title => "get_target" }
+          { RDF::DC.description => "Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "dataset_uri" },
+          { RDF::DC.description => "Feature URI for dependent variable", RDF::OT.paramScope => "optional", RDF::DC.title => "prediction_feature" },
+          { RDF::DC.description => "Minimum frequency", RDF::OT.paramScope => "optional", RDF::DC.title => "min_frequency" },
+          { RDF::DC.description => "Feature type, can be 'paths' or 'trees'", RDF::OT.paramScope => "optional", RDF::DC.title => "feature_type" },
+          { RDF::DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", RDF::OT.paramScope => "optional", RDF::DC.title => "backbone" },
+          { RDF::DC.description => "Significance threshold (between 0 and 1)", RDF::OT.paramScope => "optional", RDF::DC.title => "min_chisq_significance" },
+          { RDF::DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", RDF::OT.paramScope => "optional", RDF::DC.title => "nr_hits" },
+          { RDF::DC.description => "Set to 'true' to obtain target variables as a feature", RDF::OT.paramScope => "optional", RDF::DC.title => "get_target" }
       ]
       format_output(algorithm)
     end
@@ -58,19 +57,19 @@ module OpenTox
     get "/fminer/bbrc/sample/?" do
       algorithm = OpenTox::Algorithm.new(to('/fminer/bbrc/sample',:full))
       algorithm.metadata = {
-        DC.title => 'Backbone Refinement Class Representatives, obtained from samples of a dataset',
-        DC.creator => "andreas@maunz.de",
-        RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+        RDF::DC.title => 'Backbone Refinement Class Representatives, obtained from samples of a dataset',
+        RDF::DC.creator => "andreas@maunz.de",
+        RDF.type => [RDF::OT.Algorithm,RDF::OTA.PatternMiningSupervised]
       }
       algorithm.parameters = [
-          { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
-          { DC.description => "Number of bootstrap samples", OT.paramScope => "optional", DC.title => "num_boots" },
-          { DC.description => "Minimum sampling support", OT.paramScope => "optional", DC.title => "min_sampling_support" },
-          { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
-          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
-          { DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", OT.paramScope => "optional", DC.title => "backbone" },
-          { DC.description => "Chisq estimation method, pass 'mean' to use simple mean estimate for chisq test.", OT.paramScope => "optional", DC.title => "method" }
+          { RDF::DC.description => "Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "dataset_uri" },
+          { RDF::DC.description => "Feature URI for dependent variable", RDF::OT.paramScope => "optional", RDF::DC.title => "prediction_feature" },
+          { RDF::DC.description => "Number of bootstrap samples", RDF::OT.paramScope => "optional", RDF::DC.title => "num_boots" },
+          { RDF::DC.description => "Minimum sampling support", RDF::OT.paramScope => "optional", RDF::DC.title => "min_sampling_support" },
+          { RDF::DC.description => "Minimum frequency", RDF::OT.paramScope => "optional", RDF::DC.title => "min_frequency" },
+          { RDF::DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", RDF::OT.paramScope => "optional", RDF::DC.title => "nr_hits" },
+          { RDF::DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", RDF::OT.paramScope => "optional", RDF::DC.title => "backbone" },
+          { RDF::DC.description => "Chisq estimation method, pass 'mean' to use simple mean estimate for chisq test.", RDF::OT.paramScope => "optional", RDF::DC.title => "method" }
       ]
       format_output(algorithm)
     end
@@ -80,17 +79,17 @@ module OpenTox
     get "/fminer/last/?" do
       algorithm = OpenTox::Algorithm.new(to('/fminer/last',:full))
       algorithm.metadata = {
-        DC.title => 'Latent Structure Pattern Mining descriptors',
-        DC.creator => "andreas@maunz.de",
-        RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+        RDF::DC.title => 'Latent Structure Pattern Mining descriptors',
+        RDF::DC.creator => "andreas@maunz.de",
+        RDF.type => [RDF::OT.Algorithm,RDF::OTA.PatternMiningSupervised]
       }
       algorithm.parameters = [
-          { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" },
-          { DC.description => "Minimum frequency", OT.paramScope => "optional", DC.title => "min_frequency" },
-          { DC.description => "Feature type, can be 'paths' or 'trees'", OT.paramScope => "optional", DC.title => "feature_type" },
-          { DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", OT.paramScope => "optional", DC.title => "nr_hits" },
-          { DC.description => "Set to 'true' to obtain target variables as a feature", OT.paramScope => "optional", DC.title => "get_target" }
+          { RDF::DC.description => "Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "dataset_uri" },
+          { RDF::DC.description => "Feature URI for dependent variable", RDF::OT.paramScope => "optional", RDF::DC.title => "prediction_feature" },
+          { RDF::DC.description => "Minimum frequency", RDF::OT.paramScope => "optional", RDF::DC.title => "min_frequency" },
+          { RDF::DC.description => "Feature type, can be 'paths' or 'trees'", RDF::OT.paramScope => "optional", RDF::DC.title => "feature_type" },
+          { RDF::DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", RDF::OT.paramScope => "optional", RDF::DC.title => "nr_hits" },
+          { RDF::DC.description => "Set to 'true' to obtain target variables as a feature", RDF::OT.paramScope => "optional", RDF::DC.title => "get_target" }
       ]
       format_output(algorithm)
     end
@@ -101,14 +100,14 @@ module OpenTox
     get "/fminer/:method/match?" do
       algorithm = OpenTox::Algorithm.new(to("/fminer/#{params[:method]}/match",:full))
       algorithm.metadata = {
-        DC.title => 'fminer feature matching',
-        DC.creator => "mguetlein@gmail.com, andreas@maunz.de",
-        RDF.type => [OT.Algorithm,OTA.PatternMiningSupervised]
+        RDF::DC.title => 'fminer feature matching',
+        RDF::DC.creator => "mguetlein@gmail.com, andreas@maunz.de",
+        RDF.type => [RDF::OT.Algorithm,RDF::OTA.PatternMiningSupervised]
       }
       algorithm.parameters = [
-          { DC.description => "Dataset URI", OT.paramScope => "mandatory", DC.title => "dataset_uri" },
-          { DC.description => "Feature Dataset URI", OT.paramScope => "mandatory", DC.title => "feature_dataset_uri" },
-          { DC.description => "Feature URI for dependent variable", OT.paramScope => "optional", DC.title => "prediction_feature" }
+          { RDF::DC.description => "Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "dataset_uri" },
+          { RDF::DC.description => "Feature Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "feature_dataset_uri" },
+          { RDF::DC.description => "Feature URI for dependent variable", RDF::OT.paramScope => "optional", RDF::DC.title => "prediction_feature" }
       ]
       format_output(algorithm)
     end
@@ -128,18 +127,10 @@ module OpenTox
     # @return [text/uri-list] Task URI
     post '/fminer/bbrc/?' do
     
-
       @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/bbrc',:full))
-      @@fminer.check_params(params,5,@subjectid)
+      @@fminer.check_params(params,5)
     
-      task = OpenTox::Task.create( 
-                                  $task[:uri], 
-                                  @subjectid, 
-                                  { RDF::DC.description => "Mining BBRC features", 
-                                    RDF::DC.creator => to('/fminer/bbrc',:full) 
-                                  } 
-                                 ) do |task|
-
+      task = OpenTox::Task.run("Mining BBRC features", uri('/fminer/bbrc'), @subjectid) do |task|
 
         @@bbrc.Reset
         if @@fminer.prediction_feature.feature_type == "regression"
@@ -149,7 +140,7 @@ module OpenTox
                             "dataset '#{@@fminer.training_dataset.uri}' and "\
                             "feature '#{@@fminer.prediction_feature.uri}'" unless 
                              @@fminer.prediction_feature.accept_values
-          value_map=@@fminer.training_dataset.value_map(@@fminer.prediction_feature)
+          value_map=@@fminer.prediction_feature.value_map
         end
         @@bbrc.SetMinfreq(@@fminer.minfreq)
         @@bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -157,21 +148,20 @@ module OpenTox
         @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
         @@bbrc.SetConsoleOut(false)
 
-  
         feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
         feature_dataset.metadata = {
-          DC.title => "BBRC representatives",
-          DC.creator => to('/fminer/bbrc',:full),
-          OT.hasSource => to('/fminer/bbrc', :full),
+          RDF::DC.title => "BBRC representatives",
+          RDF::DC.creator => to('/fminer/bbrc',:full),
+          RDF::OT.hasSource => to('/fminer/bbrc', :full),
         }
         feature_dataset.parameters = [
-            { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-            { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
-            { DC.title => "min_frequency", OT.paramValue => @@fminer.minfreq },
-            { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") },
-            { DC.title => "backbone", OT.paramValue => (params[:backbone] == "false" ? "false" : "true") }
+            { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] },
+            { RDF::DC.title => "prediction_feature", RDF::OT.paramValue => params[:prediction_feature] },
+            { RDF::DC.title => "min_frequency", RDF::OT.paramValue => @@fminer.minfreq },
+            { RDF::DC.title => "nr_hits", RDF::OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") },
+            { RDF::DC.title => "backbone", RDF::OT.paramValue => (params[:backbone] == "false" ? "false" : "true") }
         ]
-  
+
         @@fminer.compounds = []
         @@fminer.db_class_sizes = Array.new # AM: effect
         @@fminer.all_activities = Hash.new # DV: for effect calculation in regression part
@@ -219,17 +209,16 @@ module OpenTox
               end
             end
   
-            #feature_uri = File.join feature_dataset.uri,"feature","bbrc", features.size.to_s
             unless features_smarts.include? smarts
               features_smarts << smarts
-              metadata = {
-                OT.hasSource => to('/fminer/bbrc', :full),
-                RDF.type => [OT.Feature, OT.Substructure, OT.NumericFeature],
-                OT.smarts => smarts.dup,
-                OT.pValue => p_value.to_f.abs.round(5),
-                OT.effect => effect
-              }
-              feature = OpenTox::Feature.find_by_title(smarts.dup,metadata)
+              feature = OpenTox::Feature.find_or_create({
+                RDF::DC.title => smarts.dup,
+                RDF::OT.hasSource => to('/fminer/bbrc', :full),
+                RDF.type => [RDF::OT.Feature, RDF::OT.Substructure, RDF::OT.NumericFeature],
+                RDF::OT.smarts => smarts.dup,
+                RDF::OT.pValue => p_value.to_f.abs.round(5),
+                RDF::OT.effect => effect
+              }, @subjectid)
               features << feature
             end
 
@@ -247,9 +236,8 @@ module OpenTox
           end # end of
         end   # feature parsing
 
-        fminer_compounds = @@fminer.training_dataset.compounds.collect.to_a
-        @@fminer.training_dataset.build_feature_positions
-        prediction_feature_idx = @@fminer.training_dataset.feature_positions[@@fminer.prediction_feature.uri]
+        fminer_compounds = @@fminer.training_dataset.compounds
+        prediction_feature_idx = @@fminer.training_dataset.features.collect{|f| f.uri}.index @@fminer.prediction_feature.uri
         prediction_feature_all_acts = fminer_compounds.each_with_index.collect { |c,idx| 
           @@fminer.training_dataset.data_entries[idx][prediction_feature_idx] 
         }
@@ -257,29 +245,65 @@ module OpenTox
 
         feature_dataset.features = features
         if (params[:get_target] == "true")
+          puts "get_target TRUE"
           feature_dataset.features = [ @@fminer.prediction_feature ] + feature_dataset.features
+        else
+          puts "get_target FALSE"
         end
+        feature_dataset.compounds = fminer_compounds
         fminer_compounds.each_with_index { |c,idx|
-          row = [ c ]
-          if (params[:get_target] == "true")
-            row = row + [ prediction_feature_all_acts[idx] ]
-          end
+          #puts c.smiles
+          # TODO: fix here, insert with add_data_entry
+          #row = [ c ]
+          # TODO: reenable option
+          #if (params[:get_target] == "true")
+            #row = row + [ prediction_feature_all_acts[idx] ]
+          #end
           features.each { |f|
-            row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
+            #m = c.match([f.title])[f.title]
+            #m = 0 unless m
+            v = fminer_results[c][f.uri] if fminer_results[c] 
+            unless fminer_noact_compounds.include? c
+              v = 0 if v.nil?
+            end
+            #unless m == v
+              #puts f.title
+              #puts m
+              #puts v
+            #end
+            feature_dataset.add_data_entry c, f, v.to_i
+            #row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
           }
-          row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
-          feature_dataset << row
+          #row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
+          #feature_dataset << row
         }
+
+=begin
+CH: Ordering seems to be ok here
+        feature_dataset.compounds.each_with_index do |c,i|
+          feature_dataset.features.each_with_index do |f,j|
+            m = c.match([f.title])[f.title]
+            #puts c.smiles
+            #puts f.title
+            #puts m.inspect
+            v = feature_dataset.data_entries[i][j]
+            #puts v.inspect
+            unless m.to_i == v.to_i
+              puts f.title
+              puts m.to_i
+              puts v.to_i
+            end
+          end
+        end
+=end
           
-        $logger.debug "fminer found #{feature_dataset.features.size} features for #{feature_dataset.compounds.size} compounds"
-        feature_dataset.put @subjectid
-        $logger.debug feature_dataset.uri
+        #puts feature_dataset.to_csv
+        feature_dataset.put 
         feature_dataset.uri
 
       end
       response['Content-Type'] = 'text/uri-list'
-      service_unavailable_error "Service unavailable" if task.cancelled?
-      halt 202,task.uri.to_s+"\n"
+      halt 202,task.uri
     end
     
    
@@ -298,15 +322,9 @@ module OpenTox
     post '/fminer/last/?' do
     
       @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/last',:full))
-      @@fminer.check_params(params,80,@subjectid)
+      @@fminer.check_params(params,80)
     
-      task = OpenTox::Task.create( 
-                                    $task[:uri], 
-                                    @subjectid, 
-                                    { RDF::DC.description => "Mining LAST features", 
-                                      RDF::DC.creator => to('/fminer/last',:full) 
-                                    } 
-                                   ) do |task|
+      task = OpenTox::Task.run("Mining LAST features", uri('/fminer/last'), @subjectid) do |task|
 
         @@last.Reset
         if @@fminer.prediction_feature.feature_type == "regression"
@@ -316,7 +334,7 @@ module OpenTox
                           "dataset '#{fminer.training_dataset.uri}' and "\
                           "feature '#{fminer.prediction_feature.uri}'" unless 
                            @@fminer.prediction_feature.accept_values
-          value_map=@@fminer.training_dataset.value_map(@@fminer.prediction_feature)
+          value_map=@@fminer.prediction_feature.value_map
         end
         @@last.SetMinfreq(@@fminer.minfreq)
         @@last.SetType(1) if params[:feature_type] == "paths"
@@ -325,15 +343,15 @@ module OpenTox
   
         feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
         feature_dataset.metadata = {
-          DC.title => "LAST representatives for " + @@fminer.training_dataset.metadata[DC.title].to_s,
-          DC.creator => to('/fminer/last',:full),
-          OT.hasSource => to('/fminer/last', :full)
+          RDF::DC.title => "LAST representatives for " + @@fminer.training_dataset.metadata[RDF::DC.title].to_s,
+          RDF::DC.creator => to('/fminer/last'),
+          RDF::OT.hasSource => to('/fminer/last')
         }
         feature_dataset.parameters = [
-            { DC.title => "dataset_uri", OT.paramValue => params[:dataset_uri] },
-            { DC.title => "prediction_feature", OT.paramValue => params[:prediction_feature] },
-            { DC.title => "min_frequency", OT.paramValue => @@fminer.minfreq },
-            { DC.title => "nr_hits", OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") }
+            { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] },
+            { RDF::DC.title => "prediction_feature", RDF::OT.paramValue => params[:prediction_feature] },
+            { RDF::DC.title => "min_frequency", RDF::OT.paramValue => @@fminer.minfreq },
+            { RDF::DC.title => "nr_hits", RDF::OT.paramValue => (params[:nr_hits] == "true" ? "true" : "false") }
         ]
         
         @@fminer.compounds = []
@@ -366,7 +384,8 @@ module OpenTox
         fminer_results = {}
         matches.each do |smarts, ids|
           metadata, parameters = @@fminer.calc_metadata(smarts, ids, counts[smarts], @@last, nil, value_map, params)
-          feature = OpenTox::Feature.find_by_title(smarts.dup,metadata)
+          metadata[RDF::DC.title] = smarts.dup
+          feature = OpenTox::Feature.find_or_create(metadata, @subjectid)
           features << feature
           ids.each_with_index { |id,idx| 
             fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}
@@ -374,9 +393,8 @@ module OpenTox
           }
         end
 
-        fminer_compounds = @@fminer.training_dataset.compounds.collect.to_a
-        @@fminer.training_dataset.build_feature_positions
-        prediction_feature_idx = @@fminer.training_dataset.feature_positions[@@fminer.prediction_feature.uri]
+        fminer_compounds = @@fminer.training_dataset.compounds
+        prediction_feature_idx = @@fminer.training_dataset.features.collect{|f| f.uri}.index @@fminer.prediction_feature.uri
         prediction_feature_all_acts = fminer_compounds.each_with_index.collect { |c,idx| 
           @@fminer.training_dataset.data_entries[idx][prediction_feature_idx] 
         }
@@ -387,6 +405,7 @@ module OpenTox
           feature_dataset.features = [ @@fminer.prediction_feature ] + feature_dataset.features
         end
         fminer_compounds.each_with_index { |c,idx|
+          # TODO: fix value insertion
           row = [ c ]
           if (params[:get_target] == "true")
             row = row + [ prediction_feature_all_acts[idx] ]
@@ -397,14 +416,12 @@ module OpenTox
           row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
           feature_dataset << row
         }
-        feature_dataset.put @subjectid
-        $logger.debug feature_dataset.uri
+        feature_dataset.put
         feature_dataset.uri
 
       end
       response['Content-Type'] = 'text/uri-list'
-      service_unavailable_error "Service unavailable" if task.cancelled?
-      halt 202,task.uri.to_s+"\n"
+      halt 202,task.uri
     end
 
   end
