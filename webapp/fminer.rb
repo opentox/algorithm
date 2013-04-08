@@ -244,60 +244,22 @@ module OpenTox
         fminer_noact_compounds = fminer_compounds - @@fminer.compounds
 
         feature_dataset.features = features
-        if (params[:get_target] == "true")
-          puts "get_target TRUE"
-          feature_dataset.features = [ @@fminer.prediction_feature ] + feature_dataset.features
-        else
-          puts "get_target FALSE"
-        end
+        feature_dataset.features = [ @@fminer.prediction_feature ] + feature_dataset.features if params[:get_target] == "true"
         feature_dataset.compounds = fminer_compounds
         fminer_compounds.each_with_index { |c,idx|
-          #puts c.smiles
-          # TODO: fix here, insert with add_data_entry
-          #row = [ c ]
           # TODO: reenable option
           #if (params[:get_target] == "true")
             #row = row + [ prediction_feature_all_acts[idx] ]
           #end
           features.each { |f|
-            #m = c.match([f.title])[f.title]
-            #m = 0 unless m
             v = fminer_results[c][f.uri] if fminer_results[c] 
             unless fminer_noact_compounds.include? c
               v = 0 if v.nil?
             end
-            #unless m == v
-              #puts f.title
-              #puts m
-              #puts v
-            #end
             feature_dataset.add_data_entry c, f, v.to_i
-            #row << (fminer_results[c] ? fminer_results[c][f.uri] : nil)
           }
-          #row.collect! { |v| v ? v : 0 } unless fminer_noact_compounds.include? c
-          #feature_dataset << row
         }
 
-=begin
-CH: Ordering seems to be ok here
-        feature_dataset.compounds.each_with_index do |c,i|
-          feature_dataset.features.each_with_index do |f,j|
-            m = c.match([f.title])[f.title]
-            #puts c.smiles
-            #puts f.title
-            #puts m.inspect
-            v = feature_dataset.data_entries[i][j]
-            #puts v.inspect
-            unless m.to_i == v.to_i
-              puts f.title
-              puts m.to_i
-              puts v.to_i
-            end
-          end
-        end
-=end
-          
-        #puts feature_dataset.to_csv
         feature_dataset.put 
         feature_dataset.uri
 

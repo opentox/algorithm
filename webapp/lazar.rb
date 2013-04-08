@@ -28,7 +28,6 @@ module OpenTox
     # @param [optional,String] - further parameters for the feature generation service 
     # @return [text/uri-list] Task URI 
     post '/lazar/?' do 
-      puts params.inspect
       resource_not_found_error "Please provide a dataset_uri parameter." unless params[:dataset_uri]
       resource_not_found_error "Dataset '#{params[:dataset_uri]}' not found." unless URI.accessible? params[:dataset_uri]
       bad_request_error "Please provide a feature_generation_uri parameter." unless params[:feature_generation_uri]
@@ -62,8 +61,6 @@ module OpenTox
       task = OpenTox::Task.run("Apply lazar model",uri('/lazar/predict'), @subjectid) do |task|
 
         lazar = OpenTox::LazarPrediction.new params
-        puts "RESULT"
-        puts lazar.prediction_dataset.uri
         lazar.prediction_dataset.uri
 
       end

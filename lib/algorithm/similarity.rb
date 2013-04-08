@@ -15,8 +15,6 @@ module OpenTox
       # @param [Array] b fingerprints of second compound
       # @return [Float] Tanimoto similarity
       def self.tanimoto(a,b)
-        puts a.inspect
-        puts b.inspect
         common_p_sum = 0.0
         all_p_sum = 0.0
         size = [ a.size, b.size ].min

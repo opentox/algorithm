@@ -17,7 +17,6 @@ module OpenTox
       params.each {|k,v|
         self.class.class_eval { attr_accessor k.to_sym }
         instance_variable_set "@#{k}", v
-        puts "#{k} => #{v}"
         @prediction_dataset.parameters << {RDF::DC.title => k, RDF::OT.paramValue => v}
       }
       ["cmpds", "fps", "acts", "n_prop", "q_prop", "neighbors"].each {|k|
@@ -25,13 +24,9 @@ module OpenTox
         instance_variable_set("@#{k}", [])
       }
 
-      puts "Loading #{@prediction_feature_uri}"
       @prediction_feature = OpenTox::Feature.new(@prediction_feature_uri,@subjectid)
       @predicted_variable = OpenTox::Feature.new @predicted_variable_uri, @subjectid
       @predicted_confidence = OpenTox::Feature.new @predicted_confidence_uri, @subjectid
-      puts @predicted_variable.inspect
-      puts @predicted_confidence.inspect
-      puts "Setting metadata"
       #@prediction_dataset.metadata = {
       @prediction_dataset.metadata = {
         RDF::DC.title => "Lazar prediction for #{@prediction_feature.title}",
@@ -41,10 +36,8 @@ module OpenTox
         RDF::OT.predictedVariables => [@predicted_variable_uri,@predicted_confidence_uri]
       }
 
-      puts "Loading #{@training_dataset_uri}"
       @training_dataset = OpenTox::Dataset.new(@training_dataset_uri,@subjectid)
 
-      puts "Loading #{@feature_dataset_uri}"
       @feature_dataset = OpenTox::Dataset.new(@feature_dataset_uri, @subjectid)
       bad_request_error "No features found in feature dataset #{@feature_dataset.uri}." if @feature_dataset.features.empty?
 
@@ -55,14 +48,12 @@ module OpenTox
       prediction_feature_pos = @training_dataset.features.collect{|f| f.uri}.index @prediction_feature.uri
 
       if @dataset_uri
-        puts "Loading #{@dataset_uri}"
         compounds = OpenTox::Dataset.new(@dataset_uri,@subjectid).compounds
       else
         compounds = [ OpenTox::Compound.new(@compound_uri,@subjectid) ]
       end
       compounds.each do |compound|
           
-        puts compound.smiles
         database_activity = @training_dataset.database_activity(params)
         if database_activity
           @prediction_dataset.add_data_entry compound, @prediction_feature, database_activity
@@ -108,7 +99,6 @@ module OpenTox
                 :min_train_performance => @min_train_performance
                 } )
          
-          puts prediction.inspect
           predicted_value = prediction[:prediction].to_f
           confidence_value = prediction[:confidence].to_f
 

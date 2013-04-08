@@ -334,13 +334,8 @@ module OpenTox
         # @param[Array] training_props Propositionalized data for this neighbor
         # @param[Integer] Index of neighbor
         def add_neighbor(training_props, idx)
-          puts idx
-          #puts training_props.inspect
-          #puts @q_prop.inspect
-          #puts @model.acts[idx].to_s
           unless @model.acts[idx].nil?
             sim = similarity(training_props)
-            puts sim
             if sim > @model.min_sim.to_f
                 @model.neighbors << {
                   :compound => @cmpds[idx],

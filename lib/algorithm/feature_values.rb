@@ -14,7 +14,6 @@ module OpenTox
       # @return [Array] Array with matching Smarts
       def self.match(params, subjectid)
         features = params[:feature_dataset].features.collect{ |f| f[RDF::DC.title] }
-        puts features.inspect
         params[:compound].match(features)
       end
 

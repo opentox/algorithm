@@ -4,3 +4,4 @@ public/*.owl
 java/docs/*
 *.*~
 Gemfile.lock
+fminer_debug.txt

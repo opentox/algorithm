@@ -19,11 +19,11 @@ Gem::Specification.new do |s|
   # specify any dependencies here; for example:
   s.add_runtime_dependency "opentox-server"
   s.add_runtime_dependency "opentox-client"
-  s.add_runtime_dependency 'rinruby', "~>2.0.2"
-  s.add_runtime_dependency 'nokogiri', "~>1.4.4"
-  s.add_runtime_dependency 'statsample', "~>1.1"
-  s.add_runtime_dependency 'gsl', "~>1.14"
-  s.add_runtime_dependency "openbabel", "~>2.3.1.5"
-  s.add_runtime_dependency "rjb" ,"1.4.3" # error in 1.4.5
+  s.add_runtime_dependency 'rinruby'#, "~>2.0.2"
+  s.add_runtime_dependency 'nokogiri'#, "~>1.4.4"
+  s.add_runtime_dependency 'statsample'#, "~>1.1"
+  s.add_runtime_dependency 'gsl'#, "~>1.14"
+  s.add_runtime_dependency "openbabel"#, "~>2.3.1.5"
+  s.add_runtime_dependency "rjb" ,"1.4.6" # error in 1.4.5#,"1.4.3"
   s.post_install_message = "Please configure your service in ~/.opentox/config/algorithm.rb"
 end
