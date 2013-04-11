@@ -24,6 +24,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'statsample'#, "~>1.1"
   s.add_runtime_dependency 'gsl'#, "~>1.14"
   s.add_runtime_dependency "openbabel"#, "~>2.3.1.5"
-  s.add_runtime_dependency "rjb" ,"1.4.6" # error in 1.4.5#,"1.4.3"
   s.post_install_message = "Please configure your service in ~/.opentox/config/algorithm.rb"
 end

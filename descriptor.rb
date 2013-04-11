@@ -1,7 +1,7 @@
 # descriptors.rb
 # Calculation of physico-chemical descriptors
 # Author: Andreas Maunz, Christoph Helma
-require 'rjb'
+#require 'rjb'
 require 'openbabel'
 
 module OpenTox
@@ -9,22 +9,11 @@ module OpenTox
   class Application < Service
 
     ENV["JAVA_HOME"] ||= "/usr/lib/jvm/java-7-openjdk" 
-    java_dir = File.join(File.dirname(__FILE__),"java")
-    jars = Dir[File.join(ENV["JAVA_HOME"],"lib","*.jar")]
-    jars += Dir[File.join(java_dir,"*jar")]
-    ENV["CLASSPATH"] = ([java_dir]+jars).join(":")
-    jars.each { |jar| Rjb::load jar }
-
-    StringReader ||= Rjb::import "java.io.StringReader"
-    CDKMdlReader ||= Rjb::import "org.openscience.cdk.io.MDLReader"
-    CDKMolecule ||= Rjb::import "org.openscience.cdk.Molecule"
-    CDKDescriptorEngine ||= Rjb::import "org.openscience.cdk.qsar.DescriptorEngine"
-    #AromaticityDetector = Rjb::import 'org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector'
-    JOELIBHelper ||= Rjb::import 'joelib2.feature.FeatureHelper'
-    JOELIBFactory ||= Rjb::import 'joelib2.feature.FeatureFactory'
-    JOELIBSmilesParser ||= Rjb::import "joelib2.smiles.SMILESParser"
-    JOELIBTypeHolder ||= Rjb::import "joelib2.io.BasicIOTypeHolder"
-    JOELIBMolecule ||= Rjb::import "joelib2.molecule.BasicConformerMolecule"
+    JAVA_DIR = File.join(File.dirname(__FILE__),"java")
+    CDK_JAR = Dir[File.join(JAVA_DIR,"cdk-*jar")].last
+    JOELIB_JAR = File.join(JAVA_DIR,"joelib2.jar")
+    LOG4J_JAR = File.join(JAVA_DIR,"log4j.jar")
+    JMOL_JAR = File.join(JAVA_DIR,"Jmol.jar")
 
     unless defined? DESCRIPTORS 
 
@@ -34,7 +23,6 @@ module OpenTox
       @@obmol = OpenBabel::OBMol.new
       @@obconversion = OpenBabel::OBConversion.new
       @@obconversion.set_in_format 'inchi'
-      @@cdk_engine = CDKDescriptorEngine.new(CDKDescriptorEngine.MOLECULAR)
 
       # OpenBabel
       OpenBabel::OBDescriptor.list_as_string("descriptors").split("\n").each do |d|
@@ -56,50 +44,34 @@ module OpenTox
       end
 
       # CDK
-      @@cdk_engine.getDescriptorClassNames.toArray.each do |d|
-        cdk_class = d.toString
-        title = "CDK "+cdk_class.split('.').last
-        description = @@cdk_engine.getDictionaryDefinition(cdk_class).gsub(/\s+/,' ').strip + " (Class: " + @@cdk_engine.getDictionaryClass(cdk_class).join(", ") + ")"
-        descriptor = {
-          :title => title,
-          :description => description,
-          :calculator => Rjb::import(cdk_class).new,
-          :features => []
-        }
-        # CDK Descriptors may return more than one value
-        descriptor[:features] = descriptor[:calculator].getDescriptorNames.collect do |name|
-          feature = OpenTox::Feature.find_or_create({
-            RDF::DC.title => "#{title} #{name}",
+      cdk_descriptors = YAML.load(`java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptorInfo`)
+      cdk_descriptors.each do |descriptor|
+        descriptor[:title] = "Cdk " + descriptor[:java_class].split('.').last.sub(/Descriptor/,'')
+        descriptor[:features] = []
+        descriptor[:names].each do |name|
+          descriptor[:features] << OpenTox::Feature.find_or_create({
+            RDF::DC.title => "#{descriptor[:title]} #{name}",
             RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature],
-            RDF::DC.description => description
+            RDF::DC.description => descriptor[:description]
           }, @subjectid)
         end
-        descriptors[:cdk] << descriptor
       end
+      descriptors[:cdk] = cdk_descriptors
+      
+      # Joelib
+      joelib_descriptors = YAML.load(`java -classpath #{JOELIB_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptorInfo | sed '0,/---/d'`) # strip Joelib messages at stdout
+      joelib_descriptors.each do |descriptor|
+        # exclude Hashcode (not a physchem property) and GlobalTopologicalChargeIndex (Joelib bug)
+        next if descriptor[:java_class] == "joelib2.feature.types.MoleculeHashcode" or descriptor[:java_class] == "joelib2.feature.types.GlobalTopologicalChargeIndex"
+        descriptor[:title] = "Joelib " + descriptor[:java_class].split('.').last
+        descriptor[:feature] = OpenTox::Feature.find_or_create({
+            RDF::DC.title => descriptor[:title],
+            RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature],
+            #RDF::DC.description => descriptor[:title], # impossible to obtain meaningful descriptions from JOELIb, see java/JoelibDescriptors.java
+          }, @subjectid)
+      end
+      descriptors[:joelib] = joelib_descriptors.select{|d| d[:title]}
 
-      # JOELIB
-      factory = JOELIBFactory.instance
-      JOELIBHelper.instance.getNativeFeatures.toArray.each do |f|
-        joelib_class = f.toString
-        unless joelib_class == "joelib2.feature.types.GlobalTopologicalChargeIndex"
-          # CH: returns "joelib2.feature.types.atomlabel.AtomValence\n#{numeric value}"
-          # unsure if numeric_value is GlobalTopologicalChargeIndex or AtomValence
-          # excluded from descriptor list
-          title = "JOELib "+joelib_class.split('.').last
-          description = title # feature.getDescription.hasText returns false, feature.getDescription.getHtml returns unparsable content
-          feature = OpenTox::Feature.find_or_create({
-              RDF::DC.title => title,
-              RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature],
-              RDF::DC.description => description,
-            }, @subjectid)
-          descriptors[:joelib] << {
-            :title => title,
-            :description => description, 
-            :calculator => Rjb::import(joelib_class).new,
-            :feature => feature
-          }
-        end
-      end
       DESCRIPTORS = descriptors
 
     end
@@ -110,65 +82,66 @@ module OpenTox
         compounds.each do |compound|
           @@obconversion.read_string @@obmol, compound.inchi
           descriptors.each do |descriptor|
-            puts descriptor[:title]
             @feature_dataset.add_data_entry compound, descriptor[:feature], fix_value(descriptor[:calculator].predict(@@obmol))
           end
         end
       end
 
       def cdk compounds, descriptors
-        @@obconversion.set_out_format 'sdf'
-        compounds.each do |compound|
-          @@obconversion.read_string @@obmol, compound.inchi
-          sdf = @@obconversion.write_string(@@obmol)  
-          OpenBabel::OBOp.find_type("Gen3D").do(@@obmol) 
-          sdf_3D = @@obconversion.write_string(@@obmol)  
-          if sdf_3D.match(/.nan/)
-            warning = "3D generation failed for compound #{compound.uri} (using 2D structure)."
-            $logger.warn warning
-            @feature_dataset[RDF::OT.Warnings] ? @feature_dataset[RDF::OT.Warnings] << warning : @feature_dataset[RDF::OT.Warnings] = warning
-          else
-            sdf = sdf_3D
-          end
-          reader = CDKMdlReader.new(StringReader.new(sdf))
-          cdk_compound = reader.read(CDKMolecule.new)
-          #AromaticityDetector.detectAromaticity(cdk_compound)
-          values = []
-          descriptors.each do |descriptor|
-            puts descriptor[:title]
-            begin
-            result = descriptor[:calculator].calculate cdk_compound
-            result.getValue.toString.split(",").each_with_index do |value,i|
-              @feature_dataset.add_data_entry compound, descriptor[:features][i], fix_value(value)
-            end
-            rescue
-              $logger.error "#{descriptor[:title]} calculation failed with #{$!.message} for compound #{compound.uri}."
-            end
+        sdf_3d compounds
+        # rjb blocks within tasks
+        # Avoid "Argument list too long" error by sending only short descriptor names
+        yaml = `echo "#{@sdf}" |java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{descriptors.collect{|d| d[:title].split("\s").last}.join(" ")}`
+        YAML.load(yaml).each_with_index do |calculation,i|
+          $logger.error "Descriptor calculation failed with #{$!.message} for compound #{compounds[i].uri}." if calculation.empty?
+          calculation.each do |name,value|
+            feature = DESCRIPTORS[:cdk].collect{|d| d[:features]}.flatten.select{|f| f[RDF::DC.title].split("\s").last == name.to_s}.first
+            @feature_dataset.add_data_entry compounds[i], feature, fix_value(value)
           end
         end
       end
 
       def joelib compounds, descriptors
-        @@obconversion.set_out_format 'smi'
-        compounds.each do |compound|
-          mol = JOELIBMolecule.new(JOELIBTypeHolder.instance.getIOType("SMILES"), JOELIBTypeHolder.instance.getIOType("SMILES"))
-          @@obconversion.read_string @@obmol, compound.inchi
-          JOELIBSmilesParser.smiles2molecule mol, @@obconversion.write_string(@@obmol).strip, "Smiles: #{@@obconversion.write_string(@@obmol).strip}"
-          mol.addHydrogens
-          descriptors.each do |descriptor|
-            puts descriptor[:title]
-            puts descriptor[:calculator].toString#java_methods.inspect
-            puts descriptor[:calculator].calculate(mol).toString
-            @feature_dataset.add_data_entry compound, descriptor[:feature], fix_value(descriptor[:calculator].calculate(mol).toString)
+        sdf_3d compounds
+        # rjb blocks within tasks
+        yaml = `echo "#{@sdf}" |java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors #{descriptors.collect{|d| d[:java_class]}.join(" ")}|grep "^[- ]"`
+        YAML.load(yaml).each_with_index do |calculation,i|
+          $logger.error "Descriptor calculation failed with #{$!.message} for compound #{compounds[i].uri}." if calculation.empty?
+          calculation.each do |java_class,value|
+            feature = DESCRIPTORS[:joelib].select{|d| d[:java_class] == java_class}.first[:feature]
+            @feature_dataset.add_data_entry compounds[i], feature, fix_value(value)
+          end
+        end
+      end
+
+      def sdf_3d compounds
+        unless @sdf
+          @sdf = ""
+          @@obconversion.set_out_format 'sdf'
+          # create 3d sdf file (faster in Openbabel than in CDK)
+          compounds.each do |compound|
+            @@obconversion.read_string @@obmol, compound.inchi
+            sdf_2d = @@obconversion.write_string(@@obmol)  
+            OpenBabel::OBOp.find_type("Gen3D").do(@@obmol) 
+            sdf_3d = @@obconversion.write_string(@@obmol)  
+            if sdf_3d.match(/.nan/)
+              warning = "3D generation failed for compound #{compound.uri}, using 2D structure."
+              $logger.warn warning
+              @feature_dataset[RDF::OT.Warnings] ? @feature_dataset[RDF::OT.Warnings] << warning : @feature_dataset[RDF::OT.Warnings] = warning
+              @sdf << sdf_2d
+            else
+              @sdf << sdf_3d
+            end
           end
         end
       end
 
       def fix_value val
-        #unless val.numeric?
         if val.numeric?
           val = Float(val)
           val = nil if val.nan? or val.infinite?
+        else
+          val = nil if val == "NaN"
         end
         val
       end
@@ -207,31 +180,30 @@ module OpenTox
 
     before '/descriptor/:lib/:descriptor/?' do
       @descriptors = DESCRIPTORS[params[:lib].to_sym].select{|d| d[:title].split(" ").last == params[:descriptor]}
-      bad_request_error "Unknown descriptor #{@uri}. See #{uri('descriptors')} for a complete list of supported descriptors.", @uri if @descriptors.empty?
+      bad_request_error "Unknown descriptor #{@uri}. See #{uri('descriptor')} for a complete list of supported descriptors.", @uri if @descriptors.empty?
       @descriptor = @descriptors.first
     end
 
     # Get a list of descriptor calculation 
     # @return [text/uri-list] URIs
     get '/descriptor/?' do
-      DESCRIPTORS.collect{|lib,d| d.collect{|n| uri("/descriptors/#{lib}/#{n[:title].split(" ").last}")}}.flatten.sort.join("\n")
+      DESCRIPTORS.collect{|lib,d| d.collect{|n| uri("/descriptor/#{lib}/#{n[:title].split(" ").last}")}}.flatten.sort.join("\n")
     end
 
     get '/descriptor/:lib/?' do
-      DESCRIPTORS[params[:lib].to_sym].collect{|n| uri("/descriptors/#{params[:lib].to_sym}/#{n[:title].split(" ").last}")}.sort.join("\n")
+      DESCRIPTORS[params[:lib].to_sym].collect{|n| uri("/descriptor/#{params[:lib].to_sym}/#{n[:title].split(" ").last}")}.sort.join("\n")
     end
 
     # Get representation of descriptor calculation
     # @return [String] Representation
     get '/descriptor/:lib/:descriptor/?' do
       @algorithm[RDF::DC.title] = @descriptor[:title]
-      @algorithm[RDF::DC.description] = @descriptor[:description]
+      @algorithm[RDF::DC.description] = @descriptor[:description] if @descriptor[:description]
       format_output(@algorithm)
     end
 
     post '/descriptor/?' do
-      #task = OpenTox::Task.run "Calculating PC descriptors", @uri, @subjectid do |task|
-        puts "Task created"
+      task = OpenTox::Task.run "Calculating PC descriptors", @uri, @subjectid do |task|
         if params[:descriptors]
           descriptors = {}
           params[:descriptors].each do |descriptor|
@@ -247,18 +219,12 @@ module OpenTox
         elsif params[:dataset_uri]
           compounds = Dataset.new(params[:dataset_uri]).compounds
         end
-        puts "Calculating"
-        [:openbabel, :cdk, :joelib].each{ |lib| puts lib; send lib, compounds, descriptors[lib]; puts lib.to_s+" finished" }
-        #[:joelib].each{ |lib| send lib, compounds, descriptors[lib]; puts lib.to_s+" finished" }
-        puts "saving file"
-        File.open("/home/ch/tmp.nt","w+"){|f| f.puts @feature_dataset.to_ntriples}
-        puts "saving "+@feature_dataset.uri
+        [:openbabel, :cdk, :joelib].each{ |lib| send lib, compounds, descriptors[lib] }
         @feature_dataset.put
-        puts "finished"
         @feature_dataset.uri
-      #end
-      #response['Content-Type'] = 'text/uri-list'
-      #halt 202, task.uri
+      end
+      response['Content-Type'] = 'text/uri-list'
+      halt 202, task.uri
     end
 
     post '/descriptor/:lib/:descriptor/?' do
