@@ -37,7 +37,7 @@ RUBY_DIR="$HOME/.rbenv/versions/$RUBY_NUM_VER"
 
 # # # Install
 
-check_utils "rbenv find R"
+check_utils "rbenv find R javac"
 check_log $SELF
 
 if [ "$OT_BRANCH" = "development" ]; then
@@ -48,6 +48,12 @@ fi
 
 # log directory for this service
 [ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
+
+echo
+echo "Compile Algorithm java classes"
+cd $DIR/../java
+$JAVAC -classpath classes:* *.java 2>&1
+cd $DIR/.. 
 
 # Adjust ruby version here!
 RUBY_NUM_VER="1.9.3-p194"
