@@ -56,7 +56,7 @@ $JAVAC -classpath classes:* *.java 2>&1
 cd $DIR/.. 
 
 # Adjust ruby version here!
-RUBY_NUM_VER="1.9.3-p194"
+RUBY_NUM_VER="2.0.0-p0"
 
 # ruby
 install_ruby
