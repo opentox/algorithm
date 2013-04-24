@@ -1,7 +1,6 @@
 # descriptors.rb
 # Calculation of physico-chemical descriptors
 # Author: Andreas Maunz, Christoph Helma
-#require 'rjb'
 require 'openbabel'
 
 module OpenTox
@@ -91,9 +90,12 @@ module OpenTox
         sdf_3d compounds
         # rjb blocks within tasks
         # Avoid "Argument list too long" error by sending only short descriptor names
-        yaml = `echo "#{@sdf}" |java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{descriptors.collect{|d| d[:title].split("\s").last}.join(" ")}`
-        YAML.load(yaml).each_with_index do |calculation,i|
-          $logger.error "Descriptor calculation failed with #{$!.message} for compound #{compounds[i].uri}." if calculation.empty?
+        #yaml = `export CDKDescriptors= ;echo "#{@sdf}" |java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{descriptors.collect{|d| d[:title].split("\s").last}.join(" ")}`
+        #yaml = `export CDKDescriptors='#{descriptors.collect{|d| d[:title].split("\s").last}.join(" ")}';echo "#{@sdf}" |java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors `
+        puts `java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{@sdf_file.path} #{descriptors.collect{|d| d[:title].split("\s").last}.join(" ")}`
+        #puts yaml
+        YAML.load_file(@sdf_file.path+"cdk.yaml").each_with_index do |calculation,i|
+          $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
           calculation.each do |name,value|
             feature = DESCRIPTORS[:cdk].collect{|d| d[:features]}.flatten.select{|f| f[RDF::DC.title].split("\s").last == name.to_s}.first
             @feature_dataset.add_data_entry compounds[i], feature, fix_value(value)
@@ -104,9 +106,12 @@ module OpenTox
       def joelib compounds, descriptors
         sdf_3d compounds
         # rjb blocks within tasks
-        yaml = `echo "#{@sdf}" |java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors #{descriptors.collect{|d| d[:java_class]}.join(" ")}|grep "^[- ]"`
-        YAML.load(yaml).each_with_index do |calculation,i|
-          $logger.error "Descriptor calculation failed with #{$!.message} for compound #{compounds[i].uri}." if calculation.empty?
+        #yaml = `echo "#{@sdf}" |java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors #{descriptors.collect{|d| d[:java_class]}.join(" ")}|grep "^[- ]"`
+        #puts "java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors  #{@sdf_file.path} #{descriptors.collect{|d| d[:java_class]}.join(" ")}"
+        puts `java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors  #{@sdf_file.path} #{descriptors.collect{|d| d[:java_class]}.join(" ")}`
+        #YAML.load(yaml).each_with_index do |calculation,i|
+        YAML.load_file(@sdf_file.path+"joelib.yaml").each_with_index do |calculation,i|
+          $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
           calculation.each do |java_class,value|
             feature = DESCRIPTORS[:joelib].select{|d| d[:java_class] == java_class}.first[:feature]
             @feature_dataset.add_data_entry compounds[i], feature, fix_value(value)
@@ -115,6 +120,7 @@ module OpenTox
       end
 
       def sdf_3d compounds
+        #unless @sdf_file and File.exists? @sdf_file.path
         unless @sdf
           @sdf = ""
           @@obconversion.set_out_format 'sdf'
@@ -125,7 +131,7 @@ module OpenTox
             OpenBabel::OBOp.find_type("Gen3D").do(@@obmol) 
             sdf_3d = @@obconversion.write_string(@@obmol)  
             if sdf_3d.match(/.nan/)
-              warning = "3D generation failed for compound #{compound.uri}, using 2D structure."
+              warning = "3D generation failed for compound #{compound.uri}, trying to calculate descriptors from 2D structure."
               $logger.warn warning
               @feature_dataset[RDF::OT.Warnings] ? @feature_dataset[RDF::OT.Warnings] << warning : @feature_dataset[RDF::OT.Warnings] = warning
               @sdf << sdf_2d
@@ -133,6 +139,9 @@ module OpenTox
               @sdf << sdf_3d
             end
           end
+          @sdf_file = Tempfile.open("sdf")
+          @sdf_file.puts @sdf
+          @sdf_file.close
         end
       end
 
@@ -182,6 +191,12 @@ module OpenTox
       @descriptors = DESCRIPTORS[params[:lib].to_sym].select{|d| d[:title].split(" ").last == params[:descriptor]}
       bad_request_error "Unknown descriptor #{@uri}. See #{uri('descriptor')} for a complete list of supported descriptors.", @uri if @descriptors.empty?
       @descriptor = @descriptors.first
+    end
+
+    after do
+      #@sdf_file.unlink if @sdf_file and File.exists @sdf_file.path
+      #TODO cleanup yamls
+      @sdf_file = nil
     end
 
     # Get a list of descriptor calculation 

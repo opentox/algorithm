@@ -15,52 +15,51 @@ import joelib2.molecule.BasicConformerMolecule;
 class JoelibDescriptors {
   public static void main(String[] args) {
 
-    // set args to all descriptors
-    if (args.length == 0) {
+    String[] features = null;
+    // set features to all descriptors
+    if (args.length == 1) {
       FeatureHelper helper = FeatureHelper.instance();
-      args = (String[]) helper.getNativeFeatures().toArray(new String[0]);
+      features = (String[]) helper.getNativeFeatures().toArray(new String[0]);
+    } else {
+      features = new String[args.length-1];
+      System.arraycopy(args,1,features,0,args.length-1);
     }
 
     FeatureFactory factory = FeatureFactory.instance();
     MoleculeFileIO loader = null;
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
     String line = new String();
     String sdf = new String();
     try {
-      while ((line = br.readLine()) != null) { sdf += line + "\n"; }
-      br.close();
-      InputStream is = null;
-      is = new ByteArrayInputStream(sdf.getBytes("UTF-8"));
+      // parse 3d sdf from file and calculate descriptors
+      InputStream is = new FileInputStream(args[0]);
+      PrintWriter yaml = new PrintWriter(new FileWriter(args[0]+"joelib.yaml"));
       BasicIOType inType = BasicIOTypeHolder.instance().getIOType("SDF");
       loader = MoleculeFileHelper.getMolReader(is, inType);
-      //BasicIOType outType = BasicIOTypeHolder.instance().getIOType("SMILES");
-      //JOEMol mol = new JOEMol(inType, inType);
       BasicConformerMolecule mol = new BasicConformerMolecule(inType, inType);
       while (true) {
         try {
           Boolean success = loader.read(mol);
-          if (!success) { break; }
-          //System.err.println( mol );
-          for (int i =0; i < args.length; i++) {
-            Feature feature = factory.getFeature(args[i]);
+          if (!success) { break; } // last molecule
+          for (int i =0; i < features.length; i++) {
+            Feature feature = factory.getFeature(features[i]);
             FeatureResult result = feature.calculate(mol);
-            if (i == 0) { System.out.print("- "); }
-            else { System.out.print("  "); }
-            System.out.print( args[i]+": " );
-            System.out.println( result.toString() );
+            if (i == 0) { yaml.print("- "); }
+            else { yaml.print("  "); }
+            yaml.print( features[i]+": " );
+            yaml.println( result.toString() );
           }
 
         }
         catch (Exception e) { 
-      System.err.println(e.toString());
-      e.printStackTrace();
-      //next;
+          System.err.println(e.toString());
+          e.printStackTrace();
         }
       }
+      yaml.close();
     }
     catch (Exception e) {
+      System.err.println(e.toString());
       e.printStackTrace();
-      //System.err.println(e.toString());
     }
   }
 }
