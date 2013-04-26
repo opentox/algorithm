@@ -50,9 +50,8 @@ fi
 [ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
 
 echo
-echo "Compile Algorithm java classes"
 cd $DIR/../java
-$JAVAC -classpath classes:* *.java 2>&1
+cmd="$JAVAC -classpath classes:* *.java 2>&1" && run_cmd "$cmd" "Compile Algorithm java classes"
 cd $DIR/.. 
 
 # Adjust ruby version here!
