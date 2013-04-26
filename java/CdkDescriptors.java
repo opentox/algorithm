@@ -34,36 +34,36 @@ class CdkDescriptors {
         try {
           IMolecule molecule = (IMolecule)reader.next();
           engine.process(molecule);
+          Iterator it = molecule.getProperties().values().iterator();
+          Boolean first = true;
+          while (it.hasNext()) {
+            try {
+              DescriptorValue value = (DescriptorValue)it.next();
+              int size = value.getValue().length();
+              if (size == 1) {
+                if (first) { yaml.print("- "); }
+                else { yaml.print("  "); }
+                yaml.println(":"+value.getNames()[0].toString() + ": " + value.getValue());
+                first = false;
+              }
+              else {
+                String[] values = value.getValue().toString().split(",");
+                for (int i = 0; i < size; i++) {
+                  if (first) { yaml.print("- "); }
+                  else { yaml.print("  "); }
+                  yaml.println(":"+value.getNames()[i].toString() + ": "  + values[i]);
+                  first = false;
+                }
+              }
+            }
+            catch (ClassCastException e) { } // sdf properties are stored as molecules properties (strings), ignore them
+            catch (Exception e) { e.printStackTrace(); } // output nothing to yaml
+          }
         }
         catch (Exception e) {
           yaml.println("- {}");
           e.printStackTrace();
           continue;
-        }
-        Iterator it = molecule.getProperties().values().iterator(); 
-        Boolean first = true;
-        while (it.hasNext()) {
-          try {
-            DescriptorValue value = (DescriptorValue)it.next();
-            int size = value.getValue().length();
-            if (size == 1) {
-              if (first) { yaml.print("- "); }
-              else { yaml.print("  "); }
-              yaml.println(":"+value.getNames()[0].toString() + ": " + value.getValue());
-              first = false;
-            }
-            else {
-              String[] values = value.getValue().toString().split(",");
-              for (int i = 0; i < size; i++) {
-                if (first) { yaml.print("- "); }
-                else { yaml.print("  "); }
-                yaml.println(":"+value.getNames()[i].toString() + ": "  + values[i]);
-                first = false;
-              }
-            }
-          }
-          catch (ClassCastException e) { } // sdf properties are stored as molecules properties (strings), ignore them
-          catch (Exception e) { e.printStackTrace(); } // output nothing to yaml
         }
       }
       yaml.close();
