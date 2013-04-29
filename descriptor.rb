@@ -156,7 +156,7 @@ module OpenTox
 
     before '/descriptor/?*' do
       if request.get?
-        @algorithm = OpenTox::Algorithm.new @uri
+        @algorithm = OpenTox::Algorithm.new @uri, @subjectid
         @algorithm.parameters = [ 
           { RDF::DC.description => "Dataset URI", 
             RDF::OT.paramScope => "optional", 
@@ -233,7 +233,7 @@ module OpenTox
         if params[:compound_uri]
           compounds = [ Compound.new(params[:compound_uri], @subjectid) ]
         elsif params[:dataset_uri]
-          compounds = Dataset.new(params[:dataset_uri]).compounds
+          compounds = Dataset.new(params[:dataset_uri], @subjectid).compounds
         end
         [:openbabel, :cdk, :joelib].each{ |lib| send lib, compounds, descriptors[lib] }
         @feature_dataset.put

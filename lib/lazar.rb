@@ -24,7 +24,7 @@ module OpenTox
         instance_variable_set("@#{k}", [])
       }
 
-      @prediction_feature = OpenTox::Feature.new(@prediction_feature_uri,@subjectid)
+      @prediction_feature = OpenTox::Feature.new @prediction_feature_uri, @subjectid
       @predicted_variable = OpenTox::Feature.new @predicted_variable_uri, @subjectid
       @predicted_confidence = OpenTox::Feature.new @predicted_confidence_uri, @subjectid
       #@prediction_dataset.metadata = {
@@ -113,7 +113,7 @@ module OpenTox
       
         if @compound_uri # add neighbors only for compound predictions
           @neighbors.each do |neighbor|
-            n =  OpenTox::Compound.new(neighbor[:compound])
+            n =  OpenTox::Compound.new(neighbor[:compound], @subjectid)
             @prediction_dataset.add_data_entry n, @prediction_feature, @prediction_feature.value_map[neighbor[:activity]]
             @prediction_dataset.add_data_entry n, @similarity_feature, neighbor[:similarity]
             #@prediction_dataset << [ n, @prediction_feature.value_map[neighbor[:activity]], nil, nil, neighbor[:similarity] ]
@@ -199,7 +199,7 @@ module OpenTox
         self[RDF::OT.featureDataset] = params["feature_dataset_uri"]
       else
         # run feature generation algorithm
-        feature_dataset_uri = OpenTox::Algorithm.new(params[:feature_generation_uri]).run(params)
+        feature_dataset_uri = OpenTox::Algorithm.new(params[:feature_generation_uri], @subjectid).run(params)
         @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => feature_dataset_uri}
         self[RDF::OT.featureDataset] = feature_dataset_uri
       end

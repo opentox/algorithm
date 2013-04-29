@@ -33,7 +33,7 @@ module OpenTox
     # Get representation of BBRC algorithm
     # @return [String] Representation
     get "/fminer/bbrc/?" do
-      algorithm = OpenTox::Algorithm.new(to('/fminer/bbrc',:full))
+      algorithm = OpenTox::Algorithm.new(to('/fminer/bbrc',:full), @subjectid)
       algorithm.metadata = {
         RDF::DC.title => 'Backbone Refinement Class Representatives',
         RDF::DC.creator => "andreas@maunz.de",
@@ -55,7 +55,7 @@ module OpenTox
     # Get representation of BBRC-sample algorithm
     # @return [String] Representation
     get "/fminer/bbrc/sample/?" do
-      algorithm = OpenTox::Algorithm.new(to('/fminer/bbrc/sample',:full))
+      algorithm = OpenTox::Algorithm.new(to('/fminer/bbrc/sample',:full), @subjectid)
       algorithm.metadata = {
         RDF::DC.title => 'Backbone Refinement Class Representatives, obtained from samples of a dataset',
         RDF::DC.creator => "andreas@maunz.de",
@@ -77,7 +77,7 @@ module OpenTox
     # Get representation of fminer LAST-PM algorithm
     # @return [String] Representation
     get "/fminer/last/?" do
-      algorithm = OpenTox::Algorithm.new(to('/fminer/last',:full))
+      algorithm = OpenTox::Algorithm.new(to('/fminer/last',:full), @subjectid)
       algorithm.metadata = {
         RDF::DC.title => 'Latent Structure Pattern Mining descriptors',
         RDF::DC.creator => "andreas@maunz.de",
@@ -98,7 +98,7 @@ module OpenTox
     # Get representation of matching algorithm
     # @return [String] Representation
     get "/fminer/:method/match?" do
-      algorithm = OpenTox::Algorithm.new(to("/fminer/#{params[:method]}/match",:full))
+      algorithm = OpenTox::Algorithm.new(to("/fminer/#{params[:method]}/match",:full), @subjectid)
       algorithm.metadata = {
         RDF::DC.title => 'fminer feature matching',
         RDF::DC.creator => "mguetlein@gmail.com, andreas@maunz.de",
@@ -127,7 +127,7 @@ module OpenTox
     # @return [text/uri-list] Task URI
     post '/fminer/bbrc/?' do
     
-      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/bbrc',:full))
+      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/bbrc',:full), @subjectid)
       @@fminer.check_params(params,5)
     
       task = OpenTox::Task.run("Mining BBRC features", uri('/fminer/bbrc'), @subjectid) do |task|
@@ -283,7 +283,7 @@ module OpenTox
     # @return [text/uri-list] Task URI
     post '/fminer/last/?' do
     
-      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/last',:full))
+      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/last',:full), @subjectid)
       @@fminer.check_params(params,80)
     
       task = OpenTox::Task.run("Mining LAST features", uri('/fminer/last'), @subjectid) do |task|
