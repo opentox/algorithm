@@ -194,7 +194,7 @@ module OpenTox
       @parameters << {RDF::DC.title => "min_train_performance", RDF::OT.paramValue => 0.1} unless parameter_value("min_train_performance")
 
       if params[:feature_dataset_uri]
-        bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri]
+        bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri], @subjectid
         @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => params[:feature_dataset_uri]}
         self[RDF::OT.featureDataset] = params["feature_dataset_uri"]
       else
