@@ -23,7 +23,7 @@ module OpenTox
   
     # for service check
     head '/?' do
-      $logger.debug "Algorithm service is running."
+      #$logger.debug "Algorithm service is running."
     end
     
     get '/?' do
