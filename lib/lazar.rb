@@ -36,7 +36,7 @@ module OpenTox
         RDF::OT.predictedVariables => [@predicted_variable_uri,@predicted_confidence_uri]
       }
 
-      @training_dataset = OpenTox::Dataset.new(@training_dataset_uri,@subjectid)
+      @training_dataset = OpenTox::Dataset.new(@training_dataset_uri, @subjectid)
 
       @feature_dataset = OpenTox::Dataset.new(@feature_dataset_uri, @subjectid)
       bad_request_error "No features found in feature dataset #{@feature_dataset.uri}." if @feature_dataset.features.empty?
@@ -48,9 +48,9 @@ module OpenTox
       prediction_feature_pos = @training_dataset.features.collect{|f| f.uri}.index @prediction_feature.uri
 
       if @dataset_uri
-        compounds = OpenTox::Dataset.new(@dataset_uri,@subjectid).compounds
+        compounds = OpenTox::Dataset.new(@dataset_uri, @subjectid).compounds
       else
-        compounds = [ OpenTox::Compound.new(@compound_uri,@subjectid) ]
+        compounds = [ OpenTox::Compound.new(@compound_uri, @subjectid) ]
       end
       compounds.each do |compound|
           
