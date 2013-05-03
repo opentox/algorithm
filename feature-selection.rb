@@ -10,15 +10,15 @@ module OpenTox
 
   # Get list of feature selection algorithms
   # @return [text/uri-list] URIs
-  get '/fs/?' do
-    list = [ to('/fs/rfe', :full) ].join("\n") + "\n"
-    format_output(list)
+  get '/feature-selection/?' do
+    list = [ to('/feature-selection/recursive-feature-elimination', :full) ].join("\n") + "\n"
+    render(list)
   end
   
   # Get representation of Recursive Feature Elimination algorithm
   # @return [String] Representation
-  get "/fs/rfe/?" do
-    algorithm = OpenTox::Algorithm.new(to('/fs/rfe',:full))
+  get "/feature-selection/recursive-feature-elimination/?" do
+    algorithm = OpenTox::Algorithm.new(to('/feature-selection/recursive-feature-elimination',:full))
     algorithm.metadata = {
       RDF::DC.title => 'Recursive Feature Elimination',
       RDF::DC.creator => "andreas@maunz.de",
@@ -30,7 +30,7 @@ module OpenTox
         { RDF::DC.description => "Feature Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "feature_dataset_uri" },
         { RDF::DC.description => "Delete Instances with missing values", RDF::OT.paramScope => "optional", RDF::DC.title => "del_missing" }
     ]
-    format_output(algorithm)
+    render(algorithm)
   end
   
   end

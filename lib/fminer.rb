@@ -61,7 +61,7 @@ module OpenTox
           bad_request_error "Minimum frequency must be integer [n], or a percentage [n]pc, or a per-mil [n]pm , with n greater 0" if bad_request
         end
         if @minfreq.nil?
-          @minfreq=OpenTox::Algorithm.min_frequency(@training_dataset,@prediction_feature,per_mil)
+          @minfreq=min_frequency(@training_dataset,@prediction_feature,per_mil)
           $logger.debug "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
         end
       end
@@ -176,6 +176,25 @@ module OpenTox
         metadata[RDF::OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
         [ metadata, parameters ]
       end
+
+      # Minimum Frequency
+      # @param [Integer] per-mil value
+      # return [Integer] min-frequency
+      def min_frequency(training_dataset,prediction_feature,per_mil)
+        nr_labeled_cmpds=0
+        f_idx=training_dataset.features.collect{|f| f.uri}.index prediction_feature.uri
+        training_dataset.compounds.each_with_index { |cmpd, c_idx|
+          if ( training_dataset.data_entries[c_idx] )
+               unless training_dataset.data_entries[c_idx][f_idx].nil?
+                 nr_labeled_cmpds += 1 
+               end
+          end
+        }
+        minfreq = per_mil * nr_labeled_cmpds.to_f / 1000.0 # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
+        minfreq = 2 unless minfreq > 2
+        Integer (minfreq)
+      end
+
     end
 
   end

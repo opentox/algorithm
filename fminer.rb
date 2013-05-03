@@ -21,13 +21,21 @@ module OpenTox
     # Get list of fminer algorithms
     # @return [text/uri-list] URIs
     get '/fminer/?' do
+=begin
       list = [ uri('/fminer/bbrc'), 
-               uri('/fminer/bbrc/sample'), 
+               #uri('/fminer/bbrc/sample'), 
                uri('/fminer/last'), 
-               uri('/fminer/bbrc/match'), 
-               uri('/fminer/last/match') 
+               #uri('/fminer/bbrc/match'), 
+               #uri('/fminer/last/match') 
              ].join("\n") + "\n"
-      format_output(list)
+      render(list)
+=end
+      render [ uri('/fminer/bbrc'), 
+               #uri('/fminer/bbrc/sample'), 
+               uri('/fminer/last'), 
+               #uri('/fminer/bbrc/match'), 
+               #uri('/fminer/last/match') 
+             ]
     end
     
     # Get representation of BBRC algorithm
@@ -49,7 +57,7 @@ module OpenTox
           { RDF::DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", RDF::OT.paramScope => "optional", RDF::DC.title => "nr_hits" },
           { RDF::DC.description => "Set to 'true' to obtain target variables as a feature", RDF::OT.paramScope => "optional", RDF::DC.title => "get_target" }
       ]
-      format_output(algorithm)
+      render(algorithm)
     end
     
     # Get representation of BBRC-sample algorithm
@@ -71,7 +79,7 @@ module OpenTox
           { RDF::DC.description => "BBRC classes, pass 'false' to switch off mining for BBRC representatives.", RDF::OT.paramScope => "optional", RDF::DC.title => "backbone" },
           { RDF::DC.description => "Chisq estimation method, pass 'mean' to use simple mean estimate for chisq test.", RDF::OT.paramScope => "optional", RDF::DC.title => "method" }
       ]
-      format_output(algorithm)
+      render(algorithm)
     end
     
     # Get representation of fminer LAST-PM algorithm
@@ -91,7 +99,7 @@ module OpenTox
           { RDF::DC.description => "Whether subgraphs should be weighted with their occurrence counts in the instances (frequency)", RDF::OT.paramScope => "optional", RDF::DC.title => "nr_hits" },
           { RDF::DC.description => "Set to 'true' to obtain target variables as a feature", RDF::OT.paramScope => "optional", RDF::DC.title => "get_target" }
       ]
-      format_output(algorithm)
+      render(algorithm)
     end
     
     
@@ -109,7 +117,7 @@ module OpenTox
           { RDF::DC.description => "Feature Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "feature_dataset_uri" },
           { RDF::DC.description => "Feature URI for dependent variable", RDF::OT.paramScope => "optional", RDF::DC.title => "prediction_feature" }
       ]
-      format_output(algorithm)
+      render(algorithm)
     end
     
     

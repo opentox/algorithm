@@ -214,7 +214,7 @@ module OpenTox
     get '/descriptor/:lib/:descriptor/?' do
       @algorithm[RDF::DC.title] = @descriptor[:title]
       @algorithm[RDF::DC.description] = @descriptor[:description] if @descriptor[:description]
-      format_output(@algorithm)
+      render(@algorithm)
     end
 
     post '/descriptor/?' do
@@ -222,7 +222,6 @@ module OpenTox
         if params[:descriptor_uris]
           descriptors = {}
           params[:descriptor_uris].each do |descriptor_uri|
-            #lib, title = descriptor.split('/')
             lib = descriptor_uri.split('/')[-2]
             descriptors[lib.to_sym] ||= []
             descriptors[lib.to_sym] += DESCRIPTORS[lib.to_sym].select{|d| d[:uri] == descriptor_uri}
@@ -235,7 +234,7 @@ module OpenTox
         elsif params[:dataset_uri]
           compounds = Dataset.new(params[:dataset_uri]).compounds
         end
-        [:openbabel, :cdk, :joelib].each{ |lib| send lib, compounds, descriptors[lib] }
+        [:openbabel, :cdk, :joelib].each{ |lib| send lib, compounds, descriptors[lib] if descriptors[lib] }
         @feature_dataset.put
         @feature_dataset.uri
       end

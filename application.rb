@@ -12,10 +12,7 @@ require_relative 'last-utils/lu.rb'
 $logger.debug "Algorithm booting: #{$algorithm.collect{ |k,v| "#{k}: '#{v}'"} }"
 Dir['./lib/algorithm/*.rb'].each { |f| require f; also_reload f } # Libs
 Dir['./lib/*.rb'].each { |f| require f; also_reload f } # Libs
-Dir['./webapp/*.rb'].each { |f| require f; also_reload f } # Webapps
-require_relative "descriptor.rb"
-also_reload "descriptor.rb"
-#Dir['./webapp/pc-descriptors.rb'].each { |f| require f; also_reload f } # Webapps
+Dir['./*.rb'].each { |f| require_relative f; also_reload f } # Webapps
 
 # Entry point
 module OpenTox
@@ -23,13 +20,13 @@ module OpenTox
     get '/?' do
       list = [ to('/lazar', :full), 
                to('/fminer/bbrc', :full), 
-               to('/fminer/bbrc/sample', :full), 
+               #to('/fminer/bbrc/sample', :full), 
                to('/fminer/last', :full), 
-               to('/fminer/bbrc/match', :full), 
-               to('/fminer/last/match', :full), 
-               to('/fs/rfe', :full), 
+               #to('/fminer/bbrc/match', :full), 
+               #to('/fminer/last/match', :full), 
+               to('/feature-selection/recursive-feature-elimination', :full), 
                to('/descriptor') ].join("\n") + "\n"
-      format_output (list)
+      render list
     end
   end
 end

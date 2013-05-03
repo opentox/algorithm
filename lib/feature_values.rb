@@ -29,13 +29,15 @@ module OpenTox
       # @param [Hash] keys: compound, feature_dataset, pc_type, lib, values: OpenTox::Compound, String, String
       # @return [Hash] Hash with feature name as key and value as value
       def self.lookup(params, subjectid)
+        puts "lookup started"
         ds = params[:feature_dataset]
-        ds.build_feature_positions
+        #ds.build_feature_positions
         cmpd_inchi = params[:compound].inchi
         cmpd_idxs = ds.compounds.each_with_index.collect{ |cmpd,idx|
           idx if cmpd.inchi == cmpd_inchi
         }.compact
         if cmpd_idxs.size > 0 # We have entries
+          puts "entries"
           cmpd_numeric_f = ds.features.collect { |f|
             f if f[RDF.type].include? RDF::OT.NumericFeature
           }.compact
@@ -58,12 +60,14 @@ module OpenTox
             cmpd_fingerprints[f.title] = values.to_scale.mode # AM: mode for the others
           }
         else # We need lookup
+          puts "no entries"
           params[:subjectid] = subjectid
           [:compound, :feature_dataset].each { |p| params.delete(p) }; [:pc_type, :lib].each { |p| params.delete(p) if params[p] == "" }
           single_cmpd_ds = OpenTox::Dataset.new(nil,subjectid)
+          # TODO: ntriples !!!
           single_cmpd_ds.parse_rdfxml(RestClientWrapper.post(File.join($compound[:uri],cmpd_inchi,"pc"), params, {:accept => "application/rdf+xml"}))
           single_cmpd_ds.get(true)
-          single_cmpd_ds.build_feature_positions
+          #single_cmpd_ds.build_feature_positions
           cmpd_fingerprints = single_cmpd_ds.features.inject({}) { |h,f|
             h[f.title] = single_cmpd_ds.data_entries[0][single_cmpd_ds.feature_positions[f.uri]]
             h
