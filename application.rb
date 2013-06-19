@@ -17,6 +17,12 @@ Dir['./*.rb'].each { |f| require_relative f; also_reload f } # Webapps
 # Entry point
 module OpenTox
   class Application < Service
+  
+    # for service check
+    head '/?' do
+      #$logger.debug "Algorithm service is running."
+    end
+    
     get '/?' do
       list = [ to('/lazar', :full), 
                to('/fminer/bbrc', :full), 

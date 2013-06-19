@@ -12,7 +12,6 @@ module OpenTox
     attr_accessor :prediction_dataset
 
     def initialize(params)
-      puts "prediction started"
       @prediction_dataset = OpenTox::Dataset.new(nil, @subjectid) 
       # set instance variables and prediction dataset parameters from parameters
       params.each {|k,v|
@@ -25,7 +24,7 @@ module OpenTox
         instance_variable_set("@#{k}", [])
       }
 
-      @prediction_feature = OpenTox::Feature.new(@prediction_feature_uri,@subjectid)
+      @prediction_feature = OpenTox::Feature.new @prediction_feature_uri, @subjectid
       @predicted_variable = OpenTox::Feature.new @predicted_variable_uri, @subjectid
       @predicted_confidence = OpenTox::Feature.new @predicted_confidence_uri, @subjectid
       @prediction_dataset.metadata = {
@@ -35,8 +34,6 @@ module OpenTox
         RDF::OT.dependentVariables => @prediction_feature_uri,
         RDF::OT.predictedVariables => [@predicted_variable_uri,@predicted_confidence_uri]
       }
-
-      puts "metadata set"
 
       @training_dataset = OpenTox::Dataset.new(@training_dataset_uri,@subjectid)
 
@@ -50,18 +47,16 @@ module OpenTox
       prediction_feature_pos = @training_dataset.features.collect{|f| f.uri}.index @prediction_feature.uri
 
       if @dataset_uri
-        compounds = OpenTox::Dataset.new(@dataset_uri,@subjectid).compounds
+        compounds = OpenTox::Dataset.new(@dataset_uri, @subjectid).compounds
       else
-        compounds = [ OpenTox::Compound.new(@compound_uri,@subjectid) ]
+        compounds = [ OpenTox::Compound.new(@compound_uri, @subjectid) ]
       end
 
-      puts "compounds started"
       compounds.each do |compound|
           
 
         #database_activity = @training_dataset.database_activity(params)
         database_activities = @training_dataset.values(compound,@prediction_feature)
-        puts "checking dataset activity"
         if database_activities and !database_activities.empty?
           database_activities.each do |database_activity|
             @prediction_dataset.add_data_entry compound, @prediction_feature, database_activity
@@ -75,15 +70,10 @@ module OpenTox
             :compound => compound, 
             :feature_dataset => @feature_dataset,
           }
-          puts "fingerprints"
-          puts @feature_calculation_algorithm
-          puts compound_params
           #compound_fingerprints = OpenTox::Algorithm::FeatureValues.send( @feature_calculation_algorithm, compound_params, @subjectid )
           # TODO: fix for pc descriptors
           #compound_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compound, @feature_dataset.features.collect{ |f| f[RDF::DC.title] } )
           compound_fingerprints = eval("#{@feature_calculation_algorithm}(compound, @feature_dataset.features.collect{ |f| f[RDF::DC.title] } )")
-          puts "Fingerprints"
-          puts compound_fingerprints.inspect
           @training_dataset.compounds.each_with_index { |cmpd, idx|
             act = @training_dataset.data_entries[idx][prediction_feature_pos]
             @acts << (@prediction_feature.feature_type=="classification" ? @prediction_feature.value_map.invert[act] : nil)
@@ -99,12 +89,10 @@ module OpenTox
           } # query structure
 =end
           @q_prop = compound_fingerprints.first.collect{|v| v.to_f}
-          puts @q_prop.inspect
 
           mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(self)
           mtf.transform
           
-          puts "Prediction"
           prediction = OpenTox::Algorithm::Neighbors.send(@prediction_algorithm, 
               { :props => mtf.props,
                 :acts => mtf.acts,
@@ -127,7 +115,7 @@ module OpenTox
       
         if @compound_uri # add neighbors only for compound predictions
           @neighbors.each do |neighbor|
-            n =  OpenTox::Compound.new(neighbor[:compound])
+            n =  OpenTox::Compound.new(neighbor[:compound], @subjectid)
             @prediction_dataset.add_data_entry n, @prediction_feature, @prediction_feature.value_map[neighbor[:activity]]
             @prediction_dataset.add_data_entry n, @similarity_feature, neighbor[:similarity]
             #@prediction_dataset << [ n, @prediction_feature.value_map[neighbor[:activity]], nil, nil, neighbor[:similarity] ]
@@ -218,6 +206,18 @@ module OpenTox
         put
         @uri
 
+<<<<<<< HEAD
+=======
+      if params[:feature_dataset_uri]
+        bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri], @subjectid
+        @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => params[:feature_dataset_uri]}
+        self[RDF::OT.featureDataset] = params["feature_dataset_uri"]
+      else
+        # run feature generation algorithm
+        feature_dataset_uri = OpenTox::Algorithm.new(params[:feature_generation_uri], @subjectid).run(params)
+        @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => feature_dataset_uri}
+        self[RDF::OT.featureDataset] = feature_dataset_uri
+>>>>>>> ad386110267ecc3e0c5301769b4880a7e555a44e
       end
     end
 

@@ -184,6 +184,50 @@ module OpenTox
           @sdf_file.close
         end
       end
+<<<<<<< HEAD
+=======
+
+      def fix_value val
+        if val.numeric?
+          val = Float(val)
+          val = nil if val.nan? or val.infinite?
+        else
+          val = nil if val == "NaN"
+        end
+        val
+      end
+    end
+
+    before '/descriptor/?*' do
+      if request.get?
+        @algorithm = OpenTox::Algorithm.new @uri, @subjectid
+        @algorithm.parameters = [ 
+          { RDF::DC.description => "Dataset URI", 
+            RDF::OT.paramScope => "optional", 
+            RDF::DC.title => "dataset_uri" } ,
+          { RDF::DC.description => "Compound URI", 
+            RDF::OT.paramScope => "optional", 
+            RDF::DC.title => "compound_uri" } 
+        ]
+        @algorithm.metadata = {
+          RDF.type => [RDF::OTA.DescriptorCalculation],
+        }
+      elsif request.post?
+        @feature_dataset = Dataset.new nil, @subjectid
+        @feature_dataset.metadata = {
+          RDF::DC.title => "Physico-chemical descriptors",
+          RDF::DC.creator => @uri,
+          RDF::OT.hasSource => @uri,
+        }
+        if params[:compound_uri]
+          @feature_dataset.parameters = [ { RDF::DC.title => "compound_uri", RDF::OT.paramValue => params[:compound_uri] }]
+        elsif params[:dataset_uri]
+          @feature_dataset.parameters = [ { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] }]
+        else
+          bad_request_error "Please provide a dataset_uri or compound_uri parameter", @uri
+        end
+      end
+>>>>>>> ad386110267ecc3e0c5301769b4880a7e555a44e
     end
 
     before '/descriptor/:lib/:descriptor/?' do
@@ -221,7 +265,7 @@ module OpenTox
         if params[:compound_uri]
           compounds = [ Compound.new(params[:compound_uri], @subjectid) ]
         elsif params[:dataset_uri]
-          compounds = Dataset.new(params[:dataset_uri]).compounds
+          compounds = Dataset.new(params[:dataset_uri], @subjectid).compounds
         end
         [:openbabel, :cdk, :joelib].each{ |lib| send lib, compounds, descriptors[lib] if descriptors[lib] }
         @feature_dataset.put
