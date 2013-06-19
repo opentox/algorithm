@@ -7,6 +7,77 @@ module OpenTox
 
   class Application < Service
 
+    before '/descriptor/:lib/:descriptor/?' do
+      #if request.get?
+        lib = @uri.split("/")[-2].capitalize
+        klass = OpenTox::Descriptor.const_get params[:lib].capitalize
+        @algorithm = klass.new @uri, @subjectid unless params[:lib] == "smarts"
+=begin
+      elsif request.post?
+        @feature_dataset = Dataset.new nil, @subjectid
+        @feature_dataset.metadata = {
+          RDF::DC.title => "Physico-chemical descriptors",
+          RDF::DC.creator => @uri,
+          RDF::OT.hasSource => @uri,
+        }
+        if params[:compound_uri]
+          @feature_dataset.parameters = [ { RDF::DC.title => "compound_uri", RDF::OT.paramValue => params[:compound_uri] }]
+        elsif params[:dataset_uri]
+          @feature_dataset.parameters = [ { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] }]
+        else
+          bad_request_error "Please provide a dataset_uri or compound_uri parameter", @uri
+        end
+      end
+=end
+    end
+
+    # Get a list of descriptor calculation 
+    # @return [text/uri-list] URIs
+    get '/descriptor/?' do
+      #uris = ["Openbabel","Cdk","Joelib"].collect do |lib|
+      uris = ["Openbabel"].collect do |lib|
+        klass = OpenTox::Descriptor.const_get lib
+        klass.all 
+      end.flatten
+      render uris
+    end
+
+    get '/descriptor/:lib/?' do
+      klass = OpenTox::Descriptor.const_get params[:lib].capitalize
+      render klass.all
+    end
+
+    # Get representation of descriptor calculation
+    # @return [String] Representation
+    get '/descriptor/:lib/:descriptor/?' do
+      render @algorithm
+    end
+
+    post '/descriptor/smarts/:method/?' do
+      method = params[:method].to_sym
+      bad_request_error "Please provide a compound_uri or dataset_uri parameter and a smarts parameter. The count parameter is optional and defaults to false." unless (params[:compound_uri] or params[:dataset_uri]) and params[:smarts]
+      params[:count] ?  params[:count] = params[:count].to_boolean : params[:count] = false
+      if params[:compound_uri]
+        compounds = OpenTox::Compound.new params[:compound_uri]
+        response['Content-Type'] = "application/json"
+        OpenTox::Descriptor::Smarts.send(method, compounds, params[:smarts], params[:count]).to_json
+      elsif params[:dataset_uri]
+        compounds = OpenTox::Dataset.new params[:dataset_uri]
+        # TODO: create and return dataset
+      end
+    end
+
+    # use /descriptor with dataset_uri and descriptor_uri parameters for efficient calculation of multiple compounds/descriptors
+    post '/descriptor/:lib/:descriptor/?' do
+      bad_request_error "Please provide a compound_uri parameter", @uri unless params[:compound_uri]
+      params[:descriptor_uris] = [@uri]
+      @algorithm.calculate params
+      #compounds = [ Compound.new(params[:compound_uri], @subjectid) ]
+      #send params[:lib].to_sym, compounds, @descriptors
+      #@feature_dataset.put
+      #@feature_dataset.uri
+    end
+=begin
     ENV["JAVA_HOME"] ||= "/usr/lib/jvm/java-7-openjdk" 
     JAVA_DIR = File.join(File.dirname(__FILE__),"java")
     CDK_JAR = Dir[File.join(JAVA_DIR,"cdk-*jar")].last
@@ -23,26 +94,6 @@ module OpenTox
       @@obconversion = OpenBabel::OBConversion.new
       @@obconversion.set_in_format 'inchi'
 
-      # OpenBabel
-      OpenBabel::OBDescriptor.list_as_string("descriptors").split("\n").each do |d|
-        title,description = d.split(/\s+/,2)
-        unless title =~ /cansmi|formula|InChI|smarts|title/ or title == "s"
-          uri = File.join $algorithm[:uri], "descriptor/openbabel" ,title
-          title = "OpenBabel "+title
-          feature = OpenTox::Feature.find_or_create({
-              RDF::DC.title => title,
-              RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature],
-              RDF::DC.description => description,
-            }, @subjectid)
-          descriptors[:openbabel] << {
-            :title => title,
-            :uri => uri,
-            :description => description,
-            :calculator => OpenBabel::OBDescriptor.find_type(title.split(" ").last),
-            :feature => feature
-          }
-        end
-      end
 
       # CDK
       cdk_descriptors = YAML.load(`java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptorInfo`)
@@ -82,15 +133,6 @@ module OpenTox
     end
 
     helpers do
-
-      def openbabel compounds, descriptors
-        compounds.each do |compound|
-          @@obconversion.read_string @@obmol, compound.inchi
-          descriptors.each do |descriptor|
-            @feature_dataset.add_data_entry compound, descriptor[:feature], fix_value(descriptor[:calculator].predict(@@obmol))
-          end
-        end
-      end
 
       def cdk compounds, descriptors
         sdf_3d compounds
@@ -142,47 +184,6 @@ module OpenTox
           @sdf_file.close
         end
       end
-
-      def fix_value val
-        if val.numeric?
-          val = Float(val)
-          val = nil if val.nan? or val.infinite?
-        else
-          val = nil if val == "NaN"
-        end
-        val
-      end
-    end
-
-    before '/descriptor/?*' do
-      if request.get?
-        @algorithm = OpenTox::Algorithm.new @uri
-        @algorithm.parameters = [ 
-          { RDF::DC.description => "Dataset URI", 
-            RDF::OT.paramScope => "optional", 
-            RDF::DC.title => "dataset_uri" } ,
-          { RDF::DC.description => "Compound URI", 
-            RDF::OT.paramScope => "optional", 
-            RDF::DC.title => "compound_uri" } 
-        ]
-        @algorithm.metadata = {
-          RDF.type => [RDF::OTA.DescriptorCalculation],
-        }
-      elsif request.post?
-        @feature_dataset = Dataset.new nil, @subjectid
-        @feature_dataset.metadata = {
-          RDF::DC.title => "Physico-chemical descriptors",
-          RDF::DC.creator => @uri,
-          RDF::OT.hasSource => @uri,
-        }
-        if params[:compound_uri]
-          @feature_dataset.parameters = [ { RDF::DC.title => "compound_uri", RDF::OT.paramValue => params[:compound_uri] }]
-        elsif params[:dataset_uri]
-          @feature_dataset.parameters = [ { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] }]
-        else
-          bad_request_error "Please provide a dataset_uri or compound_uri parameter", @uri
-        end
-      end
     end
 
     before '/descriptor/:lib/:descriptor/?' do
@@ -199,22 +200,10 @@ module OpenTox
       @sdf_file = nil
     end
 
-    # Get a list of descriptor calculation 
-    # @return [text/uri-list] URIs
-    get '/descriptor/?' do
-      DESCRIPTORS.collect{|lib,d| d.collect{|n| uri("/descriptor/#{lib}/#{n[:title].split(" ").last}")}}.flatten.sort.join("\n")
-    end
-
-    get '/descriptor/:lib/?' do
-      DESCRIPTORS[params[:lib].to_sym].collect{|n| uri("/descriptor/#{params[:lib].to_sym}/#{n[:title].split(" ").last}")}.sort.join("\n")
-    end
-
     # Get representation of descriptor calculation
     # @return [String] Representation
     get '/descriptor/:lib/:descriptor/?' do
-      @algorithm[RDF::DC.title] = @descriptor[:title]
-      @algorithm[RDF::DC.description] = @descriptor[:description] if @descriptor[:description]
-      render(@algorithm)
+      render @algorithm
     end
 
     post '/descriptor/?' do
@@ -241,15 +230,7 @@ module OpenTox
       response['Content-Type'] = 'text/uri-list'
       halt 202, task.uri
     end
-
-    # use /descriptor with dataset_uri and descriptor_uri parameters for efficient calculation of multiple compounds/descriptors
-    post '/descriptor/:lib/:descriptor/?' do
-      bad_request_error "Please provide a compound_uri parameter", @uri unless params[:compound_uri]
-      compounds = [ Compound.new(params[:compound_uri], @subjectid) ]
-      send params[:lib].to_sym, compounds, @descriptors
-      @feature_dataset.put
-      @feature_dataset.uri
-    end
+=end
 
   end
 

@@ -10,8 +10,8 @@ require_relative 'last-utils/lu.rb'
 
 # Library Code
 $logger.debug "Algorithm booting: #{$algorithm.collect{ |k,v| "#{k}: '#{v}'"} }"
-Dir['./lib/algorithm/*.rb'].each { |f| require f; also_reload f } # Libs
 Dir['./lib/*.rb'].each { |f| require f; also_reload f } # Libs
+#Dir['./lib/descriptor.rb'].each { |f| require f; also_reload f } # Libs
 Dir['./*.rb'].each { |f| require_relative f; also_reload f } # Webapps
 
 # Entry point

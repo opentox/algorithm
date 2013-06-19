@@ -80,7 +80,8 @@ module OpenTox
           puts compound_params
           #compound_fingerprints = OpenTox::Algorithm::FeatureValues.send( @feature_calculation_algorithm, compound_params, @subjectid )
           # TODO: fix for pc descriptors
-          compound_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compound, @feature_dataset.features.collect{ |f| f[RDF::DC.title] } )
+          #compound_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compound, @feature_dataset.features.collect{ |f| f[RDF::DC.title] } )
+          compound_fingerprints = eval("#{@feature_calculation_algorithm}(compound, @feature_dataset.features.collect{ |f| f[RDF::DC.title] } )")
           puts "Fingerprints"
           puts compound_fingerprints.inspect
           @training_dataset.compounds.each_with_index { |cmpd, idx|
@@ -188,9 +189,9 @@ module OpenTox
         case params["feature_generation_uri"]
         when /fminer/
           if (params[:nr_hits] == "true")
-            @parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => "match_hits"}
+            @parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => "OpenTox::Descriptor::Smarts.count"}
           else
-            @parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => "match"}
+            @parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => "OpenTox::Descriptor::Smarts.fingerprint"}
           end
           @parameters << {RDF::DC.title => "similarity_algorithm", RDF::OT.paramValue => "tanimoto"}
           @parameters << {RDF::DC.title => "min_sim", RDF::OT.paramValue => 0.3} unless parameter_value("min_sim")
