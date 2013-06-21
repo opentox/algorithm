@@ -203,22 +203,20 @@ module OpenTox
           @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => feature_dataset_uri}
           self[RDF::OT.featureDataset] = feature_dataset_uri
         end
+        if params[:feature_dataset_uri]
+          bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri], @subjectid
+          @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => params[:feature_dataset_uri]}
+          self[RDF::OT.featureDataset] = params["feature_dataset_uri"]
+        else
+          # run feature generation algorithm
+          feature_dataset_uri = OpenTox::Algorithm.new(params[:feature_generation_uri], @subjectid).run(params)
+          @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => feature_dataset_uri}
+          self[RDF::OT.featureDataset] = feature_dataset_uri
+        end
         put
         @uri
-
-<<<<<<< HEAD
-=======
-      if params[:feature_dataset_uri]
-        bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri], @subjectid
-        @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => params[:feature_dataset_uri]}
-        self[RDF::OT.featureDataset] = params["feature_dataset_uri"]
-      else
-        # run feature generation algorithm
-        feature_dataset_uri = OpenTox::Algorithm.new(params[:feature_generation_uri], @subjectid).run(params)
-        @parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => feature_dataset_uri}
-        self[RDF::OT.featureDataset] = feature_dataset_uri
->>>>>>> ad386110267ecc3e0c5301769b4880a7e555a44e
       end
+
     end
 
   end
