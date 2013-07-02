@@ -6,7 +6,7 @@
 =end
 
 module OpenTox
-  class Algorithm
+  module Algorithm
 
     class Similarity
 

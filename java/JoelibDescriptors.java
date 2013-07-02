@@ -41,7 +41,8 @@ class JoelibDescriptors {
           Boolean success = loader.read(mol);
           if (!success) { break; } // last molecule
           for (int i =0; i < features.length; i++) {
-            Feature feature = factory.getFeature(features[i]);
+            String name = "joelib2.feature.types." + features[i];
+            Feature feature = factory.getFeature(name);
             FeatureResult result = feature.calculate(mol);
             if (i == 0) { yaml.print("- "); }
             else { yaml.print("  "); }

@@ -6,14 +6,17 @@
 =end
 
 module OpenTox
-  class Algorithm
+  module Algorithm
 
     # Fminer algorithms (https://github.com/amaunz/fminer2)
-    class Fminer < Algorithm
+    class Fminer #< Algorithm
+      
       attr_accessor :prediction_feature, :training_dataset, :minfreq, :compounds, :db_class_sizes, :all_activities, :smi
 
       def initialize(uri, subjectid=nil)
-        super(uri, subjectid)
+        @uri = uri
+        @subjectid = subjectid
+        #super(uri, subjectid)
       end
 
 

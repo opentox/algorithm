@@ -4,7 +4,7 @@ module OpenTox
     # Get representation of lazar algorithm
     # @return [String] Representation
     get '/lazar/?' do
-      algorithm = OpenTox::Algorithm.new(to('/lazar',:full))
+      algorithm = OpenTox::Algorithm::Generic.new(to('/lazar',:full))
       algorithm.metadata = {
         RDF::DC.title => 'lazar',
         RDF::DC.creator => 'helma@in-silico.ch, andreas@maunz.de',
@@ -17,7 +17,6 @@ module OpenTox
         { RDF::DC.description => "Feature dataset URI", RDF::OT.paramScope => "optional", RDF::DC.title => "feature_dataset_uri" },
         { RDF::DC.description => "Further parameters for the feature generation service", RDF::OT.paramScope => "optional" }
       ]
-      #format_output(algorithm)
       render algorithm
     end
 
@@ -33,11 +32,7 @@ module OpenTox
       #resource_not_found_error "Dataset '#{params[:dataset_uri]}' not found." unless URI.accessible? params[:dataset_uri], @subjectid # wrong URI class
       bad_request_error "Please provide a feature_generation_uri parameter." unless params[:feature_generation_uri]
       task = OpenTox::Task.run("Create lazar model", uri('/lazar'), @subjectid) do |task|
-        #lazar = OpenTox::Model::Lazar.new(nil, @subjectid)
-        lazar = OpenTox::Model::Lazar.new(File.join($model[:uri],SecureRandom.uuid), @subjectid)
-        lazar.create(params)
-        #lazar.put
-        #lazar.uri
+        OpenTox::Model::Lazar.create(params)
       end
       response['Content-Type'] = 'text/uri-list'
       halt 202,task.uri
@@ -60,19 +55,12 @@ module OpenTox
     post '/lazar/predict/?' do 
       # pass parameters instead of model_uri, because model service is blocked by incoming call
 
-      puts "LAZAR"
-      puts params.inspect
       task = OpenTox::Task.run("Apply lazar model",uri('/lazar/predict'), @subjectid) do |task|
-
-        lazar = OpenTox::LazarPrediction.new params
-        puts lazar.inspect
-        lazar.prediction_dataset.uri
-
+        OpenTox::Model::Lazar.new(params[:model_uri]).predict(params).uri
       end
       response['Content-Type'] = 'text/uri-list'
       halt 202,task.uri
     end
-
 
   end
 end

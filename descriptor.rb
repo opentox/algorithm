@@ -7,12 +7,36 @@ module OpenTox
 
   class Application < Service
 
+    before '/descriptor/:method' do
+      if params[:compound_uri]
+        @compounds = [params[:compound_uri]].flatten.collect{|u| OpenTox::Compound.new u}
+      elsif params[:dataset_uri]
+        @compounds = OpenTox::Dataset.new(params[:dataset_uri], @subjectid).compounds
+      else
+        bad_request_error "Please provide a dataset_uri or compound_uri parameter", @uri
+      end
+=begin
+      new_params = {}
+      delete = []
+      params.each do |k,v|
+        if k.match(/_uri$/)
+          klass = k.sub(/_uri$/,'')
+          v = [v] if v.is_a? String
+          new_params[klass] = v.collect{|u| OpenTox.const_get(klass.capitalize).new(u)}
+          delete << k
+        end
+      end
+      delete.each{|k| params.delete k}
+      params.merge! new_params
+=end
+    end
+=begin
     before '/descriptor/:lib/:descriptor/?' do
       #if request.get?
-        lib = @uri.split("/")[-2].capitalize
-        klass = OpenTox::Descriptor.const_get params[:lib].capitalize
-        @algorithm = klass.new @uri, @subjectid unless params[:lib] == "smarts"
-=begin
+        #lib = @uri.split("/")[-2].capitalize
+        @klass = OpenTox::Descriptor.const_get params[:lib].capitalize
+        #@algorithm = klass.new @uri, @subjectid unless params[:lib] == "smarts"
+        @method = params[:descriptor].to_sym
       elsif request.post?
         @feature_dataset = Dataset.new nil, @subjectid
         @feature_dataset.metadata = {
@@ -28,9 +52,88 @@ module OpenTox
           bad_request_error "Please provide a dataset_uri or compound_uri parameter", @uri
         end
       end
+    end
 =end
+    get '/descriptor/?' do
+      #OpenTox::Algorithm::Descriptor.list.collect{|d| uri d}.join "\n"
+      OpenTox::Algorithm::Descriptor.list.join "\n"
+      #OpenTox::Algorithm::Descriptor.list.inspect
     end
 
+    post '/descriptor/:method' do
+      puts params.inspect
+      bad_request_error "Please provide 'descriptors' parameters.", @uri unless params["descriptors"]
+      if params[:compound_uri] 
+        result = OpenTox::Algorithm::Descriptor.send(params[:method].to_sym, @compounds, params["descriptors"])
+        Hash[result.map {|compound, v| [compound.uri, v] }].to_json
+      elsif params[:dataset_uri] 
+        puts "starting task"
+        task = OpenTox::Task.run("Calculating #{params[:method]} descriptors for dataset #{params[:dataset_uri]}.", @uri, @subjectid) do |task|
+          puts "start calculation"
+          result = OpenTox::Algorithm::Descriptor.send(params[:method].to_sym, @compounds, params["descriptors"])
+          puts "create dataset"
+          puts result.inspect
+          dataset = OpenTox::Dataset.new nil, @subjectid
+          @compounds.each do |compound|
+            @features ||= result[compound].keys.collect{|name| 
+              # TODO set other metadata
+              OpenTox::Feature.find_or_create({RDF::DC.title => name}, @subjectid)
+            }
+            @features.each do |feature|
+              value = result[compound][feature.title]
+              puts compound, feature, value if value 
+              dataset.add_data_entry compound, feature, value if value 
+            end
+          end
+          puts "put dataset"
+          dataset.put
+          puts "dataset stored"
+          dataset.uri
+        end
+        puts "Task"
+        puts task.uri
+        response['Content-Type'] = 'text/uri-list'
+        halt 202,task.uri
+      end
+    end
+
+=begin
+    post '/descriptor/smarts_match/?' do
+      bad_request_error "Please provide a compound_uri or dataset_uri parameter and a smarts parameter. The count parameter is optional and defaults to false." unless (params[:compound_uri] or params[:dataset_uri]) and params[:smarts]
+      params[:count] ?  params[:count] = params[:count].to_boolean : params[:count] = false
+      if params[:compound_uri]
+        params[:compound_uri] = [ params[:compound_uri] ] unless params[:compound_uri].is_a? Array
+        response['Content-Type'] = "application/json"
+        OpenTox::Algorithm::Descriptor.smarts_match(params[:compound_uri].collect{|c| OpenTox::Compound.new c}, params[:smarts], params[:count]).to_json
+      elsif params[:dataset_uri]
+        task = OpenTox::Task.run("Calculating Smarts #{method} for dataset #{params[:dataset_uri]}.", @uri, @subjectid) do |task|
+          compounds = OpenTox::Dataset.new params[:dataset_uri]
+          matches = OpenTox::Descriptor::Smarts.fingerprint(compounds, params[:smarts], params[:count])
+        end
+        response['Content-Type'] = 'text/uri-list'
+        halt 202,task.uri
+      end
+    end
+
+    post '/descriptor/smarts_count/?' do
+      bad_request_error "Please provide a compound_uri or dataset_uri parameter and a smarts parameter. The count parameter is optional and defaults to false." unless (params[:compound_uri] or params[:dataset_uri]) and params[:smarts]
+      params[:count] ?  params[:count] = params[:count].to_boolean : params[:count] = false
+      if params[:compound_uri]
+        params[:compound_uri] = [ params[:compound_uri] ] unless params[:compound_uri].is_a? Array
+        response['Content-Type'] = "application/json"
+        OpenTox::Algorithm::Descriptor.smarts_count(params[:compound_uri].collect{|c| OpenTox::Compound.new c}, params[:smarts]).to_json
+      elsif params[:dataset_uri]
+        task = OpenTox::Task.run("Calculating Smarts #{method} for dataset #{params[:dataset_uri]}.", @uri, @subjectid) do |task|
+          compounds = OpenTox::Dataset.new params[:dataset_uri]
+          matches = OpenTox::Descriptor::Smarts.fingerprint(compounds, params[:smarts], params[:count])
+        end
+        response['Content-Type'] = 'text/uri-list'
+        halt 202,task.uri
+      end
+    end
+=end
+
+=begin
     # Get a list of descriptor calculation 
     # @return [text/uri-list] URIs
     get '/descriptor/?' do
@@ -43,8 +146,12 @@ module OpenTox
     end
 
     get '/descriptor/:lib/?' do
-      klass = OpenTox::Descriptor.const_get params[:lib].capitalize
-      render klass.all
+      begin
+        klass = OpenTox::Descriptor.const_get params[:lib].capitalize
+        render klass.all
+      rescue
+        bad_request_error "Descriptor library '#{params[:lib]}' not found.", @uri
+      end
     end
 
     # Get representation of descriptor calculation
@@ -53,30 +160,38 @@ module OpenTox
       render @algorithm
     end
 
-    post '/descriptor/smarts/:method/?' do
-      method = params[:method].to_sym
-      bad_request_error "Please provide a compound_uri or dataset_uri parameter and a smarts parameter. The count parameter is optional and defaults to false." unless (params[:compound_uri] or params[:dataset_uri]) and params[:smarts]
-      params[:count] ?  params[:count] = params[:count].to_boolean : params[:count] = false
+    post '/descriptor/?' do
+      descriptors = OpenTox::Descriptor::Set.new params
       if params[:compound_uri]
-        compounds = OpenTox::Compound.new params[:compound_uri]
-        response['Content-Type'] = "application/json"
-        OpenTox::Descriptor::Smarts.send(method, compounds, params[:smarts], params[:count]).to_json
+        compound = OpenTox::Compound.new params[:compound_uri]
+        descriptors.calculate compound
       elsif params[:dataset_uri]
-        compounds = OpenTox::Dataset.new params[:dataset_uri]
-        # TODO: create and return dataset
+        task = OpenTox::Task.run("Calculating Smarts #{method} for dataset #{params[:dataset_uri]}.", @uri, @subjectid) do |task|
+          dataset = OpenTox::Dataset.new params[:dataset_uri]
+          descriptors.calculate dataset
+        end
+        response['Content-Type'] = 'text/uri-list'
+        halt 202,task.uri
+      else
+
       end
     end
+    #post '/descriptor/physchem/?' do
+    #post '/descriptor/lookup/?' do
 
     # use /descriptor with dataset_uri and descriptor_uri parameters for efficient calculation of multiple compounds/descriptors
     post '/descriptor/:lib/:descriptor/?' do
       bad_request_error "Please provide a compound_uri parameter", @uri unless params[:compound_uri]
       params[:descriptor_uris] = [@uri]
-      @algorithm.calculate params
+      result = @algorithm.calculate(params)
+      puts result.inspect
+      result.to_json
       #compounds = [ Compound.new(params[:compound_uri], @subjectid) ]
       #send params[:lib].to_sym, compounds, @descriptors
       #@feature_dataset.put
       #@feature_dataset.uri
     end
+=end
 =begin
     ENV["JAVA_HOME"] ||= "/usr/lib/jvm/java-7-openjdk" 
     JAVA_DIR = File.join(File.dirname(__FILE__),"java")

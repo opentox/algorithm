@@ -4,14 +4,15 @@
 * Author: Andreas Maunz <andreas@maunz.de>
 * Date: 10/2012
 =end
+require 'rinruby'
 
 module OpenTox
-  class Algorithm
+  module Algorithm
     
     class Neighbors
 
       # Get confidence.
-      # @param[Hash] Required keys: :sims, :acts
+      # @param[Hash] Required keys: :sims, :activities
       # @return[Float] Confidence
       def self.get_confidence(params)
         conf = params[:sims].inject{|sum,x| sum + x }
@@ -21,7 +22,7 @@ module OpenTox
       end
 
       # Classification with majority vote from neighbors weighted by similarity
-      # @param [Hash] params Keys `:acts, :sims, :value_map` are required
+      # @param [Hash] params Keys `:activities, :sims, :value_map` are required
       # @return [Numeric] A prediction value.
       def self.weighted_majority_vote(params)
 
@@ -32,11 +33,11 @@ module OpenTox
 
         $logger.debug "Weighted Majority Vote Classification."
 
-        params[:acts].each_index do |idx|
+        params[:activities].each_index do |idx|
           neighbor_weight = params[:sims][1][idx]
-          neighbor_contribution += params[:acts][idx] * neighbor_weight
+          neighbor_contribution += params[:activities][idx] * neighbor_weight
           if params[:value_map].size == 2 # AM: provide compat to binary classification: 1=>false 2=>true
-            case params[:acts][idx]
+            case params[:activities][idx]
             when 1
               confidence_sum -= neighbor_weight
             when 2
@@ -48,16 +49,16 @@ module OpenTox
         end
         if params[:value_map].size == 2 
           if confidence_sum >= 0.0
-            prediction = 2 unless params[:acts].size==0
+            prediction = 2 unless params[:activities].size==0
           elsif confidence_sum < 0.0
-            prediction = 1 unless params[:acts].size==0
+            prediction = 1 unless params[:activities].size==0
           end
         else 
-          prediction = (neighbor_contribution/confidence_sum).round  unless params[:acts].size==0  # AM: new multinomial prediction
+          prediction = (neighbor_contribution/confidence_sum).round  unless params[:activities].size==0  # AM: new multinomial prediction
         end 
 
         #$logger.debug "Prediction: '" + prediction.to_s + "'." unless prediction.nil?
-        confidence = (confidence_sum/params[:acts].size).abs if params[:acts].size > 0
+        confidence = (confidence_sum/params[:activities].size).abs if params[:activities].size > 0
         #$logger.debug "Confidence: '" + confidence.to_s + "'." unless prediction.nil?
         return {:prediction => prediction, :confidence => confidence.abs}
       end
@@ -65,7 +66,7 @@ module OpenTox
 
 
       # Local support vector regression from neighbors 
-      # @param [Hash] params Keys `:props, :acts, :sims, :min_train_performance` are required
+      # @param [Hash] params Keys `:props, :activities, :sims, :min_train_performance` are required
       # @return [Numeric] A prediction value.
       def self.local_svm_regression(params)
         puts "SVM"
@@ -74,17 +75,17 @@ module OpenTox
         prediction = nil
 
         $logger.debug "Local SVM."
-        if params[:acts].size>0
+        if params[:activities].size>0
           if params[:props]
             n_prop = params[:props][0].collect.to_a
             q_prop = params[:props][1].collect.to_a
             props = [ n_prop, q_prop ]
           end
-          acts = params[:acts].collect.to_a
-          prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
+          activities = params[:activities].collect.to_a
+          prediction = local_svm_prop( props, activities, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
           prediction = nil if (!prediction.nil? && prediction.infinite?)
           #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
-          confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
+          confidence = get_confidence({:sims => params[:sims][1], :activities => params[:activities]})
           confidence = 0.0 if prediction.nil?
         end
         {:prediction => prediction, :confidence => confidence}
@@ -93,7 +94,7 @@ module OpenTox
 
 
       # Local support vector regression from neighbors 
-      # @param [Hash] params Keys `:props, :acts, :sims, :min_train_performance` are required
+      # @param [Hash] params Keys `:props, :activities, :sims, :min_train_performance` are required
       # @return [Numeric] A prediction value.
       def self.local_svm_classification(params)
 
@@ -101,19 +102,19 @@ module OpenTox
         prediction = nil
 
         $logger.debug "Local SVM."
-        if params[:acts].size>0
+        if params[:activities].size>0
           if params[:props]
             n_prop = params[:props][0].collect.to_a
             q_prop = params[:props][1].collect.to_a
             props = [ n_prop, q_prop ]
           end
-          acts = params[:acts].collect.to_a
-          acts = acts.collect{|v| "Val" + v.to_s} # Convert to string for R to recognize classification
-          prediction = local_svm_prop( props, acts, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
+          activities = params[:activities].collect.to_a
+          activities = activities.collect{|v| "Val" + v.to_s} # Convert to string for R to recognize classification
+          prediction = local_svm_prop( props, activities, params[:min_train_performance]) # params[:props].nil? signals non-prop setting
           prediction = prediction.sub(/Val/,"") if prediction # Convert back
           confidence = 0.0 if prediction.nil?
           #$logger.debug "Prediction: '" + prediction.to_s + "' ('#{prediction.class}')."
-          confidence = get_confidence({:sims => params[:sims][1], :acts => params[:acts]})
+          confidence = get_confidence({:sims => params[:sims][1], :activities => params[:activities]})
         end
         {:prediction => prediction, :confidence => confidence}
 
@@ -125,18 +126,18 @@ module OpenTox
       # Uses propositionalized setting.
       # Not to be called directly (use local_svm_regression or local_svm_classification).
       # @param [Array] props, propositionalization of neighbors and query structure e.g. [ Array_for_q, two-nested-Arrays_for_n ]
-      # @param [Array] acts, activities for neighbors.
+      # @param [Array] activities, activities for neighbors.
       # @param [Float] min_train_performance, parameter to control censoring
       # @return [Numeric] A prediction value.
-      def self.local_svm_prop(props, acts, min_train_performance)
+      def self.local_svm_prop(props, activities, min_train_performance)
 
         $logger.debug "Local SVM (Propositionalization / Kernlab Kernel)."
         n_prop = props[0] # is a matrix, i.e. two nested Arrays.
         q_prop = props[1] # is an Array.
 
         prediction = nil
-        if acts.uniq.size == 1
-          prediction = acts[0]
+        if activities.uniq.size == 1
+          prediction = activities[0]
         else
           #$logger.debug gram_matrix.to_yaml
           @r = RinRuby.new(true,false) # global R instance leads to Socket errors after a large number of requests
@@ -151,7 +152,7 @@ module OpenTox
             @r.n_prop = n_prop.flatten
             @r.n_prop_x_size = n_prop.size
             @r.n_prop_y_size = n_prop[0].size
-            @r.y = acts
+            @r.y = activities
             @r.q_prop = q_prop
             #@r.eval "y = matrix(y)"
             @r.eval "prop_matrix = matrix(n_prop, n_prop_x_size, n_prop_y_size, byrow=T)"
@@ -196,22 +197,29 @@ module OpenTox
             EOR
 
 
-            # prediction
-            $logger.debug "Predicting ..."
-            @r.eval "predict(model,q_prop); p = predict(model,q_prop)" # kernlab bug: predict twice
-            @r.eval "if (class(y)!='numeric') p = as.character(p)"
-            prediction = @r.p
+            if train_success
+              # prediction
+              $logger.debug "Predicting ..."
+              @r.eval "predict(model,q_prop); p = predict(model,q_prop)" # kernlab bug: predict twice
+              #@r.eval "p = predict(model,q_prop)" # kernlab bug: predict twice
+              @r.eval "if (class(y)!='numeric') p = as.character(p)"
+              prediction = @r.p
 
-            # censoring
-            prediction = nil if ( @r.perf.nan? || @r.perf < min_train_performance.to_f )
-            prediction = nil if prediction =~ /NA/
-            prediction = nil unless train_success
-            $logger.debug "Performance: '#{sprintf("%.2f", @r.perf)}'"
-          #rescue Exception => e
-            #$logger.debug "#{e.class}: #{e.message}"
-            #$logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+              # censoring
+              prediction = nil if ( @r.perf.nan? || @r.perf < min_train_performance.to_f )
+              prediction = nil if prediction =~ /NA/
+              $logger.debug "Performance: '#{sprintf("%.2f", @r.perf)}'"
+            else
+              $logger.debug "Model creation failed."
+              prediction = nil 
+            end
+          rescue Exception => e
+            $logger.debug "#{e.class}: #{e.message}"
+            $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
           ensure
-            @r.quit # free R
+            #puts @r.inspect
+            #TODO: broken pipe
+            #@r.quit # free R
           end
         end
         prediction

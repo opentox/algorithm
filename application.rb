@@ -11,14 +11,6 @@ require_relative 'last-utils/lu.rb'
 # Library Code
 $logger.debug "Algorithm booting: #{$algorithm.collect{ |k,v| "#{k}: '#{v}'"} }"
 Dir['./lib/*.rb'].each { |f| require f; also_reload f } # Libs
-=begin
-Dir['./*.rb'].each do |f|
-  unless f == "unicorn.rb"
-    require_relative f
-    also_reload f  # Webapps
-  end
-end
-=end
 
 [
 "descriptor.rb",

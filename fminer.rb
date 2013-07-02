@@ -21,21 +21,7 @@ module OpenTox
     # Get list of fminer algorithms
     # @return [text/uri-list] URIs
     get '/fminer/?' do
-=begin
-      list = [ uri('/fminer/bbrc'), 
-               #uri('/fminer/bbrc/sample'), 
-               uri('/fminer/last'), 
-               #uri('/fminer/bbrc/match'), 
-               #uri('/fminer/last/match') 
-             ].join("\n") + "\n"
-      render(list)
-=end
-      render [ uri('/fminer/bbrc'), 
-               #uri('/fminer/bbrc/sample'), 
-               uri('/fminer/last'), 
-               #uri('/fminer/bbrc/match'), 
-               #uri('/fminer/last/match') 
-             ]
+      render [ uri('/fminer/bbrc'), uri('/fminer/last') ]
     end
     
     # Get representation of BBRC algorithm

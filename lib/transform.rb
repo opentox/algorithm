@@ -6,7 +6,7 @@
 =end
 
 module OpenTox
-  class Algorithm
+  module Algorithm
 
     class Transform
     # Uses Statsample Library (http://ruby-statsample.rubyforge.org/) by C. Bustos
@@ -231,7 +231,7 @@ module OpenTox
       # Attaches transformations to an OpenTox::Model
       # Stores props, sims, performs similarity calculations
       class ModelTransformer
-        attr_accessor :model, :similarity_algorithm, :acts, :sims
+        attr_accessor :model, :similarity_algorithm, :activities, :sims
 
         # @params[OpenTox::Model] model Model to transform
         def initialize model
@@ -241,7 +241,7 @@ module OpenTox
 
         # Transforms the model
         def transform
-          get_matrices # creates @n_prop, @q_prop, @acts from ordered fps
+          get_matrices # creates @n_prop, @q_prop, @activities from ordered fingerprints
           @ids = (0..((@n_prop.length)-1)).to_a # surviving compounds; become neighbors
 
           if (@model.similarity_algorithm =~ /cosine/)
@@ -258,9 +258,9 @@ module OpenTox
             $logger.debug "M: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
 
             # adjust rest
-            fps_tmp = []; @ids.each { |idx| fps_tmp << @fps[idx] }; @fps = fps_tmp
-            cmpds_tmp = []; @ids.each { |idx| cmpds_tmp << @cmpds[idx] }; @cmpds = cmpds_tmp
-            acts_tmp = []; @ids.each { |idx| acts_tmp << @acts[idx] }; @acts = acts_tmp
+            #fingerprints_tmp = []; @ids.each { |idx| fingerprints_tmp << @fingerprints[idx] }; @fingerprints = fingerprints_tmp
+            compounds_tmp = []; @ids.each { |idx| compounds_tmp << @compounds[idx] }; @compounds = compounds_tmp
+            acts_tmp = []; @ids.each { |idx| acts_tmp << @activities[idx] }; @activities = acts_tmp
 
             # scale and svd
             nr_cases, nr_features = @n_prop.size, @n_prop[0].size
@@ -284,7 +284,7 @@ module OpenTox
           @sims = [] # calculated by neighbor routine
           neighbors
           n_prop_tmp = []; @ids.each { |idx| n_prop_tmp << @n_prop[idx] }; @n_prop = n_prop_tmp # select neighbors from matrix
-          acts_tmp = []; @ids.each { |idx| acts_tmp << @acts[idx] }; @acts = acts_tmp
+          acts_tmp = []; @ids.each { |idx| acts_tmp << @activities[idx] }; @activities = acts_tmp
 
 
           # Sims between neighbors, if necessary
@@ -312,7 +312,7 @@ module OpenTox
           end
 
           $logger.debug "F: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}" if (@n_prop && @n_prop[0] && @q_prop)
-          $logger.debug "Sims: #{@sims.size}, Acts: #{@acts.size}"
+          $logger.debug "Sims: #{@sims.size}, Acts: #{@activities.size}"
 
           @sims = [ gram_matrix, @sims ] 
 
@@ -334,13 +334,13 @@ module OpenTox
         # @param[Array] training_props Propositionalized data for this neighbor
         # @param[Integer] Index of neighbor
         def add_neighbor(training_props, idx)
-          unless @model.acts[idx].nil?
+          unless @model.training_activities[idx].nil?
             sim = similarity(training_props)
             if sim > @model.min_sim.to_f
                 @model.neighbors << {
-                  :compound => @cmpds[idx],
+                  :compound => @compounds[idx],
                   :similarity => sim,
-                  :activity => acts[idx]
+                  :activity => activities[idx]
                 }
                 @sims << sim
                 @ids << idx
@@ -400,11 +400,12 @@ module OpenTox
         # Converts fingerprints to matrix, order of rows by fingerprints. nil values allowed.
         # Same for compound fingerprints.
         def get_matrices
-          @cmpds = @model.cmpds
-          @fps = @model.fps
-          @acts = @model.acts
-          @n_prop = @model.n_prop
-          @q_prop = @model.q_prop
+          @compounds = @model.training_compounds
+          puts @compounds.inspect
+          #@fingerprints = @model.fingerprints
+          @activities = @model.training_activities
+          @n_prop = @model.training_fingerprints
+          @q_prop = @model.query_fingerprint
         end
 
         # Returns propositionalized data, if appropriate, or nil
