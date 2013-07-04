@@ -16,14 +16,8 @@ class JoelibDescriptors {
   public static void main(String[] args) {
 
     String[] features = null;
-    // set features to all descriptors
-    if (args.length == 1) {
-      FeatureHelper helper = FeatureHelper.instance();
-      features = (String[]) helper.getNativeFeatures().toArray(new String[0]);
-    } else {
-      features = new String[args.length-1];
-      System.arraycopy(args,1,features,0,args.length-1);
-    }
+    features = new String[args.length-1];
+    System.arraycopy(args,1,features,0,args.length-1);
 
     FeatureFactory factory = FeatureFactory.instance();
     MoleculeFileIO loader = null;
@@ -46,7 +40,7 @@ class JoelibDescriptors {
             FeatureResult result = feature.calculate(mol);
             if (i == 0) { yaml.print("- "); }
             else { yaml.print("  "); }
-            yaml.print( features[i]+": " );
+            yaml.print( "Joelib."+features[i]+": " );
             yaml.println( result.toString() );
           }
 

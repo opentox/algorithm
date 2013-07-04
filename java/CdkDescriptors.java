@@ -11,19 +11,15 @@ class CdkDescriptors {
 
     // parse command line arguments > 1 (descriptors)
     DescriptorEngine engine;
-    if (args.length > 1) {
-      List<String> classNames = new ArrayList<String>();
-      for (int i =1; i < args.length; i++) {
-        classNames.add("org.openscience.cdk.qsar.descriptors.molecular." + args[i] + "Descriptor");
-      }
-      engine = new DescriptorEngine(classNames);
-      List<IDescriptor> instances =  engine.instantiateDescriptors(classNames);
-      List<DescriptorSpecification> specs = engine.initializeSpecifications(instances);
-      engine.setDescriptorInstances(instances);
-      engine.setDescriptorSpecifications(specs);
-    } else {
-      engine = new DescriptorEngine(DescriptorEngine.MOLECULAR);
+    List<String> classNames = new ArrayList<String>();
+    for (int i =1; i < args.length; i++) {
+      classNames.add("org.openscience.cdk.qsar.descriptors.molecular." + args[i] + "Descriptor");
     }
+    engine = new DescriptorEngine(classNames);
+    List<IDescriptor> instances =  engine.instantiateDescriptors(classNames);
+    List<DescriptorSpecification> specs = engine.initializeSpecifications(instances);
+    engine.setDescriptorInstances(instances);
+    engine.setDescriptorSpecifications(specs);
 
     try {
       BufferedReader br = new BufferedReader(new FileReader(args[0]));
@@ -34,26 +30,22 @@ class CdkDescriptors {
         try {
           IMolecule molecule = (IMolecule)reader.next();
           engine.process(molecule);
-          Iterator it = molecule.getProperties().values().iterator();
+          Map<Object,Object> properties = molecule.getProperties();
           Boolean first = true;
-          while (it.hasNext()) {
+          for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             try {
-              DescriptorValue value = (DescriptorValue)it.next();
-              int size = value.getValue().length();
-              if (size == 1) {
-                if (first) { yaml.print("- "); }
-                else { yaml.print("  "); }
-                yaml.println(":"+value.getNames()[0].toString() + ": " + value.getValue());
-                first = false;
-              }
-              else {
+              if ((entry.getKey() instanceof DescriptorSpecification) && (entry.getValue() instanceof DescriptorValue)) {
+                DescriptorSpecification property = (DescriptorSpecification)entry.getKey();
+                DescriptorValue value = (DescriptorValue)entry.getValue();
                 String[] values = value.getValue().toString().split(",");
-                for (int i = 0; i < size; i++) {
-                  if (first) { yaml.print("- "); }
+                for (int i = 0; i < values.length; i++) {
+                  if (first) { yaml.print("- "); first = false; }
                   else { yaml.print("  "); }
-                  yaml.println(":"+value.getNames()[i].toString() + ": "  + values[i]);
-                  first = false;
+                  String cdk_class = property.getImplementationTitle();
+                  String name = cdk_class.substring(cdk_class.lastIndexOf(".")+1).replace("Descriptor","");
+                  yaml.println("Cdk." + name + "." + value.getNames()[i] + ": " + values[i]);
                 }
+                
               }
             }
             catch (ClassCastException e) { } // sdf properties are stored as molecules properties (strings), ignore them

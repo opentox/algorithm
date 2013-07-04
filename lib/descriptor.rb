@@ -12,32 +12,39 @@ module OpenTox
       LOG4J_JAR = File.join(JAVA_DIR,"log4j.jar")
       JMOL_JAR = File.join(JAVA_DIR,"Jmol.jar")
 
-=begin
-      def initialize uri, subjectid
-        super uri, subjectid
-        @parameters = [ 
-          { RDF::DC.description => "Dataset URI", 
-            RDF::OT.paramScope => "optional", 
-            RDF::DC.title => "dataset_uri" } ,
-          { RDF::DC.description => "Compound URI", 
-            RDF::OT.paramScope => "optional", 
-            RDF::DC.title => "compound_uri" } 
-        ]
-        tokens = uri.split %r{/}
-        @metadata = {
-          RDF::DC.title => "#{tokens[-2].capitalize} #{tokens[-1]}",
-          RDF.type => [RDF::OT.Algorithm, RDF::OTA.DescriptorCalculation],
-        }
-      end
-=end
+      obexclude = ["cansmi","cansmiNS","formula","InChI","InChIKey","s","smarts","title"]
+      OBDESCRIPTORS = Hash[OpenBabel::OBDescriptor.list_as_string("descriptors").split("\n").collect do |d|
+        name,description = d.split(/\s+/,2)
+        ["Openbabel."+name,description] unless obexclude.include? name
+      end.compact.sort{|a,b| a[0] <=> b[0]}]
 
-      def self.list
-        list = OpenBabel::OBDescriptor.list_as_string("descriptors").split("\n").collect{|line| "/openbabel/#{line.split(/\s+/).first}" }
-        list += YAML.load(`java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptorInfo`).collect{|d| "cdk/#{d[:java_class].split('.').last.sub(/Descriptor/,'')}" }
-        joelib = YAML.load(`java -classpath #{JOELIB_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptorInfo | sed '0,/---/d'`) # strip Joelib messages at stdout
-        # exclude Hashcode (not a physchem property) and GlobalTopologicalChargeIndex (Joelib bug)
-        list += joelib.collect{|d| "joelib/#{d[:java_class].split('.').last}" unless d[:java_class] == "joelib2.feature.types.MoleculeHashcode" or d[:java_class] == "joelib2.feature.types.GlobalTopologicalChargeIndex"}.compact  
-        list.collect{|item| File.join "descriptor",item}
+      CDKDESCRIPTORS = Hash[YAML.load(`java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptorInfo`).collect { |d| ["Cdk."+d[:java_class].split('.').last.sub(/Descriptor/,''), d[:description]] }.sort{|a,b| a[0] <=> b[0]}]
+
+      # exclude Hashcode (not a physchem property) and GlobalTopologicalChargeIndex (Joelib bug)
+      joelibexclude = ["MoleculeHashcode","GlobalTopologicalChargeIndex"]
+      # strip Joelib messages from stdout
+      JOELIBDESCRIPTORS = Hash[YAML.load(`java -classpath #{JOELIB_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptorInfo | sed '0,/---/d'`).collect do |d|
+        name = d[:java_class].sub(/^joelib2.feature.types./,'')
+        # impossible to obtain meaningful descriptions from JOELIb, see java/JoelibDescriptors.java
+        ["Joelib."+name, "no description available"] unless joelibexclude.include? name
+      end.compact.sort{|a,b| a[0] <=> b[0]}] 
+
+      DESCRIPTORS = OBDESCRIPTORS.merge(CDKDESCRIPTORS.merge(JOELIBDESCRIPTORS))
+      require_relative "unique_descriptors.rb"
+
+      def self.description descriptor
+        lib = descriptor.split('.').first
+        case lib
+        when "Openbabel"
+          OBDESCRIPTORS[descriptor]
+        when "Cdk"
+          name = descriptor.split('.')[0..-2].join('.')
+          CDKDESCRIPTORS[name]
+        when "Joelib"
+          JOELIBDESCRIPTORS[descriptor]
+        when "lookup"
+          "Read feature values from a dataset"
+        end
       end
 
       def self.smarts_match compounds, smarts, count=false
@@ -71,16 +78,17 @@ module OpenTox
       def self.physchem compounds, descriptors
         des = {}
         descriptors.each do |d|
-          lib, descriptor = d.split(".")
-          des[lib.to_sym] ||= []
-          des[lib.to_sym] << descriptor
+          lib, descriptor = d.split(".",2)
+          lib = lib.downcase.to_sym
+          des[lib] ||= []
+          des[lib] << descriptor
         end
         result = {}
         des.each do |lib,d|
           send(lib, compounds, d).each do |compound,values|
             result[compound] ||= {}
             result[compound].merge! values
-          end
+          end 
         end
         result
       end
@@ -95,7 +103,7 @@ module OpenTox
           obconversion.read_string obmol, compound.inchi
           fingerprint[compound] = {}
           obdescriptors.each_with_index do |descriptor,i|
-            fingerprint[compound][descriptors[i]] = fix_value(descriptor.predict(obmol))
+            fingerprint[compound]["Openbabel."+descriptors[i]] = fix_value(descriptor.predict(obmol))
           end
         end
         fingerprint
@@ -109,7 +117,7 @@ module OpenTox
         fingerprint = {}
         YAML.load_file(sdf+"cdk.yaml").each_with_index do |calculation,i|
           $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
-          descriptors.each_with_index do |descriptor,j|
+          descriptors.each do |descriptor|
             fingerprint[compounds[i]] = calculation
           end
         end
@@ -125,7 +133,7 @@ module OpenTox
         fingerprint = {}
         YAML.load_file(sdf+"joelib.yaml").each_with_index do |calculation,i|
           $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
-          descriptors.each_with_index do |descriptor,j|
+          descriptors.each do |descriptor|
             fingerprint[compounds[i]] = calculation
           end
         end
@@ -186,44 +194,3 @@ module OpenTox
     end
   end
 end
-=begin
-    class Set
-
-      def initialize params
-        bad_request_error "Please provide a compound_uri or dataset_uri parameter." unless params[:compound_uri] or params[:dataset_uri]
-        @dataset = OpenTox::Dataset.new params[:dataset_uri]
-        @compound = OpenTox::Compound.new params[:compound_uri]
-        @descriptors = []
-        
-      end
-
-      def calculate
-      end
-
-    end
-
-    class Openbabel
-      include Descriptor
-
-      def initialize uri, subjectid=nil
-        descriptor = OpenBabel::OBDescriptor.find_type(uri.split("/").last)
-        bad_request_error "Unknown descriptor #{uri}. See #{File.join $algorithm[:uri], "descriptor"} for a list of supported descriptors.", uri unless descriptor
-        super uri, subjectid
-        @metadata[RDF::DC.description] = descriptor.description.split("\n").first
-        @obmol = OpenBabel::OBMol.new
-        @obconversion = OpenBabel::OBConversion.new
-        @obconversion.set_in_format 'inchi'
-      end
-
-      def self.all
-        OpenBabel::OBDescriptor.list_as_string("descriptors").split("\n").collect do |d|
-          title = d.split(/\s+/).first
-          unless title =~ /cansmi|formula|InChI|smarts|title/ or title == "s"
-            File.join $algorithm[:uri], "descriptor/openbabel" ,title
-          end
-        end.compact.sort{|a,b| a.upcase <=> b.upcase}
-      end
-
-
-    end
-=end

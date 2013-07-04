@@ -401,8 +401,6 @@ module OpenTox
         # Same for compound fingerprints.
         def get_matrices
           @compounds = @model.training_compounds
-          puts @compounds.inspect
-          #@fingerprints = @model.fingerprints
           @activities = @model.training_activities
           @n_prop = @model.training_fingerprints
           @q_prop = @model.query_fingerprint

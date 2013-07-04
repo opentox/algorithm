@@ -33,15 +33,11 @@ module OpenTox
     end
     
     get '/?' do
-      list = [ to('/lazar', :full), 
+      render [ to('/lazar', :full), 
                to('/fminer/bbrc', :full), 
-               #to('/fminer/bbrc/sample', :full), 
                to('/fminer/last', :full), 
-               #to('/fminer/bbrc/match', :full), 
-               #to('/fminer/last/match', :full), 
-               to('/feature-selection/recursive-feature-elimination', :full), 
+               #to('/feature-selection/recursive-feature-elimination', :full), 
                to('/descriptor') ].join("\n") + "\n"
-      render list
     end
   end
 end

@@ -184,8 +184,6 @@ module OpenTox
         
           if @compound_uri # add neighbors only for compound predictions
             @neighbors.each do |neighbor|
-              puts "Neighbor"
-              puts neighbor.inspect
               n =  neighbor[:compound]
               @prediction_feature.feature_type == "classification" ? a = @prediction_feature.value_map[neighbor[:activity]] : a = neighbor[:activity]
               @prediction_dataset.add_data_entry n, @prediction_feature, a
@@ -195,7 +193,6 @@ module OpenTox
           end
 
         end # iteration over compounds
-        puts prediction_dataset.to_turtle
         @prediction_dataset.put
         @prediction_dataset
 
