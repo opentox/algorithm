@@ -18,7 +18,7 @@ module OpenTox
   # Get representation of Recursive Feature Elimination algorithm
   # @return [String] Representation
   get "/feature-selection/recursive-feature-elimination/?" do
-    algorithm = OpenTox::Algorithm.new(to('/feature-selection/recursive-feature-elimination',:full))
+    algorithm = OpenTox::Algorithm::Generic.new(to('/feature-selection/recursive-feature-elimination',:full))
     algorithm.metadata = {
       RDF::DC.title => 'Recursive Feature Elimination',
       RDF::DC.creator => "andreas@maunz.de",
