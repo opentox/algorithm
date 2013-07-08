@@ -13,7 +13,7 @@ if echo $DIR | grep "algorithm/bin" >/dev/null 2>&1 ; then cd ..; fi
 OT_CONFIG_DIR="$HOME/.opentox"
 ! [ -f "$OT_CONFIG_DIR/config/install/config.sh" ] && echo "config.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/config/install/config.sh
 ! [ -f "$OT_PREFIX/install/utils.sh" ] && echo "utils.sh not found." 1>&2 && exit 1 || . $OT_PREFIX/install/utils.sh
-! [ -f $OT_CONFIG_DIR/opentox-ui.sh ] && echo "opentox-ui.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/opentox-ui.sh 
+! [ -f $OT_CONFIG_DIR/opentox-ui.sh ] && echo "opentox-ui.sh not found." 1>&2 && exit 1 || . $OT_CONFIG_DIR/opentox-ui.sh
 
 if [ -z "$LOG" ]; then
   LOG="$OT_PREFIX/tmp/`basename $0`.log"
@@ -26,8 +26,8 @@ check_utils "git make sed"
 printf "\n%50s\n" "FMINER"
 DIR=`pwd`
 eval RUBY_INC="-I`dirname $RUBY_DIR/include/ruby*/*linux/ruby`\ -I`dirname $RUBY_DIR/include/ruby*/ruby`"
-OPBB_INC="-I$OB_DEST/include/openbabel-2.0"
-OPBB_LIB="-L$OB_DEST/lib"
+OPBB_INC="-I$RUBY_DIR/lib/ruby/gems/${RUBY_NUM_VER%-*}/gems/openbabel-*/include/openbabel-*"
+OPBB_LIB="-L$RUBY_DIR/lib/ruby/gems/${RUBY_NUM_VER%-*}/gems/openbabel-*/lib"
 cmd="$GIT submodule init" && run_cmd "$cmd" "Fminer Init"
 cmd="$GIT submodule update" && run_cmd "$cmd" "Fminer Update"
 cd "libfminer/libbbrc">>$LOG 2>&1
