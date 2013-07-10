@@ -9,7 +9,7 @@ module OpenTox
 
     before '/descriptor/:method/?' do
       if request.get?
-        @algorithm = OpenTox::Algorithm::Descriptor.new @uri
+        @algorithm = OpenTox::Algorithm::Descriptor.new @uri, @subjectid
         @algorithm.parameters = [ {
           RDF::DC.description => "Dataset URI", 
           RDF::OT.paramScope => "optional", 
@@ -92,9 +92,9 @@ module OpenTox
         Hash[result.map {|compound, v| [compound.uri, v] }].to_json
       elsif params[:dataset_uri] # return dataset
         task = OpenTox::Task.run("Calculating #{params[:method]} descriptors for dataset #{params[:dataset_uri]}.", @uri, @subjectid) do |task|
-          @compounds = OpenTox::Dataset.new(params[:dataset_uri], SUBJECTID).compounds
+          @compounds = OpenTox::Dataset.new(params[:dataset_uri],@subjectid).compounds
           result = OpenTox::Algorithm::Descriptor.send(params[:method].to_sym, @compounds, params[:descriptors])
-          dataset = OpenTox::Dataset.new nil, SUBJECTID
+          dataset = OpenTox::Dataset.new nil, @subjectid
           dataset.metadata = {
             RDF::DC.title => "Physico-chemical descriptors",
             RDF::DC.creator => @uri,
@@ -111,7 +111,7 @@ module OpenTox
                 RDF::DC.title => name,
                 RDF.type => [RDF::OT.Feature, feature_type],
                 RDF::DC.description => OpenTox::Algorithm::Descriptor.description(name)
-              }, SUBJECTID)
+              })
             }
             @features.each do |feature|
               value = result[compound][feature.title]
