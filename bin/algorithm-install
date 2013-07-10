@@ -54,6 +54,8 @@ cd $DIR/../java
 cmd="$JAVAC -classpath classes:* *.java 2>&1" && run_cmd "$cmd" "Compile Algorithm java classes"
 cd $DIR/.. 
 
+sed -i "1irequire 'openbabel'" application.rb
+
 # Adjust ruby version here!
 RUBY_NUM_VER="2.0.0-p0"
 
