@@ -80,7 +80,6 @@ module OpenTox
     end
 
     post '/descriptor/:method' do
-      puts params.inspect
       if params[:method] == "physchem"
         params[:descriptors] = OpenTox::Algorithm::Descriptor::UNIQUEDESCRIPTORS if !params[:descriptors] or params[:descriptors] == [""]
       else
