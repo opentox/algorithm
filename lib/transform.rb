@@ -242,6 +242,7 @@ module OpenTox
         # Transforms the model
         def transform
           get_matrices # creates @n_prop, @q_prop, @activities from ordered fingerprints
+          puts "MATRIX"
           @ids = (0..((@n_prop.length)-1)).to_a # surviving compounds; become neighbors
 
           if (@model.similarity_algorithm =~ /cosine/)
@@ -276,13 +277,16 @@ module OpenTox
             @q_prop = svd.transform(gsl_q_prop).row(0).to_a
             $logger.debug "S: #{@n_prop.size}x#{@n_prop[0].size}; R: #{@q_prop.size}"
           else
+            puts "CONVERT NILS"
             convert_nils # convert nil cells (for tanimoto); leave @n_props, @q_props, @ids untouched
           end
 
           # neighbor calculation
           @ids = [] # surviving compounds become neighbors
           @sims = [] # calculated by neighbor routine
+            puts "NEIGHBORS"
           neighbors
+            puts "NEIGHBORS FINISHED"
           n_prop_tmp = []; @ids.each { |idx| n_prop_tmp << @n_prop[idx] }; @n_prop = n_prop_tmp # select neighbors from matrix
           acts_tmp = []; @ids.each { |idx| acts_tmp << @activities[idx] }; @activities = acts_tmp
 

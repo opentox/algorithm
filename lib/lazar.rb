@@ -149,7 +149,7 @@ module OpenTox
             # AM: transform to cosine space
             @min_sim = (@min_sim.to_f*2.0-1.0).to_s if @similarity_algorithm =~ /cosine/
             @training_activities = @training_dataset.data_entries.collect{|entry|
-              act = entry[prediction_feature_pos]
+              act = entry[prediction_feature_pos] if entry
               @prediction_feature.feature_type=="classification" ? @prediction_feature.value_map.invert[act] : act
             }
 

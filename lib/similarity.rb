@@ -20,8 +20,8 @@ module OpenTox
         size = [ a.size, b.size ].min
         $logger.warn "fingerprints don't have equal size" if a.size != b.size
         (0...size).each { |idx|
-          common_p_sum += [ a[idx], b[idx] ].min
-          all_p_sum += [ a[idx], b[idx] ].max
+          common_p_sum += [ a[idx].to_f, b[idx].to_f ].min
+          all_p_sum += [ a[idx].to_f, b[idx].to_f ].max
         }
         (all_p_sum > 0.0) ? (common_p_sum/all_p_sum) : 0.0
       end
