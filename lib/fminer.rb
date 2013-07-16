@@ -20,12 +20,12 @@ module OpenTox
       
       def check_params(params,per_mil)
         bad_request_error "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-        @training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}", @subjectid
+        @training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}"
         unless params[:prediction_feature] # try to read prediction_feature from dataset
           resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
           params[:prediction_feature] = @training_dataset.features.first.uri
         end
-        @prediction_feature = OpenTox::Feature.find params[:prediction_feature], @subjectid
+        @prediction_feature = OpenTox::Feature.find params[:prediction_feature]
         resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset_uri]}'" unless 
           @training_dataset.find_feature_uri( params[:prediction_feature] ) 
         unless params[:min_frequency].nil? 

@@ -9,7 +9,7 @@ module OpenTox
 
     before '/descriptor/:method/?' do
       if request.get?
-        @algorithm = OpenTox::Algorithm::Descriptor.new @uri, @subjectid
+        @algorithm = OpenTox::Algorithm::Descriptor.new @uri
         @algorithm.parameters = [ {
           RDF::DC.description => "Dataset URI", 
           RDF::OT.paramScope => "optional", 
@@ -90,10 +90,10 @@ module OpenTox
         result = OpenTox::Algorithm::Descriptor.send(params[:method].to_sym, @compounds, params[:descriptors])
         Hash[result.map {|compound, v| [compound.uri, v] }].to_json
       elsif params[:dataset_uri] # return dataset
-        task = OpenTox::Task.run("Calculating #{params[:method]} descriptors for dataset #{params[:dataset_uri]}.", @uri, @subjectid) do |task|
-          @compounds = OpenTox::Dataset.new(params[:dataset_uri],@subjectid).compounds
+        task = OpenTox::Task.run("Calculating #{params[:method]} descriptors for dataset #{params[:dataset_uri]}.", @uri) do |task|
+          @compounds = OpenTox::Dataset.new(params[:dataset_uri]).compounds
           result = OpenTox::Algorithm::Descriptor.send(params[:method].to_sym, @compounds, params[:descriptors])
-          dataset = OpenTox::Dataset.new nil, @subjectid
+          dataset = OpenTox::Dataset.new
           dataset.metadata = {
             RDF::DC.title => "Physico-chemical descriptors",
             RDF::DC.creator => @uri,

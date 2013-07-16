@@ -20,9 +20,9 @@ module OpenTox
       # @param[Hash] REST parameters, as input by user
       def self.create params
         
-        lazar = OpenTox::Model::Lazar.new(File.join($model[:uri],SecureRandom.uuid), @subjectid)
+        lazar = OpenTox::Model::Lazar.new(File.join($model[:uri],SecureRandom.uuid))
 
-        training_dataset = OpenTox::Dataset.new(params[:dataset_uri], @subjectid) 
+        training_dataset = OpenTox::Dataset.new(params[:dataset_uri]) 
         lazar.parameters << {RDF::DC.title => "training_dataset_uri", RDF::OT.paramValue => training_dataset.uri}
 
         if params[:prediction_feature]
@@ -32,8 +32,8 @@ module OpenTox
           params[:prediction_feature] = training_dataset.features.first.uri
         end
         lazar[RDF::OT.trainingDataset] = training_dataset.uri
-        prediction_feature = OpenTox::Feature.new(params[:prediction_feature], @subjectid) 
-        predicted_variable = OpenTox::Feature.find_or_create({RDF::DC.title => "#{prediction_feature.title} prediction", RDF.type => [RDF::OT.Feature, prediction_feature[RDF.type]]}, @subjectid)
+        prediction_feature = OpenTox::Feature.new(params[:prediction_feature]) 
+        predicted_variable = OpenTox::Feature.find_or_create({RDF::DC.title => "#{prediction_feature.title} prediction", RDF.type => [RDF::OT.Feature, prediction_feature[RDF.type]]})
         lazar[RDF::DC.title] = prediction_feature.title 
         lazar.parameters << {RDF::DC.title => "prediction_feature_uri", RDF::OT.paramValue => prediction_feature.uri}
         lazar[RDF::OT.dependentVariables] = prediction_feature.uri
@@ -41,7 +41,7 @@ module OpenTox
         bad_request_error "Unknown prediction_algorithm #{params[:prediction_algorithm]}" if params[:prediction_algorithm] and !OpenTox::Algorithm::Neighbors.respond_to?(params[:prediction_algorithm])
         lazar.parameters << {RDF::DC.title => "prediction_algorithm", RDF::OT.paramValue => params[:prediction_algorithm]} if params[:prediction_algorithm]
 
-        confidence_feature = OpenTox::Feature.find_or_create({RDF::DC.title => "predicted_confidence", RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature]}, @subjectid)
+        confidence_feature = OpenTox::Feature.find_or_create({RDF::DC.title => "predicted_confidence", RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature]})
         lazar[RDF::OT.predictedVariables] = [ predicted_variable.uri, confidence_feature.uri ]
         case prediction_feature.feature_type
         when "classification"
@@ -77,12 +77,12 @@ module OpenTox
         lazar.parameters << {RDF::DC.title => "min_train_performance", RDF::OT.paramValue => 0.1} unless lazar.parameter_value("min_train_performance")
 
         if params[:feature_dataset_uri]
-          bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri], @subjectid
+          bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri]
           lazar.parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => params[:feature_dataset_uri]}
           lazar[RDF::OT.featureDataset] = params["feature_dataset_uri"]
         else
           # run feature generation algorithm
-          feature_dataset_uri = OpenTox::Algorithm::Generic.new(params[:feature_generation_uri], @subjectid).run(params)
+          feature_dataset_uri = OpenTox::Algorithm::Generic.new(params[:feature_generation_uri]).run(params)
           lazar.parameters << {RDF::DC.title => "feature_dataset_uri", RDF::OT.paramValue => feature_dataset_uri}
           lazar[RDF::OT.featureDataset] = feature_dataset_uri
         end
@@ -91,7 +91,7 @@ module OpenTox
       end
 
       def predict(params)
-        @prediction_dataset = OpenTox::Dataset.new(nil, @subjectid) 
+        @prediction_dataset = OpenTox::Dataset.new
         # set instance variables and prediction dataset parameters from parameters
         params.each {|k,v|
           self.class.class_eval { attr_accessor k.to_sym }
@@ -104,9 +104,9 @@ module OpenTox
           instance_variable_set("@#{k}", [])
         }
 
-        @prediction_feature = OpenTox::Feature.new @prediction_feature_uri, @subjectid
-        @predicted_variable = OpenTox::Feature.new @predicted_variable_uri, @subjectid
-        @predicted_confidence = OpenTox::Feature.new @predicted_confidence_uri, @subjectid
+        @prediction_feature = OpenTox::Feature.new @prediction_feature_uri
+        @predicted_variable = OpenTox::Feature.new @predicted_variable_uri
+        @predicted_confidence = OpenTox::Feature.new @predicted_confidence_uri
         @prediction_dataset.metadata = {
           RDF::DC.title => "Lazar prediction for #{@prediction_feature.title}",
           RDF::DC.creator => @model_uri,
@@ -115,21 +115,21 @@ module OpenTox
           RDF::OT.predictedVariables => [@predicted_variable_uri,@predicted_confidence_uri]
         }
 
-        @training_dataset = OpenTox::Dataset.new(@training_dataset_uri,@subjectid)
+        @training_dataset = OpenTox::Dataset.new(@training_dataset_uri)
 
-        @feature_dataset = OpenTox::Dataset.new(@feature_dataset_uri, @subjectid)
+        @feature_dataset = OpenTox::Dataset.new(@feature_dataset_uri)
         bad_request_error "No features found in feature dataset #{@feature_dataset.uri}." if @feature_dataset.features.empty?
 
-        @similarity_feature = OpenTox::Feature.find_or_create({RDF::DC.title => "#{@similarity_algorithm.capitalize} similarity", RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature]}, @subjectid)
+        @similarity_feature = OpenTox::Feature.find_or_create({RDF::DC.title => "#{@similarity_algorithm.capitalize} similarity", RDF.type => [RDF::OT.Feature, RDF::OT.NumericFeature]})
         
         @prediction_dataset.features = [ @predicted_variable, @predicted_confidence, @prediction_feature, @similarity_feature ]
 
         prediction_feature_pos = @training_dataset.features.collect{|f| f.uri}.index @prediction_feature.uri
 
         if @dataset_uri
-          compounds = OpenTox::Dataset.new(@dataset_uri, @subjectid).compounds
+          compounds = OpenTox::Dataset.new(@dataset_uri).compounds
         else
-          compounds = [ OpenTox::Compound.new(@compound_uri, @subjectid) ]
+          compounds = [ OpenTox::Compound.new(@compound_uri) ]
         end
 
         @training_fingerprints = @feature_dataset.data_entries

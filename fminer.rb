@@ -27,7 +27,7 @@ module OpenTox
     # Get representation of BBRC algorithm
     # @return [String] Representation
     get "/fminer/bbrc/?" do
-      algorithm = OpenTox::Algorithm::Generic.new(to('/fminer/bbrc',:full), @subjectid)
+      algorithm = OpenTox::Algorithm::Generic.new(to('/fminer/bbrc',:full))
       algorithm.metadata = {
         RDF::DC.title => 'Backbone Refinement Class Representatives',
         RDF::DC.creator => "andreas@maunz.de",
@@ -49,7 +49,7 @@ module OpenTox
     # Get representation of BBRC-sample algorithm
     # @return [String] Representation
     get "/fminer/bbrc/sample/?" do
-      algorithm = OpenTox::Algorithm::Generic.new(to('/fminer/bbrc/sample',:full), @subjectid)
+      algorithm = OpenTox::Algorithm::Generic.new(to('/fminer/bbrc/sample',:full))
       algorithm.metadata = {
         RDF::DC.title => 'Backbone Refinement Class Representatives, obtained from samples of a dataset',
         RDF::DC.creator => "andreas@maunz.de",
@@ -71,7 +71,7 @@ module OpenTox
     # Get representation of fminer LAST-PM algorithm
     # @return [String] Representation
     get "/fminer/last/?" do
-      algorithm = OpenTox::Algorithm::Generic.new(to('/fminer/last',:full), @subjectid)
+      algorithm = OpenTox::Algorithm::Generic.new(to('/fminer/last',:full))
       algorithm.metadata = {
         RDF::DC.title => 'Latent Structure Pattern Mining descriptors',
         RDF::DC.creator => "andreas@maunz.de",
@@ -92,7 +92,7 @@ module OpenTox
     # Get representation of matching algorithm
     # @return [String] Representation
     get "/fminer/:method/match?" do
-      algorithm = OpenTox::Algorithm::Generic.new(to("/fminer/#{params[:method]}/match",:full), @subjectid)
+      algorithm = OpenTox::Algorithm::Generic.new(to("/fminer/#{params[:method]}/match",:full))
       algorithm.metadata = {
         RDF::DC.title => 'fminer feature matching',
         RDF::DC.creator => "mguetlein@gmail.com, andreas@maunz.de",
@@ -121,10 +121,10 @@ module OpenTox
     # @return [text/uri-list] Task URI
     post '/fminer/bbrc/?' do
     
-      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/bbrc',:full), @subjectid)
+      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/bbrc',:full))
       @@fminer.check_params(params,5)
     
-      task = OpenTox::Task.run("Mining BBRC features", uri('/fminer/bbrc'), @subjectid) do |task|
+      task = OpenTox::Task.run("Mining BBRC features", uri('/fminer/bbrc')) do |task|
 
         @@bbrc.Reset
         if @@fminer.prediction_feature.feature_type == "regression"
@@ -142,7 +142,7 @@ module OpenTox
         @@bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
         @@bbrc.SetConsoleOut(false)
 
-        feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
+        feature_dataset = OpenTox::Dataset.new
         feature_dataset.metadata = {
           RDF::DC.title => "BBRC representatives",
           RDF::DC.creator => to('/fminer/bbrc',:full),
@@ -212,7 +212,7 @@ module OpenTox
                 RDF::OT.smarts => smarts.dup,
                 RDF::OT.pValue => p_value.to_f.abs.round(5),
                 RDF::OT.effect => effect
-              }, @subjectid)
+              })
               features << feature
             end
 
@@ -277,10 +277,10 @@ module OpenTox
     # @return [text/uri-list] Task URI
     post '/fminer/last/?' do
     
-      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/last',:full), @subjectid)
+      @@fminer=OpenTox::Algorithm::Fminer.new(to('/fminer/last',:full))
       @@fminer.check_params(params,80)
     
-      task = OpenTox::Task.run("Mining LAST features", uri('/fminer/last'), @subjectid) do |task|
+      task = OpenTox::Task.run("Mining LAST features", uri('/fminer/last')) do |task|
 
         @@last.Reset
         if @@fminer.prediction_feature.feature_type == "regression"
@@ -297,7 +297,7 @@ module OpenTox
         @@last.SetConsoleOut(false)
   
   
-        feature_dataset = OpenTox::Dataset.new(nil, @subjectid)
+        feature_dataset = OpenTox::Dataset.new
         feature_dataset.metadata = {
           RDF::DC.title => "LAST representatives for " + @@fminer.training_dataset.metadata[RDF::DC.title].to_s,
           RDF::DC.creator => to('/fminer/last'),
@@ -341,7 +341,7 @@ module OpenTox
         matches.each do |smarts, ids|
           metadata, parameters = @@fminer.calc_metadata(smarts, ids, counts[smarts], @@last, nil, value_map, params)
           metadata[RDF::DC.title] = smarts.dup
-          feature = OpenTox::Feature.find_or_create(metadata, @subjectid)
+          feature = OpenTox::Feature.find_or_create(metadata)
           features << feature
           ids.each_with_index { |id,idx| 
             fminer_results[@@fminer.compounds[id]] || fminer_results[@@fminer.compounds[id]] = {}

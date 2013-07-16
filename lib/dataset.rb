@@ -12,7 +12,7 @@ module OpenTox
     # @param [Hash] uri Compound URI, Feature URI
     # @return [Object] activity Database activity, or nil
     def database_activity(params)
-      f=Feature.new params[:prediction_feature_uri], @subjectid
+      f=Feature.new params[:prediction_feature_uri]
       db_act = values(Compound.new(params[:compound_uri]), f)
       if !db_act.empty?
         if f.feature_type == "classification"

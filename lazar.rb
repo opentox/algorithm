@@ -31,7 +31,7 @@ module OpenTox
       bad_request_error "Please provide a dataset_uri parameter." unless params[:dataset_uri]
       #resource_not_found_error "Dataset '#{params[:dataset_uri]}' not found." unless URI.accessible? params[:dataset_uri], @subjectid # wrong URI class
       bad_request_error "Please provide a feature_generation_uri parameter." unless params[:feature_generation_uri]
-      task = OpenTox::Task.run("Create lazar model", uri('/lazar'), @subjectid) do |task|
+      task = OpenTox::Task.run("Create lazar model", uri('/lazar')) do |task|
         OpenTox::Model::Lazar.create(params)
       end
       response['Content-Type'] = 'text/uri-list'
@@ -55,7 +55,7 @@ module OpenTox
     post '/lazar/predict/?' do 
       # pass parameters instead of model_uri, because model service is blocked by incoming call
 
-      task = OpenTox::Task.run("Apply lazar model",uri('/lazar/predict'), @subjectid) do |task|
+      task = OpenTox::Task.run("Apply lazar model",uri('/lazar/predict')) do |task|
         OpenTox::Model::Lazar.new(params[:model_uri]).predict(params).uri
       end
       response['Content-Type'] = 'text/uri-list'
