@@ -126,6 +126,8 @@ module OpenTox
     
       task = OpenTox::Task.run("Mining BBRC features", uri('/fminer/bbrc')) do |task|
 
+        time = Time.now
+
         @@bbrc.Reset
         if @@fminer.prediction_feature.feature_type == "regression"
           @@bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
@@ -169,6 +171,10 @@ module OpenTox
         step_width = 80 / @@bbrc.GetNoRootNodes().to_f
         features_smarts = Set.new
         features = Array.new
+
+        puts "Setup: #{Time.now-time}"
+        time = Time.now
+        ftime = 0
   
         # run @@bbrc
         
@@ -203,6 +209,7 @@ module OpenTox
               end
             end
   
+            ft = Time.now
             unless features_smarts.include? smarts
               features_smarts << smarts
               feature = OpenTox::Feature.find_or_create({
@@ -215,6 +222,7 @@ module OpenTox
               })
               features << feature
             end
+            ftime += Time.now - ft
 
             id_arrs.each { |id_count_hash|
               id=id_count_hash.keys[0].to_i
@@ -229,6 +237,10 @@ module OpenTox
   
           end # end of
         end   # feature parsing
+
+
+        puts "Fminer: #{Time.now-time} (find/create Features: #{ftime})"
+        time = Time.now
 
         fminer_compounds = @@fminer.training_dataset.compounds
         prediction_feature_idx = @@fminer.training_dataset.features.collect{|f| f.uri}.index @@fminer.prediction_feature.uri
@@ -254,9 +266,14 @@ module OpenTox
           }
         }
 
+        puts "Prepare save: #{Time.now-time}"
+        time = Time.now
         feature_dataset.put 
+
+        puts "Save: #{Time.now-time}"
         feature_dataset.uri
 
+  
       end
       response['Content-Type'] = 'text/uri-list'
       halt 202,task.uri
