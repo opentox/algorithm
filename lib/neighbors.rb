@@ -69,7 +69,6 @@ module OpenTox
       # @param [Hash] params Keys `:props, :activities, :sims, :min_train_performance` are required
       # @return [Numeric] A prediction value.
       def self.local_svm_regression(params)
-        puts "SVM"
 
         confidence = 0.0
         prediction = nil
