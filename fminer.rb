@@ -316,7 +316,7 @@ module OpenTox
   
         feature_dataset = OpenTox::Dataset.new
         feature_dataset.metadata = {
-          RDF::DC.title => "LAST representatives for " + @@fminer.training_dataset.metadata[RDF::DC.title].to_s,
+          RDF::DC.title => "LAST representatives for #{@@fminer.training_dataset.title}",
           RDF::DC.creator => to('/fminer/last'),
           RDF::OT.hasSource => to('/fminer/last')
         }
