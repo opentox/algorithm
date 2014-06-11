@@ -57,7 +57,7 @@ cd $DIR/..
 sed -i "1irequire 'openbabel'" application.rb
 
 # Adjust ruby version here!
-RUBY_NUM_VER="2.0.0-p247"
+RUBY_NUM_VER="2.0.0-p481"
 
 # ruby
 install_ruby
