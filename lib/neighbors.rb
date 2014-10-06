@@ -140,8 +140,9 @@ module OpenTox
         else
           #$logger.debug gram_matrix.to_yaml
           @r = RinRuby.new(true,false) # global R instance leads to Socket errors after a large number of requests
-          raise "failed to load R-package caret" unless @r.eval "suppressPackageStartupMessages(library('caret'))" # requires R packages "caret" and "kernlab"
-          raise "failed to load R-package doMC" unless @r.eval "suppressPackageStartupMessages(library('doMC'))" # requires R packages "multicore"
+          ["caret", "doMC", "class"].each do |lib|
+            raise "failed to load R-package #{lib}" unless @r.eval "suppressPackageStartupMessages(library('#{lib}'))"
+          end
           @r.eval "registerDoMC()" # switch on parallel processing
           @r.eval "set.seed(1)"
           begin
@@ -163,7 +164,6 @@ module OpenTox
               weights=NULL
               if (!(class(y) == 'numeric')) { 
                 y = factor(y)
-                raise "failed to load R-package class" unless suppressPackageStartupMessages(library('class')) 
                 weights=unlist(as.list(prop.table(table(y))))
                 weights=(weights-1)^2
               }
@@ -186,7 +186,7 @@ module OpenTox
             $logger.debug "Creating R SVM model ..."
             train_success = @r.eval <<-EOR
               model = train(prop_matrix,y,
-                             method="svmradial",
+                             method="svmRadial",
                              preProcess=c("center", "scale"),
                              class.weights=weights,
                              trControl=trainControl(method="LGOCV",number=10),
