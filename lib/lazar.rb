@@ -133,10 +133,27 @@ module OpenTox
         end
 
         @training_fingerprints = @feature_dataset.data_entries
+        # fill trailing missing values with nil
+        @training_fingerprints = @training_fingerprints.collect do |values|
+          values << nil while (values.size < @feature_dataset.features.size)
+          values
+        end
         @training_compounds = @training_dataset.compounds
 
-        query_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compounds, @feature_dataset.features.collect{ |f| f[RDF::DC.title] } )#.collect{|row| row.collect{|val| val ? val.to_f : 0.0 } }
-        
+        feature_names = @feature_dataset.features.collect{ |f| f[RDF::DC.title] }
+        # one Cdk descriptor may produce several features, e.g., Cdk.WienerNumbers produces Cdk.WienerNumbers.WPATH and Cdk.WienerNumbers.WPOL
+        # -> strip suffix and use the feature only once
+        feature_names = feature_names.collect do |f|
+          if f=~/Cdk/ and f.count(".")==2
+            f[0..(f.rindex(".")-1)]
+          else
+            f
+          end
+        end
+        feature_names.uniq!
+
+        query_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compounds, feature_names )#.collect{|row| row.collect{|val| val ? val.to_f : 0.0 } }
+
         compounds.each do |compound|
             
           database_activities = @training_dataset.values(compound,@prediction_feature)
