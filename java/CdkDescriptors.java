@@ -26,8 +26,10 @@ class CdkDescriptors {
       PrintWriter yaml = new PrintWriter(new FileWriter(args[0]+"cdk.yaml"));
       // parse 3d sdf from file and calculate descriptors
       IteratingMDLReader reader = new IteratingMDLReader( br, DefaultChemObjectBuilder.getInstance());
+      int c = 0;
       while (reader.hasNext()) {
         try {
+          System.out.println("computing "+(args.length-1)+" descriptors for compound "+(++c));
           IMolecule molecule = (IMolecule)reader.next();
           engine.process(molecule);
           Map<Object,Object> properties = molecule.getProperties();
