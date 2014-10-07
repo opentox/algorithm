@@ -94,6 +94,7 @@ module OpenTox
       end
 
       def self.openbabel compounds, descriptors
+        $logger.debug "compute #{descriptors.size} openbabel descriptors for #{compounds.size} compounds"
         obdescriptors = descriptors.collect{|d| OpenBabel::OBDescriptor.find_type d}
         obmol = OpenBabel::OBMol.new
         obconversion = OpenBabel::OBConversion.new
@@ -109,11 +110,17 @@ module OpenTox
         fingerprint
       end
 
+      def self.run_cmd cmd
+        $logger.debug "running '#{cmd}'"
+        IO.popen(cmd).each{|line| $logger.debug line.chomp}
+      end
+
       def self.cdk compounds, descriptors
+        $logger.debug "compute #{descriptors.size} cdk descriptors for #{compounds.size} compounds"
         sdf = sdf_3d compounds
         # use java system call (rjb blocks within tasks)
         # use Tempfiles to avoid "Argument list too long" error 
-        `java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{sdf} #{descriptors.join(" ")}`
+        run_cmd "java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{sdf} #{descriptors.join(" ")}"
         fingerprint = {}
         YAML.load_file(sdf+"cdk.yaml").each_with_index do |calculation,i|
           $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
@@ -126,10 +133,11 @@ module OpenTox
       end
 
       def self.joelib compounds, descriptors
+        $logger.debug "compute #{descriptors.size} joelib descriptors for #{compounds.size} compounds"
         # use java system call (rjb blocks within tasks)
         # use Tempfiles to avoid "Argument list too long" error 
         sdf = sdf_3d compounds
-        `java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors  #{sdf} #{descriptors.join(' ')}`
+        run_cmd "java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors  #{sdf} #{descriptors.join(' ')}"
         fingerprint = {}
         YAML.load_file(sdf+"joelib.yaml").each_with_index do |calculation,i|
           $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
@@ -155,12 +163,22 @@ module OpenTox
         obmol = OpenBabel::OBMol.new
         obconversion.set_in_format 'inchi' 
         obconversion.set_out_format 'sdf'
-        digest = Digest::MD5.hexdigest compounds.inspect
+
+        digest = Digest::MD5.hexdigest compounds.collect{|c| c.uri}.inspect
         sdf_file = "/tmp/#{digest}.sdf"
-        unless File.exists? sdf_file # do not recreate existing 3d sdfs
-          sdf = File.open sdf_file,"w+"
+        if File.exists? sdf_file # do not recreate existing 3d sdfs
+          $logger.debug "re-using cached 3d structures from #{sdf_file}"
+        else
+          tmp_file = Tempfile.new('sdf')
+          $logger.debug "3d structures will be cached in #{sdf_file} (tmp in #{tmp_file})"
           # create 3d sdf file (faster in Openbabel than in CDK)
+          # MG: moreover, CDK 3d generation is faulty
+          # MG: WARNING: Openbabel 3d generation is not deterministic
+          # MG: WARNING: Openbabel 3D generation does not work for mixtures
+          c = 0
           compounds.each do |compound|
+            c += 1
+            $logger.debug "compute 3d structures for compound #{c}/#{compounds.size}"
             obconversion.read_string obmol, compound.inchi
             sdf_2d = obconversion.write_string(obmol)  
             OpenBabel::OBOp.find_type("Gen3D").do(obmol) 
@@ -170,12 +188,13 @@ module OpenTox
               $logger.warn warning
               # TODO
               #@feature_dataset[RDF::OT.Warnings] ? @feature_dataset[RDF::OT.Warnings] << warning : @feature_dataset[RDF::OT.Warnings] = warning
-              sdf.puts sdf_2d
+              tmp_file.write sdf_2d
             else
-              sdf.puts sdf_3d
+              tmp_file.write sdf_3d
             end
           end
-          sdf.close
+          tmp_file.close
+          File.rename(tmp_file, sdf_file)
         end
         sdf_file
       end
