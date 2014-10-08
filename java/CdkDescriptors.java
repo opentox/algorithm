@@ -9,14 +9,47 @@ import org.openscience.cdk.qsar.DescriptorValue;
 class CdkDescriptors {
   public static void main(String[] args) {
 
-    // parse command line arguments > 1 (descriptors)
-    DescriptorEngine engine;
-    List<String> classNames = new ArrayList<String>();
-    for (int i =1; i < args.length; i++) {
-      classNames.add("org.openscience.cdk.qsar.descriptors.molecular." + args[i] + "Descriptor");
+    if (args==null || args.length<2) {
+	System.err.println("required params: <sd-file> <descriptor1> <descriptor2(optional)> <descriptor3(optional)> ...");
+	System.exit(1);
     }
-    engine = new DescriptorEngine(classNames);
-    List<IDescriptor> instances =  engine.instantiateDescriptors(classNames);
+    if (! new File(args[0]).exists()){
+	System.err.println("file not found "+args[0]);
+	System.exit(1);
+    }
+
+    // command line descriptor params can be either "descriptorName" or "descriptorValueName"
+    // terminology:
+    // A descriptor can calculate serveral values, e.g., ALOGP produces ALOGP.ALogP, ALOGP.ALogp2, ALOGP.AMR
+    // "descriptorName" ALOGP
+    // "valueName" AMR
+    // "descriptorValueName" ALOGP.AMR
+    DescriptorEngine engine;
+    Set<String> classNames = new LinkedHashSet<String>(); // descriptors to be computed
+    Set<String> descriptorNames = new LinkedHashSet<String>(); // all values of this descriptor will be printed
+    Set<String> descriptorValueNames = new LinkedHashSet<String>(); // only these values of a descriptor will be printed
+    for (int i =1; i < args.length; i++) {
+      String descriptorName;
+      if (args[i].indexOf(".")!=-1) {
+          descriptorValueNames.add(args[i]);
+	  descriptorName = args[i].substring(0,args[i].indexOf("."));
+      }
+      else {
+	  descriptorNames.add(args[i]);
+          descriptorName = args[i];
+      }
+      String className = "org.openscience.cdk.qsar.descriptors.molecular." + descriptorName + "Descriptor";
+      try {
+	  Class.forName(className);
+      } catch (ClassNotFoundException e) {
+	  System.err.println("Descriptor not found: "+args[i]);
+	  System.exit(1);
+      }
+      classNames.add(className);
+    }
+
+    engine = new DescriptorEngine(new ArrayList<String>(classNames));
+    List<IDescriptor> instances =  engine.instantiateDescriptors(new ArrayList<String>(classNames));
     List<DescriptorSpecification> specs = engine.initializeSpecifications(instances);
     engine.setDescriptorInstances(instances);
     engine.setDescriptorSpecifications(specs);
@@ -41,13 +74,15 @@ class CdkDescriptors {
                 DescriptorValue value = (DescriptorValue)entry.getValue();
                 String[] values = value.getValue().toString().split(",");
                 for (int i = 0; i < values.length; i++) {
-                  if (first) { yaml.print("- "); first = false; }
-                  else { yaml.print("  "); }
                   String cdk_class = property.getImplementationTitle();
-                  String name = cdk_class.substring(cdk_class.lastIndexOf(".")+1).replace("Descriptor","");
-                  yaml.println("Cdk." + name + "." + value.getNames()[i] + ": " + values[i]);
+                  String descriptorName = cdk_class.substring(cdk_class.lastIndexOf(".")+1).replace("Descriptor","");
+                  String descriptorValueName = descriptorName + "." + value.getNames()[i];
+		  if (descriptorNames.contains(descriptorName) || descriptorValueNames.contains(descriptorValueName)) {
+		      if (first) { yaml.print("- "); first = false; }
+		      else { yaml.print("  "); }
+                      yaml.println("Cdk." + descriptorValueName  + ": " + values[i]);
+		  }
                 }
-                
               }
             }
             catch (ClassCastException e) { } // sdf properties are stored as molecules properties (strings), ignore them

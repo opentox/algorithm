@@ -141,17 +141,6 @@ module OpenTox
         @training_compounds = @training_dataset.compounds
 
         feature_names = @feature_dataset.features.collect{ |f| f[RDF::DC.title] }
-        # one Cdk descriptor may produce several features, e.g., Cdk.WienerNumbers produces Cdk.WienerNumbers.WPATH and Cdk.WienerNumbers.WPOL
-        # -> strip suffix and use the feature only once
-        feature_names = feature_names.collect do |f|
-          if f=~/Cdk/ and f.count(".")==2
-            f[0..(f.rindex(".")-1)]
-          else
-            f
-          end
-        end
-        feature_names.uniq!
-
         query_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compounds, feature_names )#.collect{|row| row.collect{|val| val ? val.to_f : 0.0 } }
 
         compounds.each do |compound|
