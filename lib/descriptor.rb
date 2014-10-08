@@ -111,8 +111,15 @@ module OpenTox
       end
 
       def self.run_cmd cmd
-        $logger.debug "running '#{cmd}'"
-        IO.popen(cmd).each{|line| $logger.debug line.chomp}
+        cmd = "#{cmd} 2>&1"
+        $logger.debug "running external cmd: '#{cmd}'"
+        p = IO.popen(cmd) do |io|
+          while line = io.gets
+            $logger.debug "> #{line.chomp}"
+          end
+          io.close
+          raise "external cmd failed '#{cmd}' (error should be logged)" unless $?.to_i == 0
+        end
       end
 
       def self.cdk compounds, descriptors
