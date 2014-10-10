@@ -93,6 +93,8 @@ module OpenTox
         task = OpenTox::Task.run("Calculating #{params[:method]} descriptors for dataset #{params[:dataset_uri]}.", @uri) do |task|
           @compounds = OpenTox::Dataset.new(params[:dataset_uri]).compounds
           result = OpenTox::Algorithm::Descriptor.send(params[:method].to_sym, @compounds, params[:descriptors])
+          internal_server_error "internal error: wrong num results" if (@compounds.size != result.size)
+
           dataset = OpenTox::Dataset.new
           dataset.metadata = {
             RDF::DC.title => "Physico-chemical descriptors",
@@ -104,18 +106,30 @@ module OpenTox
             { RDF::DC.title => "descriptors", RDF::OT.paramValue => params[:descriptors] },
           ]
           params[:method] == "smarts_match" ? feature_type = RDF::OT.NominalFeature : feature_type = RDF::OT.NumericFeature 
-          @compounds.each do |compound|
-            @features ||= result[compound].keys.collect{|name| 
-              OpenTox::Feature.find_or_create({
+
+          #get descriptor names as returned from calculation (names may differ from params[:descriptors] because of CDK descriptors)
+          descriptors = []
+          result.each do |compound,values|
+            values.each do |desc,val|
+              descriptors << desc unless descriptors.include?(desc)
+            end
+          end
+          #try to preserve descriptor order
+          sorted_descriptors = []
+          params[:descriptors].each do |d|
+            sorted_descriptors << descriptors.delete(d) if descriptors.include?(d)
+          end
+          sorted_descriptors += descriptors
+          
+          sorted_descriptors.each do |name|
+            dataset.features << OpenTox::Feature.find_or_create({
                 RDF::DC.title => name,
                 RDF.type => [RDF::OT.Feature, feature_type],
                 RDF::DC.description => OpenTox::Algorithm::Descriptor.description(name)
               })
-            }
-            @features.each do |feature|
-              value = result[compound][feature.title]
-              dataset.add_data_entry compound, feature, value if value 
-            end
+          end
+          result.each do |compound,values|
+            dataset << ([compound] + sorted_descriptors.collect{|name| values[name]})
           end
           dataset.put
           dataset.uri
