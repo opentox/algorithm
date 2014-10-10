@@ -38,14 +38,7 @@ class CdkDescriptors {
 	  descriptorNames.add(args[i]);
           descriptorName = args[i];
       }
-      String className = "org.openscience.cdk.qsar.descriptors.molecular." + descriptorName + "Descriptor";
-      try {
-	  Class.forName(className);
-      } catch (ClassNotFoundException e) {
-	  System.err.println("Descriptor not found: "+args[i]);
-	  System.exit(1);
-      }
-      classNames.add(className);
+      classNames.add(getDescriptorClassName(descriptorName));
     }
 
     engine = new DescriptorEngine(new ArrayList<String>(classNames));
@@ -98,5 +91,39 @@ class CdkDescriptors {
       yaml.close();
     }
     catch (Exception e) { e.printStackTrace(); }
+  }
+    
+
+    /** HACK to find the class for a descriptor
+     * problem: Descriptor is not always at the end of the class (APolDescriptor), but may be in the middle (AutocorrelationDescriptorPolarizability)
+     * this method makes a class-lookup using trial and error */
+    static String getDescriptorClassName(String descriptorName) {
+	String split = splitCamelCase(descriptorName)+" "; // space mark possible positions for 'Descriptor'
+	for(int i = split.length()-1; i>0; i--) {
+	    if (split.charAt(i)==' ') { // iterate over all spaces, starting with the trailing one
+		String test = split.substring(0,i)+"Descriptor"+split.substring(i+1,split.length()); // replace current space with 'Descriptor' ..
+		test = test.replaceAll("\\s",""); // .. and remove other spaces
+		String className = "org.openscience.cdk.qsar.descriptors.molecular." + test;
+		try {
+		    Class.forName(className);
+		    return className;
+		} catch (ClassNotFoundException e) {}
+	    }
+        }
+	System.err.println("Descriptor not found: "+descriptorName);
+	System.exit(1);
+	return null;
+    }
+
+    /** inserts space in between camel words */
+  static String splitCamelCase(String s) {
+   return s.replaceAll(
+      String.format("%s|%s|%s",
+         "(?<=[A-Z])(?=[A-Z][a-z])",
+         "(?<=[^A-Z])(?=[A-Z])",
+         "(?<=[A-Za-z])(?=[^A-Za-z])"
+      ),
+      " "
+   );
   }
 }
