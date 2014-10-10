@@ -5,3 +5,4 @@ java/docs/*
 *.*~
 Gemfile.lock
 fminer_debug.txt
+babel_3d_cache/*.sdf

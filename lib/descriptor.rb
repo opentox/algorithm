@@ -1,5 +1,7 @@
 require 'digest/md5'
 ENV["JAVA_HOME"] ||= "/usr/lib/jvm/java-7-openjdk" 
+BABEL_3D_CACHE_DIR = File.join(Dir.pwd,'/babel_3d_cache')
+
 module OpenTox
 
   module Algorithm 
@@ -118,7 +120,7 @@ module OpenTox
             $logger.debug "> #{line.chomp}"
           end
           io.close
-          raise "external cmd failed '#{cmd}' (error should be logged)" unless $?.to_i == 0
+          raise "external cmd failed '#{cmd}' (see log file for error msg)" unless $?.to_i == 0
         end
       end
 
@@ -177,7 +179,6 @@ module OpenTox
           $logger.debug "re-using cached 3d structures from #{sdf_file}"
         else
           tmp_file = Tempfile.new('sdf')
-          $logger.debug "3d structures will be cached in #{sdf_file} (tmp in #{tmp_file})"
           # create 3d sdf file (faster in Openbabel than in CDK)
           # MG: moreover, CDK 3d generation is faulty
           # MG: WARNING: Openbabel 3d generation is not deterministic
@@ -185,20 +186,36 @@ module OpenTox
           c = 0
           compounds.each do |compound|
             c += 1
-            $logger.debug "compute 3d structures for compound #{c}/#{compounds.size}"
-            obconversion.read_string obmol, compound.inchi
-            sdf_2d = obconversion.write_string(obmol)  
-            OpenBabel::OBOp.find_type("Gen3D").do(obmol) 
-            sdf_3d = obconversion.write_string(obmol)  
-            if sdf_3d.match(/.nan/)
-              warning = "3D generation failed for compound #{compound.uri}, trying to calculate descriptors from 2D structure."
-              $logger.warn warning
-              # TODO
-              #@feature_dataset[RDF::OT.Warnings] ? @feature_dataset[RDF::OT.Warnings] << warning : @feature_dataset[RDF::OT.Warnings] = warning
-              tmp_file.write sdf_2d
+            cmp_file = File.join(BABEL_3D_CACHE_DIR,Digest::MD5.hexdigest(compound.inchi)+".sdf")
+            cmp_sdf = nil
+            if File.exists? cmp_file
+              $logger.debug "read cached 3d structure for compound #{c}/#{compounds.size}"
+              cmp_sdf = File.read(cmp_file)
             else
-              tmp_file.write sdf_3d
+              $logger.debug "compute 3d structure for compound #{c}/#{compounds.size}"
+              obconversion.read_string obmol, compound.inchi
+              sdf_2d = obconversion.write_string(obmol)  
+              error = nil
+              if compound.inchi.include?(";") # component includes multiple compounds (; in inchi, . in smiles)
+                error = "OpenBabel 3D generation failes for multi-compound #{compound.uri}, trying to calculate descriptors from 2D structure."
+              else
+                OpenBabel::OBOp.find_type("Gen3D").do(obmol) 
+                sdf_3d = obconversion.write_string(obmol)  
+                error = "3D generation failed for compound #{compound.uri}, trying to calculate descriptors from 2D structure." if sdf_3d.match(/.nan/)
+              end
+              if error
+                $logger.warn error
+                # TODO
+                # @feature_dataset[RDF::OT.Warnings] ? @feature_dataset[RDF::OT.Warnings] << error : @feature_dataset[RDF::OT.Warnings] = error
+                cmp_sdf = sdf_2d
+              else
+                cmp_sdf = sdf_3d
+                File.open(cmp_file,"w") do |f|
+                  f.write(cmp_sdf)
+                end
+              end
             end
+            tmp_file.write cmp_sdf
           end
           tmp_file.close
           File.rename(tmp_file, sdf_file)
