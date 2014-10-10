@@ -30,7 +30,7 @@ module OpenTox
     post '/lazar/?' do 
       bad_request_error "Please provide a dataset_uri parameter." unless params[:dataset_uri]
       #resource_not_found_error "Dataset '#{params[:dataset_uri]}' not found." unless URI.accessible? params[:dataset_uri], @subjectid # wrong URI class
-      bad_request_error "Please provide a feature_generation_uri parameter." unless params[:feature_generation_uri]
+      bad_request_error "Please provide either a feature_generation_uri or a feature_dataset_uri parameter." unless params[:feature_generation_uri] or params[:feature_dataset_uri]
       task = OpenTox::Task.run("Create lazar model", uri('/lazar')) do |task|
         OpenTox::Model::Lazar.create(params)
       end

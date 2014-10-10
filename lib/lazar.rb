@@ -56,8 +56,8 @@ module OpenTox
         lazar.parameters << {RDF::DC.title => "min_sim", RDF::OT.paramValue => params[:min_sim].to_f} if params[:min_sim] and params[:min_sim].numeric?
         lazar.parameters << {RDF::DC.title => "feature_generation_uri", RDF::OT.paramValue => params[:feature_generation_uri]}
         #lazar.parameters["nr_hits"] =  params[:nr_hits]
-        case params["feature_generation_uri"]
-        when /fminer/
+        
+        if params["feature_generation_uri"]=~/fminer/
           if (params[:nr_hits] == "true")
             lazar.parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => "smarts_count"}
           else
@@ -65,11 +65,16 @@ module OpenTox
           end
           lazar.parameters << {RDF::DC.title => "similarity_algorithm", RDF::OT.paramValue => "tanimoto"}
           lazar.parameters << {RDF::DC.title => "min_sim", RDF::OT.paramValue => 0.3} unless lazar.parameter_value("min_sim")
-        when /descriptor/
-          method = params["feature_generation_uri"].split(%r{/}).last.chomp
-          lazar.parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => method}
+        elsif params["feature_generation_uri"]=~/descriptor/ or params["feature_generation_uri"]==nil
+          if params["feature_generation_uri"]
+            method = params["feature_generation_uri"].split(%r{/}).last.chomp
+            lazar.parameters << {RDF::DC.title => "feature_calculation_algorithm", RDF::OT.paramValue => method}
+          end
+          # cosine similartiy is default (e.g. used when no fetature_generation_uri is given and a feature_dataset_uri is provided instead)
           lazar.parameters << {RDF::DC.title => "similarity_algorithm", RDF::OT.paramValue => "cosine"}
           lazar.parameters << {RDF::DC.title => "min_sim", RDF::OT.paramValue => 0.7} unless lazar.parameter_value("min_sim")
+        else
+          bad_request_error "unnkown feature generation method #{params["feature_generation_uri"]}"
         end
 
         bad_request_error "Parameter min_train_performance is not numeric." if params[:min_train_performance] and !params[:min_train_performance].numeric?
@@ -132,23 +137,49 @@ module OpenTox
           compounds = [ OpenTox::Compound.new(@compound_uri) ]
         end
 
-        @training_fingerprints = @feature_dataset.data_entries
+        # @training_fingerprints = @feature_dataset.data_entries
+        # select training fingerprints from feature dataset (do NOT use entire feature dataset)
+        feature_compound_uris = @feature_dataset.compounds.collect{|c| c.uri}
+        @training_fingerprints = []
+        @training_dataset.compounds.each do |c|
+          idx = feature_compound_uris.index(c.uri)
+          bad_request_error "training dataset compound not found in feature dataset" if idx==nil
+          @training_fingerprints << @feature_dataset.data_entries[idx][0..-1]
+        end
         # fill trailing missing values with nil
         @training_fingerprints = @training_fingerprints.collect do |values|
           values << nil while (values.size < @feature_dataset.features.size)
           values
         end
         @training_compounds = @training_dataset.compounds
+        internal_server_error "sth went wrong #{@training_compounds.size} != #{@training_fingerprints.size}" if @training_compounds.size != @training_fingerprints.size
 
         feature_names = @feature_dataset.features.collect{ |f| f[RDF::DC.title] }
-        query_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compounds, feature_names )#.collect{|row| row.collect{|val| val ? val.to_f : 0.0 } }
+        query_fingerprints = {}
+        # first lookup in feature dataset, than apply feature_generation_uri
+        compounds.each do |c|
+          idx = feature_compound_uris.index(c.uri) # just use first index, features should be equal for duplicates
+          if idx!=nil
+            fingerprint = {}
+            @feature_dataset.features.each do |f|
+              fingerprint[f[RDF::DC.title]] = @feature_dataset.data_entry_value(idx,f.uri)
+            end
+            query_fingerprints[c] = fingerprint
+          end
+        end
+        # if lookup failed, try computing!
+        if query_fingerprints.size!=compounds.size
+          bad_request_error "no feature_generation_uri provided in model AND cannot lookup all test compounds in existing feature dataset" unless @feature_calculation_algorithm
+          query_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compounds, feature_names )#.collect{|row| row.collect{|val| val ? val.to_f : 0.0 } }
+        end
 
         compounds.each do |compound|
-            
+          $logger.debug "predict compound #{compound.uri}"
           database_activities = @training_dataset.values(compound,@prediction_feature)
           if database_activities and !database_activities.empty?
             database_activities.each do |database_activity|
-              @prediction_dataset.add_data_entry compound, @prediction_feature, database_activity
+              $logger.debug "do not predict compound, it occurs in dataset with activity #{database_activity}"
+              @prediction_dataset << [compound, nil, nil, database_activity, nil]
             end
             next
           else
@@ -185,16 +216,13 @@ module OpenTox
             
           end
 
-          @prediction_dataset.add_data_entry compound, @predicted_variable, predicted_value
-          @prediction_dataset.add_data_entry compound, @predicted_confidence, confidence_value
-        
+          @prediction_dataset << [ compound, predicted_value, confidence_value, nil, nil ]
+
           if @compound_uri # add neighbors only for compound predictions
             @neighbors.each do |neighbor|
               n =  neighbor[:compound]
               @prediction_feature.feature_type == "classification" ? a = @prediction_feature.value_map[neighbor[:activity]] : a = neighbor[:activity]
-              @prediction_dataset.add_data_entry n, @prediction_feature, a
-              @prediction_dataset.add_data_entry n, @similarity_feature, neighbor[:similarity]
-              #@prediction_dataset << [ n, @prediction_feature.value_map[neighbor[:activity]], nil, nil, neighbor[:similarity] ]
+              @prediction_dataset << [ n, nil, nil, a, neighbor[:similarity] ]
             end
           end
 
