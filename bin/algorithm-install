@@ -81,6 +81,7 @@ fi
 
 if ! $R_DONE; then
   export R_LIBS="$R_DEST" # To install non-global
+  export CRAN_MIRROR="$R_MIRROR" # To install non-global
   cmd="$R CMD BATCH bin/packs.R" && run_cmd "$cmd" "R packages"
 fi
 
