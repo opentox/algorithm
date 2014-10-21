@@ -173,8 +173,12 @@ module OpenTox
           query_fingerprints = OpenTox::Algorithm::Descriptor.send( @feature_calculation_algorithm, compounds, feature_names )#.collect{|row| row.collect{|val| val ? val.to_f : 0.0 } }
         end
 
-        compounds.each do |compound|
-          $logger.debug "predict compound #{compound.uri}"
+        # AM: transform to cosine space
+        @min_sim = (@min_sim.to_f*2.0-1.0).to_s if @similarity_algorithm =~ /cosine/
+
+        compounds.each_with_index do |compound,c_count|
+          $logger.debug "predict compound #{c_count+1}/#{compounds.size} #{compound.uri}"
+
           database_activities = @training_dataset.values(compound,@prediction_feature)
           if database_activities and !database_activities.empty?
             database_activities.each do |database_activity|
@@ -182,9 +186,11 @@ module OpenTox
               @prediction_dataset << [compound, nil, nil, database_activity, nil]
             end
             next
+          elsif @prediction_dataset.compound_indices(compound.uri)
+            $logger.debug "compound already predicted (copy old prediction)"
+            predicted_value = @prediction_dataset.data_entry_value(@prediction_dataset.compound_indices(compound.uri).first,@predicted_variable.uri)
+            confidence_value = @prediction_dataset.data_entry_value(@prediction_dataset.compound_indices(compound.uri).first,@predicted_confidence.uri)
           else
-            # AM: transform to cosine space
-            @min_sim = (@min_sim.to_f*2.0-1.0).to_s if @similarity_algorithm =~ /cosine/
             @training_activities = @training_dataset.data_entries.collect{|entry|
               act = entry[prediction_feature_pos] if entry
               @prediction_feature.feature_type=="classification" ? @prediction_feature.value_map.invert[act] : act
@@ -213,7 +219,7 @@ module OpenTox
             # AM: transform to original space
             confidence_value = ((confidence_value+1.0)/2.0).abs if @similarity_algorithm =~ /cosine/
             predicted_value = @prediction_feature.value_map[prediction[:prediction].to_i] if @prediction_feature.feature_type == "classification"
-            
+            $logger.debug "predicted value: #{predicted_value}, confidence: #{confidence_value}"
           end
 
           @prediction_dataset << [ compound, predicted_value, confidence_value, nil, nil ]
