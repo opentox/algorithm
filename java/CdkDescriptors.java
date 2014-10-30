@@ -5,6 +5,9 @@ import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.iterator.IteratingMDLReader;
 import org.openscience.cdk.qsar.*;
 import org.openscience.cdk.qsar.DescriptorValue;
+import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.cdk.exception.NoSuchAtomTypeException;
 
 class CdkDescriptors {
   public static void main(String[] args) {
@@ -57,6 +60,15 @@ class CdkDescriptors {
         try {
           System.out.println("computing "+(args.length-1)+" descriptors for compound "+(++c));
           IMolecule molecule = (IMolecule)reader.next();
+          molecule = (IMolecule) AtomContainerManipulator.removeHydrogens(molecule);
+          try {
+            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
+          }
+	      catch (NoSuchAtomTypeException e) {
+            e.printStackTrace();
+          }
+          CDKHueckelAromaticityDetector.detectAromaticity(molecule);
+
           engine.process(molecule);
           Map<Object,Object> properties = molecule.getProperties();
           Boolean first = true;
