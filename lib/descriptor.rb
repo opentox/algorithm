@@ -20,7 +20,9 @@ module OpenTox
         ["Openbabel."+name,description] unless obexclude.include? name
       end.compact.sort{|a,b| a[0] <=> b[0]}]
 
-      CDKDESCRIPTORS = Hash[YAML.load(`java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptorInfo`).collect { |d| ["Cdk."+d[:java_class].split('.').last.sub(/Descriptor/,''), d[:description]] }.sort{|a,b| a[0] <=> b[0]}]
+      cdk_desc = YAML.load(`java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptorInfo`)
+      CDKDESCRIPTORS = Hash[cdk_desc.collect { |d| ["Cdk."+d[:java_class].split('.').last.sub(/Descriptor/,''), d[:description]] }.sort{|a,b| a[0] <=> b[0]}]
+      CDKDESCRIPTOR_VALUES = cdk_desc.collect { |d| prefix="Cdk."+d[:java_class].split('.').last.sub(/Descriptor/,''); d[:names].collect{ |name| prefix+"."+name } }.flatten
 
       # exclude Hashcode (not a physchem property) and GlobalTopologicalChargeIndex (Joelib bug)
       joelibexclude = ["MoleculeHashcode","GlobalTopologicalChargeIndex"]
@@ -32,6 +34,7 @@ module OpenTox
       end.compact.sort{|a,b| a[0] <=> b[0]}] 
 
       DESCRIPTORS = OBDESCRIPTORS.merge(CDKDESCRIPTORS.merge(JOELIBDESCRIPTORS))
+      DESCRIPTOR_VALUES = OBDESCRIPTORS.keys + CDKDESCRIPTOR_VALUES + JOELIBDESCRIPTORS.keys
       require_relative "unique_descriptors.rb"
 
       def self.description descriptor

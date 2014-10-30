@@ -64,6 +64,11 @@ module OpenTox
       OpenTox::Algorithm::Descriptor::DESCRIPTORS.collect{|k,v| "#{k}\t#{v}"}.join "\n"
     end
 
+    get '/descriptor/physchem/list_values/?' do
+      response['Content-Type'] = 'text/plain'
+      OpenTox::Algorithm::Descriptor::DESCRIPTOR_VALUES.join "\n"
+    end
+
     get '/descriptor/physchem/unique/?' do
       response['Content-Type'] = 'text/plain'
       OpenTox::Algorithm::Descriptor::UNIQUEDESCRIPTORS.collect{|d| "#{d}\t#{OpenTox::Algorithm::Descriptor::DESCRIPTORS[d]}"}.join "\n"
