@@ -8,7 +8,7 @@ module OpenTox
       algorithm.metadata = {
         RDF::DC.title => 'lazar',
         RDF::DC.creator => 'helma@in-silico.ch, andreas@maunz.de',
-        RDF.Type => [RDF::OT.Algorithm]
+        RDF.type => [RDF::OT.Algorithm]
       }
       algorithm.parameters = [
         { RDF::DC.description => "Dataset URI", RDF::OT.paramScope => "mandatory", RDF::DC.title => "dataset_uri" },
