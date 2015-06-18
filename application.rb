@@ -41,7 +41,7 @@ module OpenTox
     end
 
     # generic route to swagger API file - hotfix because opentox-server route do not work
-    get "/algorithm/api/algorithm.json" do
+    get "/api/algorithm.json" do
       response['Content-Type'] = "application/json"
       api_file = File.join("api", "algorithm.json")
       bad_request_error "API Documentation in Swagger JSON is not implemented.", uri("/algorithm/api") unless File.exists?(api_file)
