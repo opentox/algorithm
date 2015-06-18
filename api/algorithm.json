@@ -1,0 +1,206 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "5.0.0pre1",
+        "title": "OpenTox Algorithm service",
+        "description": "An OpenTox REST Webservice. <br >Provides access to OpenTox algorithms.",
+        "contact": {
+            "name": "Christoph Helma, in silico toxicology",
+            "url": "http://www.in-silico.ch",
+            "email": "support@in-silico.ch"
+        },
+        "license": {
+            "name": "GNU GENERAL PUBLIC LICENSE",
+            "url": "https://github.com/opentox/algorithm/blob/master/LICENSE"
+        }
+    },
+    "host": "enm.in-silico.ch",
+    "schemes": [
+        "https"
+    ],
+    "paths": {
+        "/algorithm": {
+            "head": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "for service check",
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Get a list of all available algorithm",
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/lazar": {
+            "get": {
+                "tags": [
+                    "algorithm",
+                    "lazar"
+                ],
+                "description": "representation of lazar algorithm",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
+                        "name": "accept",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": false,
+                        "type": "string",
+                        "enum": [
+                            "text/plain",
+                            "application/rdf+xml",
+                            "text/turtle",
+                            "text/html"
+                        ]
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "algorithm",
+                    "lazar"
+                ],
+                "description": "Create a lazar prediction model",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
+                        "$ref": "#/parameters/dataset_uri"
+                    },
+                    {
+                        "$ref": "#/parameters/prediction_feature"
+                    },
+                    {
+                        "$ref": "#/parameters/feature_generation_uri"
+                    }
+                ],
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "202": {
+                        "$ref": "#/responses/202"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        }
+    },
+    "parameters": {
+        "subjectid": {
+            "name": "subjectid",
+            "in": "header",
+            "description": "authorization token, required if A&A active",
+            "required": false,
+            "type": "string"
+        },
+        "dataset_uri": {
+            "name": "dataset_uri",
+            "description": "Training dataset URI",
+            "in": "header",
+            "required": true,
+            "type": "string"
+        },
+        "prediction_feature": {
+            "name": "prediction_feature",
+            "description": "URI of the feature to be predicted",
+            "in": "header",
+            "required": false,
+            "type": "string"
+        },
+        "feature_generation_uri": {
+            "name": "feature_generation_uri",
+            "description": "URI of the feature generation algorithm",
+            "in": "header",
+            "required": false,
+            "type": "string"
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "OK"
+        },
+        "202": {
+            "description": "Accepted"
+        },
+        "400": {
+            "description": "Bad Request"
+        },
+        "401": {
+            "description": "Unauthorized"
+        },
+        "404": {
+            "description": "Resource Not Found"
+        }
+    },
+    "tags": [
+        {
+            "name": "algorithm",
+            "description": "Algorithm service"
+        }
+    ]
+}
