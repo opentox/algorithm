@@ -146,6 +146,103 @@
                     }
                 }
             }
+        },
+        "/algorithm/lazar/predict": {
+            "post": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Make a lazar prediction - <strong>not to be called directly!</strong>",
+                "parameters": [
+                    {
+                        "name": "compound_uri",
+                        "description": "URI of compound to be predicted",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "training_dataset_uri",
+                        "description": "URI of training dataset",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "prediction_feature_uri",
+                        "description": "URI of prediction feature",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "feature_dataset_uri",
+                        "description": "URI of feature dataset",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "feature_calculation_algorithm",
+                        "description": "Name of feature calculation algorithm",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "min_sim",
+                        "description": "Numericvalue for minimum similarity",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "prediction_algorithm",
+                        "description": "Name of prediction algorithm",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "propositionalized",
+                        "description": "Whether propositionalization should be used",
+                        "required": true,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "pc_type",
+                        "description": "Physico-chemical descriptor type",
+                        "required": false,
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "pc_lib",
+                        "description": "Physico-chemical descriptor library",
+                        "required": false,
+                        "in": "header",
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "202": {
+                        "$ref": "#/responses/202"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
         }
     },
     "parameters": {
@@ -183,7 +280,10 @@
             "description": "OK"
         },
         "202": {
-            "description": "Accepted"
+            "description": "Accepted",
+            "examples": {
+                "text/uri-list": "\"https://enm.in-silico.ch/task/\""
+            }
         },
         "400": {
             "description": "Bad Request"
