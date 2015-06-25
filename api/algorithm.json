@@ -75,17 +75,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "accept",
-                        "in": "header",
-                        "description": "requested Content-type",
-                        "required": false,
-                        "type": "string",
-                        "enum": [
-                            "text/plain",
-                            "application/rdf+xml",
-                            "text/turtle",
-                            "text/html"
-                        ]
+                        "$ref": "#/parameters/accept_representation"
                     }
                 ],
                 "produces": [
@@ -448,7 +438,8 @@
                 "application/rdf+xml",
                 "text/turtle",
                 "text/html"
-            ]
+            ],
+            "default": "text/plain"
         }
     },
     "responses": {
