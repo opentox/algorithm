@@ -5,7 +5,7 @@
         "title": "OpenTox Algorithm service",
         "description": "An OpenTox REST Webservice. <br >Provides access to OpenTox algorithms.",
         "contact": {
-            "name": "Christoph Helma, in silico toxicology",
+            "name": "Christoph Helma, Andreas Maunz, in silico toxicology",
             "url": "http://www.in-silico.ch",
             "email": "support@in-silico.ch"
         },
@@ -243,6 +243,169 @@
                     }
                 }
             }
+        },
+        "/algorithm/fminer": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Get list of fminer algorithms",
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/fminer/bbrc": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Get representation of BBRC algorithm",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/fminer/bbrc/sample": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Get representation of BBRC algorithm sample",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/fminer/last": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Get representation of fminer LAST-PM algorithm",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/fminer/{method}/match": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Get representation of matching algorithm",
+                "parameters": [
+                    {
+                        "name": "method",
+                        "in": "path",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
         }
     },
     "parameters": {
@@ -273,6 +436,19 @@
             "in": "header",
             "required": false,
             "type": "string"
+        },
+        "accept_representation": {
+            "name": "accept",
+            "in": "header",
+            "description": "requested Content-type",
+            "required": false,
+            "type": "string",
+            "enum": [
+                "text/plain",
+                "application/rdf+xml",
+                "text/turtle",
+                "text/html"
+            ]
         }
     },
     "responses": {
