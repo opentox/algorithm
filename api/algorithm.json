@@ -501,6 +501,218 @@
                     }
                 }
             }
+        },
+        "/algorithm/descriptor": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "get URI-List",
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/smarts_match": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "get representation of descriptor SMARTS matcher",
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/smarts_count": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "get representation of descriptor SMARTS count",
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/lookup": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "get representation of dataset lookup",
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/physchem": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "get representation of Physical-chemical descriptors",
+                "produces": [
+                    "text/plain",
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/html"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/physchem/list": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Physical-chemical descriptors list of supported parameters with description",
+                "produces": [
+                    "text/plain"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/physchem/list_values": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Physical-chemical descriptors list of supported parameters",
+                "produces": [
+                    "text/plain"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/algorithm/descriptor/physchem/unique": {
+            "get": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Physical-chemical descriptors list of unique descriptors",
+                "produces": [
+                    "text/plain"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
         }
     },
     "parameters": {
