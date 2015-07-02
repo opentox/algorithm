@@ -533,6 +533,11 @@
                     "algorithm"
                 ],
                 "description": "get representation of descriptor SMARTS matcher",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
                 "produces": [
                     "text/plain",
                     "application/rdf+xml",
@@ -561,6 +566,11 @@
                     "algorithm"
                 ],
                 "description": "get representation of descriptor SMARTS count",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
                 "produces": [
                     "text/plain",
                     "application/rdf+xml",
@@ -589,6 +599,11 @@
                     "algorithm"
                 ],
                 "description": "get representation of dataset lookup",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
                 "produces": [
                     "text/plain",
                     "application/rdf+xml",
@@ -617,6 +632,11 @@
                     "algorithm"
                 ],
                 "description": "get representation of Physical-chemical descriptors",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/accept_representation"
+                    }
+                ],
                 "produces": [
                     "text/plain",
                     "application/rdf+xml",
