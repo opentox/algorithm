@@ -522,7 +522,7 @@
             "name": "prediction_feature",
             "description": "URI of the feature to be predicted (i.e. dependent variable)",
             "in": "header",
-            "required": false,
+            "required": true,
             "type": "string"
         },
         "feature_generation_uri": {
