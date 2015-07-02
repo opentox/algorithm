@@ -290,6 +290,68 @@
                         "$ref": "#/responses/404"
                     }
                 }
+            },
+            "post": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "run bbrc algorithm on dataset",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/dataset_uri"
+                    },
+                    {
+                        "$ref": "#/parameters/prediction_feature"
+                    },
+                    {
+                        "$ref": "#/parameters/min_frequency"
+                    },
+                    {
+                        "$ref": "#/parameters/feature_type"
+                    },
+                    {
+                        "name": "backbone",
+                        "description": "BBRC classes, pass 'false' to switch off mining for BBRC representatives.",
+                        "in": "header",
+                        "required": false,
+                        "type": "string",
+                        "enum": [
+                            true,
+                            false
+                        ],
+                        "default": true
+                    },
+                    {
+                        "name": "min_chisq_significance",
+                        "description": "Significance threshold (between 0 and 1)",
+                        "in": "header",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "$ref": "#/parameters/nr_hits"
+                    },
+                    {
+                        "$ref": "#/parameters/get_target"
+                    }
+                ],
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "202": {
+                        "$ref": "#/responses/202"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
             }
         },
         "/algorithm/fminer/bbrc/sample": {
@@ -345,6 +407,49 @@
                 "responses": {
                     "200": {
                         "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "algorithm"
+                ],
+                "description": "Run last algorithm on a dataset",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/dataset_uri"
+                    },
+                    {
+                        "$ref": "#/parameters/prediction_feature"
+                    },
+                    {
+                        "$ref": "#/parameters/min_frequency"
+                    },
+                    {
+                        "$ref": "#/parameters/feature_type"
+                    },
+                    {
+                        "$ref": "#/parameters/nr_hits"
+                    },
+                    {
+                        "$ref": "#/parameters/get_target"
+                    }
+                ],
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "202": {
+                        "$ref": "#/responses/202"
                     },
                     "400": {
                         "$ref": "#/responses/400"
@@ -415,7 +520,7 @@
         },
         "prediction_feature": {
             "name": "prediction_feature",
-            "description": "URI of the feature to be predicted",
+            "description": "URI of the feature to be predicted (i.e. dependent variable)",
             "in": "header",
             "required": false,
             "type": "string"
@@ -423,6 +528,39 @@
         "feature_generation_uri": {
             "name": "feature_generation_uri",
             "description": "URI of the feature generation algorithm",
+            "in": "header",
+            "required": false,
+            "type": "string"
+        },
+        "min_frequency": {
+            "name": "min_frequency",
+            "description": "Minimum frequency (default 5)",
+            "in": "header",
+            "required": false,
+            "type": "string"
+        },
+        "feature_type": {
+            "name": "feature_type",
+            "description": "Feature type, can be 'paths' or 'trees' (default 'trees')",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "enum": [
+                "path",
+                "trees"
+            ],
+            "default": "trees"
+        },
+        "nr_hits": {
+            "name": "nr_hits",
+            "description": "Set to 'true' to get hit count instead of presence",
+            "in": "header",
+            "required": false,
+            "type": "string"
+        },
+        "get_target": {
+            "name": "get_target",
+            "description": "Set to 'true' to obtain target variable as feature",
             "in": "header",
             "required": false,
             "type": "string"
