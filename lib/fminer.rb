@@ -1,3 +1,4 @@
+require_relative 'bbrc'
 =begin
 * Name: fminer.rb
 * Description: Fminer library 
@@ -10,6 +11,7 @@ module OpenTox
 
     # Fminer algorithms (https://github.com/amaunz/fminer2)
     class Fminer 
+      include OpenTox
       
       attr_accessor :prediction_feature, :training_dataset, :minfreq, :compounds, :db_class_sizes, :all_activities, :smi
 
@@ -19,15 +21,16 @@ module OpenTox
       # @param[Integer] per-mil value for min frequency
       
       def check_params(params,per_mil)
-        bad_request_error "Please submit a dataset_uri." unless params[:dataset_uri] and  !params[:dataset_uri].nil?
-        @training_dataset = OpenTox::Dataset.new "#{params[:dataset_uri]}"
+        bad_request_error "Please submit a dataset." unless params[:dataset] and  !params[:dataset].nil?
+        @training_dataset = OpenTox::Dataset.new 
+        @training_dataset = params[:dataset]
         unless params[:prediction_feature] # try to read prediction_feature from dataset
           resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
-          params[:prediction_feature] = @training_dataset.features.first.uri
+          params[:prediction_feature] = @training_dataset.features.first
         end
-        @prediction_feature = OpenTox::Feature.find params[:prediction_feature]
-        resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset_uri]}'" unless 
-          @training_dataset.find_feature_uri( params[:prediction_feature] ) 
+        @prediction_feature = params[:prediction_feature]
+        resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset]}'" unless 
+          @training_dataset.features.include?( params[:prediction_feature] ) 
         unless params[:min_frequency].nil? 
           # check for percentage
           if params[:min_frequency].include? "pc"
@@ -58,7 +61,8 @@ module OpenTox
         end
         if @minfreq.nil?
           @minfreq=min_frequency(@training_dataset,@prediction_feature,per_mil)
-          $logger.debug "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
+          p "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
+          #$logger.debug "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
         end
       end
 
@@ -109,7 +113,7 @@ module OpenTox
           end
 
           if compound_activities.nil?
-            $logger.warn "No activity for '#{compound.uri}' and feature '#{@prediction_feature.uri}'"
+            $logger.warn "No activity for '#{compound.inchi}' and feature '#{@prediction_feature.title}'"
           else
             if @prediction_feature.feature_type == "classification"
               activity= value_map.invert[compound_activities].to_i # activities are mapped to 1..n
@@ -178,7 +182,7 @@ module OpenTox
       # return [Integer] min-frequency
       def min_frequency(training_dataset,prediction_feature,per_mil)
         nr_labeled_cmpds=0
-        f_idx=training_dataset.features.collect{|f| f.uri}.index prediction_feature.uri
+        f_idx=training_dataset.features.index prediction_feature
         training_dataset.compounds.each_with_index { |cmpd, c_idx|
           if ( training_dataset.data_entries[c_idx] )
                unless training_dataset.data_entries[c_idx][f_idx].nil?

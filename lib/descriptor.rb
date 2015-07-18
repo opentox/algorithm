@@ -1,6 +1,8 @@
 require 'digest/md5'
 ENV["JAVA_HOME"] ||= "/usr/lib/jvm/java-7-openjdk" 
-BABEL_3D_CACHE_DIR = File.join(Dir.pwd,'/babel_3d_cache')
+BABEL_3D_CACHE_DIR = File.join(File.dirname(__FILE__),"..",'/babel_3d_cache')
+# TODO store 3D structures in mongodb
+# TODO store descriptors in mongodb
 
 module OpenTox
 
@@ -35,6 +37,7 @@ module OpenTox
 
       DESCRIPTORS = OBDESCRIPTORS.merge(CDKDESCRIPTORS.merge(JOELIBDESCRIPTORS))
       DESCRIPTOR_VALUES = OBDESCRIPTORS.keys + CDKDESCRIPTOR_VALUES + JOELIBDESCRIPTORS.keys
+
       require_relative "unique_descriptors.rb"
 
       def self.description descriptor
@@ -53,6 +56,7 @@ module OpenTox
       end
 
       def self.smarts_match compounds, smarts, count=false
+        compounds = parse compounds
         obconversion = OpenBabel::OBConversion.new
         obmol = OpenBabel::OBMol.new
         obconversion.set_in_format('inchi')
@@ -80,7 +84,8 @@ module OpenTox
         smarts_match compounds,smarts,true
       end
 
-      def self.physchem compounds, descriptors
+      def self.physchem compounds, descriptors=UNIQUEDESCRIPTORS
+        compounds = parse compounds
         des = {}
         descriptors.each do |d|
           lib, descriptor = d.split(".",2)
@@ -99,6 +104,7 @@ module OpenTox
       end
 
       def self.openbabel compounds, descriptors
+        compounds = parse compounds
         $logger.debug "compute #{descriptors.size} openbabel descriptors for #{compounds.size} compounds"
         obdescriptors = descriptors.collect{|d| OpenBabel::OBDescriptor.find_type d}
         obmol = OpenBabel::OBMol.new
@@ -115,6 +121,52 @@ module OpenTox
         fingerprint
       end
 
+      def self.cdk compounds, descriptors
+        compounds = parse compounds
+        $logger.debug "compute #{descriptors.size} cdk descriptors for #{compounds.size} compounds"
+        sdf = sdf_3d compounds
+        # use java system call (rjb blocks within tasks)
+        # use Tempfiles to avoid "Argument list too long" error 
+        run_cmd "java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{sdf} #{descriptors.join(" ")}"
+        fingerprint = {}
+        YAML.load_file(sdf+"cdk.yaml").each_with_index do |calculation,i|
+          $logger.error "Descriptor calculation failed for compound #{compounds[i].inchi}." if calculation.empty?
+          descriptors.each do |descriptor|
+            fingerprint[compounds[i]] = calculation
+          end
+        end
+        FileUtils.rm sdf+"cdk.yaml"
+        fingerprint
+      end
+
+      def self.joelib compounds, descriptors
+        compounds = parse compounds
+        $logger.debug "compute #{descriptors.size} joelib descriptors for #{compounds.size} compounds"
+        # use java system call (rjb blocks within tasks)
+        # use Tempfiles to avoid "Argument list too long" error 
+        sdf = sdf_3d compounds
+        run_cmd "java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors  #{sdf} #{descriptors.join(' ')}"
+        fingerprint = {}
+        YAML.load_file(sdf+"joelib.yaml").each_with_index do |calculation,i|
+          $logger.error "Descriptor calculation failed for compound #{compounds[i].inchi}." if calculation.empty?
+          descriptors.each do |descriptor|
+            fingerprint[compounds[i]] = calculation
+          end
+        end
+        FileUtils.rm sdf+"joelib.yaml"
+        fingerprint
+      end
+
+      def self.lookup compounds, features, dataset
+        compounds = parse compounds
+        fingerprint = []
+        compounds.each do |compound|
+          fingerprint << []
+          features.each do |feature|
+          end
+        end
+      end
+
       def self.run_cmd cmd
         cmd = "#{cmd} 2>&1"
         $logger.debug "running external cmd: '#{cmd}'"
@@ -127,56 +179,14 @@ module OpenTox
         end
       end
 
-      def self.cdk compounds, descriptors
-        $logger.debug "compute #{descriptors.size} cdk descriptors for #{compounds.size} compounds"
-        sdf = sdf_3d compounds
-        # use java system call (rjb blocks within tasks)
-        # use Tempfiles to avoid "Argument list too long" error 
-        run_cmd "java -classpath #{CDK_JAR}:#{JAVA_DIR}  CdkDescriptors #{sdf} #{descriptors.join(" ")}"
-        fingerprint = {}
-        YAML.load_file(sdf+"cdk.yaml").each_with_index do |calculation,i|
-          $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
-          descriptors.each do |descriptor|
-            fingerprint[compounds[i]] = calculation
-          end
-        end
-        FileUtils.rm sdf+"cdk.yaml"
-        fingerprint
-      end
-
-      def self.joelib compounds, descriptors
-        $logger.debug "compute #{descriptors.size} joelib descriptors for #{compounds.size} compounds"
-        # use java system call (rjb blocks within tasks)
-        # use Tempfiles to avoid "Argument list too long" error 
-        sdf = sdf_3d compounds
-        run_cmd "java -classpath #{JOELIB_JAR}:#{JMOL_JAR}:#{LOG4J_JAR}:#{JAVA_DIR}  JoelibDescriptors  #{sdf} #{descriptors.join(' ')}"
-        fingerprint = {}
-        YAML.load_file(sdf+"joelib.yaml").each_with_index do |calculation,i|
-          $logger.error "Descriptor calculation failed for compound #{compounds[i].uri}." if calculation.empty?
-          descriptors.each do |descriptor|
-            fingerprint[compounds[i]] = calculation
-          end
-        end
-        FileUtils.rm sdf+"joelib.yaml"
-        fingerprint
-      end
-
-      def self.lookup compounds, features, dataset
-        fingerprint = []
-        compounds.each do |compound|
-          fingerprint << []
-          features.each do |feature|
-          end
-        end
-      end
-
       def self.sdf_3d compounds
+        compounds = parse compounds
         obconversion = OpenBabel::OBConversion.new
         obmol = OpenBabel::OBMol.new
         obconversion.set_in_format 'inchi' 
         obconversion.set_out_format 'sdf'
 
-        digest = Digest::MD5.hexdigest compounds.collect{|c| c.uri}.inspect
+        digest = Digest::MD5.hexdigest compounds.collect{|c| c.inchi}.inspect
         sdf_file = "/tmp/#{digest}.sdf"
         if File.exists? sdf_file # do not recreate existing 3d sdfs
           $logger.debug "re-using cached 3d structures from #{sdf_file}"
@@ -200,11 +210,11 @@ module OpenTox
               sdf_2d = obconversion.write_string(obmol)  
               error = nil
               if compound.inchi.include?(";") # component includes multiple compounds (; in inchi, . in smiles)
-                error = "OpenBabel 3D generation failes for multi-compound #{compound.uri}, trying to calculate descriptors from 2D structure."
+                error = "OpenBabel 3D generation failes for multi-compound #{compound.inchi}, trying to calculate descriptors from 2D structure."
               else
                 OpenBabel::OBOp.find_type("Gen3D").do(obmol) 
                 sdf_3d = obconversion.write_string(obmol)  
-                error = "3D generation failed for compound #{compound.uri}, trying to calculate descriptors from 2D structure." if sdf_3d.match(/.nan/)
+                error = "3D generation failed for compound #{compound.inchi}, trying to calculate descriptors from 2D structure." if sdf_3d.match(/.nan/)
               end
               if error
                 $logger.warn error
@@ -226,6 +236,19 @@ module OpenTox
         sdf_file
       end
 
+      def self.parse compounds
+        case compounds.class.to_s
+        when "OpenTox::Compound"
+          compounds = [compounds]
+        when "Array"
+          compounds
+        when "OpenTox::Dataset"
+          compounds = compounds.compounds
+        else
+          bad_request_error "Cannot calculate descriptors for #{compounds.class} objects."
+        end
+      end
+
       def self.fix_value val
         val = val.first if val.is_a? Array and val.size == 1
         if val.numeric?
@@ -236,7 +259,7 @@ module OpenTox
         end
         val
       end
-      private_class_method :sdf_3d, :fix_value
+      private_class_method :sdf_3d, :fix_value, :parse, :run_cmd
     end
   end
 end

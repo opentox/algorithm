@@ -13,11 +13,12 @@ Gem::Specification.new do |s|
 
   s.rubyforge_project = "algorithm"
 
-  s.files         = `git ls-files`.split("\n")
+  s.files         = ["lib/algorithm.rb"]
+  #s.files         = `git ls-files`.split("\n")
   s.required_ruby_version = '>= 1.9.2'
 
   # specify any dependencies here; for example:
-  s.add_runtime_dependency "opentox-server"
+  #s.add_runtime_dependency "opentox-server"
   s.add_runtime_dependency "opentox-client"
   s.add_runtime_dependency 'rinruby'#, "~>2.0.2"
   s.add_runtime_dependency 'nokogiri'#, "~>1.4.4"
