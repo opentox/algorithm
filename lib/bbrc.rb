@@ -34,8 +34,8 @@ module OpenTox
             @bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
           else
             bad_request_error "No accept values for "\
-                              "dataset '#{@fminer.training_dataset.uri}' and "\
-                              "feature '#{@fminer.prediction_feature.uri}'" unless 
+                              "dataset '#{@fminer.training_dataset.id}' and "\
+                              "feature '#{@fminer.prediction_feature.id}'" unless 
                                @fminer.prediction_feature.accept_values
             value_map=@fminer.prediction_feature.value_map
           end
@@ -67,8 +67,8 @@ module OpenTox
 
           #task.progress 10
           step_width = 80 / @bbrc.GetNoRootNodes().to_f
-          features_smarts = Set.new
-          features = Array.new
+          features = []
+          data_entries = [[]]
 
           puts "Setup: #{Time.now-time}"
           time = Time.now
@@ -108,39 +108,43 @@ module OpenTox
               end
     
               ft = Time.now
-              unless features_smarts.include? smarts
-                features_smarts << smarts
-                feature = OpenTox::Feature.find_or_create_by({
-                  "title" => smarts.dup,
-                  "numeric" => true,
-                  "substructure" => true,
-                  "smarts" => smarts.dup,
-                  "pValue" => p_value.to_f.abs.round(5),
-                  "effect" => effect
-                })
-                features << feature
-              end
+              feature = OpenTox::Feature.find_or_create_by({
+                "title" => smarts.dup,
+                "numeric" => true,
+                "substructure" => true,
+                "smarts" => smarts.dup,
+                "pValue" => p_value.to_f.abs.round(5),
+                "effect" => effect
+              })
+              features << feature
+              features.uniq!
               ftime += Time.now - ft
 
               id_arrs.each { |id_count_hash|
                 id=id_count_hash.keys[0].to_i
                 count=id_count_hash.values[0].to_i
-                fminer_results[@fminer.compounds[id]] || fminer_results[@fminer.compounds[id]] = {}
+                compound_idx = params[:dataset].compounds.index @fminer.compounds[id]
+                feature_idx = features.index feature
+                data_entries[compound_idx] ||= []
                 if params[:nr_hits] == "true"
-                  fminer_results[@fminer.compounds[id]][feature] = count
+                  data_entries[compound_idx][feature_idx] = count
                 else
-                  fminer_results[@fminer.compounds[id]][feature] = 1
+                  data_entries[compound_idx][feature_idx] = 1
                 end
               }
     
             end # end of
           end   # feature parsing
+          #p features
+          p data_entries
+          #p params[:dataset].compounds
+          #p @fminer.compounds
 
 
           puts "Fminer: #{Time.now-time} (find/create Features: #{ftime})"
           time = Time.now
-          puts JSON.pretty_generate(fminer_results)
-
+          #puts JSON.pretty_generate(fminer_results)
+=begin
           fminer_compounds = @fminer.training_dataset.compounds
           prediction_feature_idx = @fminer.training_dataset.features.index @fminer.prediction_feature
           prediction_feature_all_acts = fminer_compounds.each_with_index.collect { |c,idx| 
@@ -157,19 +161,24 @@ module OpenTox
               #row = row + [ prediction_feature_all_acts[idx] ]
             #end
             features.each { |f|
-              v = fminer_results[c][f.uri] if fminer_results[c] 
+              v = fminer_results[c][f] if fminer_results[c] 
               unless fminer_noact_compounds.include? c
                 v = 0 if v.nil?
               end
               feature_dataset.add_data_entry c, f, v.to_i
             }
           }
+=end
+          feature_dataset.compounds = params[:dataset].compounds
+          feature_dataset.features = features
+          feature_dataset.data_entries = data_entries
 
           puts "Prepare save: #{Time.now-time}"
           time = Time.now
           feature_dataset.save
 
           puts "Save: #{Time.now-time}"
+          p feature_dataset
           feature_dataset
 
     
