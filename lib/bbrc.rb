@@ -1,12 +1,7 @@
-ENV['FMINER_SMARTS'] = 'true'
-ENV['FMINER_NO_AROMATIC'] = 'true'
-ENV['FMINER_PVALUES'] = 'true'
-ENV['FMINER_SILENT'] = 'true'
-ENV['FMINER_NR_HITS'] = 'true'
-
 module OpenTox
   module Algorithm
     class Fminer
+      #
       # Run bbrc algorithm on dataset
       #
       # @param [String] dataset_uri URI of the training dataset
@@ -24,6 +19,7 @@ module OpenTox
         @fminer=OpenTox::Algorithm::Fminer.new
         @fminer.check_params(params,5)
       
+        # TODO introduce task again
         #task = OpenTox::Task.run("Mining BBRC features", __FILE__ ) do |task|
 
           time = Time.now
@@ -50,7 +46,7 @@ module OpenTox
           feature_dataset.creator = __FILE__
           feature_dataset.parameters = [
               { "title" => "dataset_id", "paramValue" => params[:dataset].id },
-              { "title" => "prediction_feature", "paramValue" => params[:prediction_feature].id },
+              { "title" => "prediction_feature_id", "paramValue" => params[:prediction_feature].id },
               { "title" => "min_frequency", "paramValue" => @fminer.minfreq },
               { "title" => "nr_hits", "paramValue" => (params[:nr_hits] == "true" ? "true" : "false") },
               { "title" => "backbone", "paramValue" => (params[:backbone] == "false" ? "false" : "true") }
@@ -67,8 +63,9 @@ module OpenTox
 
           #task.progress 10
           step_width = 80 / @bbrc.GetNoRootNodes().to_f
+          #features_smarts = Set.new
           features = []
-          data_entries = [[]]
+          data_entries = Array.new(params[:dataset].compounds.size) {[]}
 
           puts "Setup: #{Time.now-time}"
           time = Time.now
@@ -76,7 +73,6 @@ module OpenTox
     
           # run @bbrc
           
-          # prepare to receive results as hash { c => [ [f,v], ... ] }
           fminer_results = {}
 
           (0 .. @bbrc.GetNoRootNodes()-1).each do |j|
@@ -114,37 +110,50 @@ module OpenTox
                 "substructure" => true,
                 "smarts" => smarts.dup,
                 "pValue" => p_value.to_f.abs.round(5),
-                "effect" => effect
+                "effect" => effect,
+                "parameters" => [
+                  { "title" => "dataset_id", "paramValue" => params[:dataset].id },
+                  { "title" => "prediction_feature_id", "paramValue" => params[:prediction_feature].id }
+                ]
               })
               features << feature
-              features.uniq!
               ftime += Time.now - ft
 
               id_arrs.each { |id_count_hash|
                 id=id_count_hash.keys[0].to_i
                 count=id_count_hash.values[0].to_i
-                compound_idx = params[:dataset].compounds.index @fminer.compounds[id]
+                fminer_results[@fminer.compounds[id]] || fminer_results[@fminer.compounds[id]] = {}
+                compound_idx = params[:dataset].compounds.index @fminer.compounds[id] 
                 feature_idx = features.index feature
                 data_entries[compound_idx] ||= []
                 if params[:nr_hits] == "true"
+                  fminer_results[@fminer.compounds[id]][feature] = count
                   data_entries[compound_idx][feature_idx] = count
                 else
+                  fminer_results[@fminer.compounds[id]][feature] = 1
                   data_entries[compound_idx][feature_idx] = 1
                 end
               }
     
             end # end of
           end   # feature parsing
-          #p features
-          p data_entries
-          #p params[:dataset].compounds
-          #p @fminer.compounds
-
 
           puts "Fminer: #{Time.now-time} (find/create Features: #{ftime})"
           time = Time.now
-          #puts JSON.pretty_generate(fminer_results)
+
+          # convert nil entries to 0
+          data_entries.collect! do |r| 
+            if r.empty? 
+              Array.new(features.size,0) 
+            else
+              r[features.size-1] = 0 if r.size < features.size # grow array to match feature size
+              r.collect!{|c| c.nil? ? 0 : c} # remove nils
+            end
+          end
+
 =begin
+          # This part increases runtime by a factor of ~65
+          # TODO: check if any information is lost due to simplification
           fminer_compounds = @fminer.training_dataset.compounds
           prediction_feature_idx = @fminer.training_dataset.features.index @fminer.prediction_feature
           prediction_feature_all_acts = fminer_compounds.each_with_index.collect { |c,idx| 
@@ -178,15 +187,10 @@ module OpenTox
           feature_dataset.save
 
           puts "Save: #{Time.now-time}"
-          p feature_dataset
           feature_dataset
-
     
-        end
-      #end
+        #end
+      end
     end
   end
 end
-    
-
-

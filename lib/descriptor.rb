@@ -56,25 +56,26 @@ module OpenTox
       end
 
       def self.smarts_match compounds, smarts, count=false
+        bad_request_error "Compounds for smarts_match are empty" unless compounds
+        bad_request_error "Smarts for smarts_match are empty" unless smarts
         compounds = parse compounds
         obconversion = OpenBabel::OBConversion.new
         obmol = OpenBabel::OBMol.new
         obconversion.set_in_format('inchi')
         smarts_pattern = OpenBabel::OBSmartsPattern.new
-        fingerprint = {}
-        compounds = [compounds] unless compounds.is_a? Array
+        #fingerprint = {}
         smarts = [smarts] unless smarts.is_a? Array
-        compounds.each do |compound|
+        fingerprint = Array.new(compounds.size){Array.new(smarts.size,false)}
+        compounds.each_with_index do |compound,c|
           obconversion.read_string(obmol,compound.inchi)
-          fingerprint[compound] = {}
-          smarts.each do |smart|
+          smarts.each_with_index do |smart,s|
             smarts_pattern.init(smart)
             if smarts_pattern.match(obmol)
               count ? value = smarts_pattern.get_map_list.to_a.size : value = 1
             else
               value = 0 
             end
-            fingerprint[compound][smart] = value
+            fingerprint[c][s] = value
           end
         end
         fingerprint

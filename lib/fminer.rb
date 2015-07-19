@@ -1,4 +1,5 @@
 require_relative 'bbrc'
+require_relative 'last'
 =begin
 * Name: fminer.rb
 * Description: Fminer library 
@@ -61,8 +62,7 @@ module OpenTox
         end
         if @minfreq.nil?
           @minfreq=min_frequency(@training_dataset,@prediction_feature,per_mil)
-          p "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
-          #$logger.debug "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
+          $logger.debug "min_frequency #{@minfreq} (input was #{per_mil} per-mil)"
         end
       end
 
@@ -164,17 +164,18 @@ module OpenTox
         end
 
         metadata = {
-          RDF.type => [RDF::OT.Feature, RDF::OT.Substructure, RDF::OT.NumericFeature],
-          RDF::OT.smarts => smarts.dup,
-          RDF::OT.pValue => p_value.abs.round(5),
-          RDF::OT.effect => effect
+          "title" => smarts.dup,
+          "substructure" => true,
+          "numeric" => true,
+          "smarts" => smarts.dup,
+          "pValue" => p_value.abs.round(5),
+          "effect" => effect,
+          "parameters" => [
+            { "title" => "dataset_id", "paramValue" => params[:dataset].id },
+            { "title" => "prediction_feature_id", "paramValue" => params[:prediction_feature].id }
+          ]
         }
-        parameters = [
-          { RDF::DC.title => "dataset_uri", RDF::OT.paramValue => params[:dataset_uri] },
-          { RDF::DC.title => "prediction_feature", RDF::OT.paramValue => params[:prediction_feature] }
-        ]
-        metadata[RDF::OT.hasSource]=feature_dataset_uri if feature_dataset_uri 
-        [ metadata, parameters ]
+        metadata
       end
 
       # Minimum Frequency

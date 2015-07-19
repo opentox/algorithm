@@ -236,7 +236,6 @@ module OpenTox
         # @params[OpenTox::Model] model Model to transform
         def initialize model
           @model = model
-          @similarity_algorithm = @model.similarity_algorithm
         end
 
         # Transforms the model
@@ -282,6 +281,7 @@ module OpenTox
           # neighbor calculation
           @ids = [] # surviving compounds become neighbors
           @sims = [] # calculated by neighbor routine
+          
           neighbors
           n_prop_tmp = []; @ids.each { |idx| n_prop_tmp << @n_prop[idx] }; @n_prop = n_prop_tmp # select neighbors from matrix
           acts_tmp = []; @ids.each { |idx| acts_tmp << @activities[idx] }; @activities = acts_tmp
@@ -294,7 +294,7 @@ module OpenTox
               gram_matrix[i] = [] unless gram_matrix[i]
               @n_prop.each_index do |j|
                 if (j>i)
-                  sim = eval("OpenTox::Algorithm::Similarity::#{@similarity_algorithm}(@n_prop[i], @n_prop[j])")
+                  sim = OpenTox::Algorithm::Similarity.send(@similarity_algorithm.to_sym, @n_prop[i], @n_prop[j])
                   gram_matrix[i][j] = sim
                   gram_matrix[j] = [] unless gram_matrix[j]
                   gram_matrix[j][i] = gram_matrix[i][j]
@@ -393,7 +393,7 @@ module OpenTox
         # @param[Array] A propositionalized data entry
         # @return[Float] Similarity to query structure
         def similarity(training_props)
-          eval("OpenTox::Algorithm::Similarity").send(@model.similarity_algorithm,training_props, @q_prop)
+          OpenTox::Algorithm::Similarity.send(@model.similarity_algorithm,training_props, @q_prop)
         end
 
 
