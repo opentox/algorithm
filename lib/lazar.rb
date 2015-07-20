@@ -37,6 +37,10 @@ module OpenTox
       field :min_train_performance, type: Float
 
       attr_accessor :prediction_dataset
+      attr_accessor :training_dataset
+      attr_accessor :feature_dataset
+      attr_accessor :query_fingerprint
+      attr_accessor :neighbors
 
       # Check parameters for plausibility
       # Prepare lazar object (includes graph mining)
@@ -48,15 +52,15 @@ module OpenTox
 
         bad_request_error "No features found in feature dataset #{feature_dataset.id}." if feature_dataset.features.empty?
         lazar.feature_dataset_id = feature_dataset.id
-        training_dataset = OpenTox::Dataset.find(feature_dataset.parameters.select{|p| p["title"] == "dataset_id"}.first["paramValue"])
-        bad_request_error "Training dataset compounds do not match feature dataset compounds. Please ensure that they are in the same order." unless training_dataset.compounds == feature_dataset.compounds
-        lazar.training_dataset_id = training_dataset.id
+        @training_dataset = OpenTox::Dataset.find(feature_dataset.parameters.select{|p| p["title"] == "dataset_id"}.first["paramValue"])
+        bad_request_error "Training dataset compounds do not match feature dataset compounds. Please ensure that they are in the same order." unless @training_dataset.compounds == feature_dataset.compounds
+        lazar.training_dataset_id = @training_dataset.id
 
         if prediction_feature
-          resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{training_dataset.id}'" unless training_dataset.features.include?( params[:prediction_feature] )
+          resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{@training_dataset.id}'" unless @training_dataset.features.include?( params[:prediction_feature] )
         else # try to read prediction_feature from dataset
-          resource_not_found_error "Please provide a prediction_feature parameter" unless training_dataset.features.size == 1
-          prediction_feature = training_dataset.features.first
+          resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
+          prediction_feature = @training_dataset.features.first
         end
 
         lazar.prediction_feature_id = prediction_feature.id
@@ -67,11 +71,6 @@ module OpenTox
           lazar.prediction_algorithm = params[:prediction_algorithm]
         end
 
-        confidence_feature = OpenTox::Feature.find_or_create_by({
-          "title" => "Prediction confidence",
-          "numeric" => true
-        })
-        
         unless lazar.prediction_algorithm
           lazar.prediction_algorithm = :weighted_majority_vote if prediction_feature.nominal
           lazar.prediction_algorithm = :local_svm_regression if prediction_feature.numeric
@@ -104,18 +103,6 @@ module OpenTox
         lazar.min_train_performance = params[:min_train_performance].to_f if params[:min_train_performance] and params[:min_train_performance].numeric?
         lazar.min_train_performance = 0.1 unless lazar.min_train_performance
 
-=begin
-        if params[:feature_dataset_uri]
-          bad_request_error "Feature dataset #{params[:feature_dataset_uri]} does not exist." unless URI.accessible? params[:feature_dataset_uri]
-          lazar.parameters << {"title" => "feature_dataset_uri", "paramValue" => params[:feature_dataset_uri]}
-          lazar[RDF::OT.featureDataset] = params["feature_dataset_uri"]
-        else
-          # run feature generation algorithm
-          feature_dataset_uri = OpenTox::Algorithm::Generic.new(params[:feature_generation_uri]).run(params)
-          lazar.parameters << {"title" => "feature_dataset_uri", "paramValue" => feature_dataset_uri}
-          lazar[RDF::OT.featureDataset] = feature_dataset_uri
-        end
-=end
         lazar.save
         lazar
       end
@@ -130,58 +117,34 @@ module OpenTox
         # prepare prediction dataset
         prediction_dataset = OpenTox::Dataset.new
         prediction_feature = OpenTox::Feature.find prediction_feature_id
-        prediction_feature = OpenTox::Feature.find prediction_feature_id
         prediction_dataset.title = "Lazar prediction for #{prediction_feature.title}",
         prediction_dataset.creator = __FILE__,
 
-        similarity_feature = OpenTox::Feature.find_or_create_by({
-          "title" => "#{similarity_algorithm.capitalize} similarity",
+        confidence_feature = OpenTox::Feature.find_or_create_by({
+          "title" => "Prediction confidence",
           "numeric" => true
         })
-       
-        #prediction_dataset.features = [ predicted_confidence, prediction_feature, similarity_feature ]
 
-        # TODO set instance variables and prediction dataset parameters from parameters (see development branch)
+        prediction_dataset.features = [ confidence_feature, prediction_feature ]
 
+        @training_dataset = OpenTox::Dataset.find(training_dataset_id)
+        @feature_dataset = OpenTox::Dataset.find(feature_dataset_id)
 
-        training_dataset = OpenTox::Dataset.find(training_dataset_id)
-
-        feature_dataset = OpenTox::Dataset.find(feature_dataset_id)
-
+        compounds = []
         if params[:compound]
           compounds = [ params[:compound]] 
-        else
+        elsif params[:compounds]
+          compounds = params[:compounds]
+        elsif params[:dataset]
           compounds = params[:dataset].compounds
+        else 
+          bad_request_error "Please provide one of the parameters: :compound, :compounds, :dataset"
         end
 
         puts "Setup: #{Time.now-time}"
         time = Time.now
 
-        # TODO: this seems to be very time consuming
-        # uses > 11" on development machine
-        # select training fingerprints from feature dataset (do NOT use entire feature dataset)
-=begin
-        @training_dataset.compounds.each do |c|
-          idx = @feature_dataset.compounds.index(c)
-          bad_request_error "training dataset compound not found in feature dataset" if idx==nil
-          @training_fingerprints << @feature_dataset.data_entries[idx][0..-1]
-        end
-        # fill trailing missing values with nil
-        @training_fingerprints = @training_fingerprints.collect do |values|
-          values << nil while (values.size < @feature_dataset.features.size)
-          values
-        end
-=end
-        # replacement code (sequence has been preserved in bbrc and last
-        # uses ~0.025" on development machine
-        #@training_fingerprints = @feature_dataset.data_entries
-        #@training_compounds = @training_dataset.compounds
-
-        #feature_names = @feature_dataset.features.collect{ |f| f[:title] }
-
-        puts "Fingerprint: #{Time.now-time}"
-        time = Time.now
-        query_fingerprint = OpenTox::Algorithm::Descriptor.send( feature_calculation_algorithm, compounds, feature_dataset.features.collect{|f| f["title"]} )
+        @query_fingerprint = OpenTox::Algorithm::Descriptor.send( feature_calculation_algorithm, compounds, @feature_dataset.features.collect{|f| f["title"]} )
 
         puts "Fingerprint calculation: #{Time.now-time}"
         time = Time.now
@@ -189,99 +152,63 @@ module OpenTox
         # AM: transform to cosine space
         min_sim = (min_sim.to_f*2.0-1.0).to_s if similarity_algorithm =~ /cosine/
 
-        neighbors = []
+        p compounds.size
+        i = 0
         compounds.each_with_index do |compound,c|
+
           $logger.debug "predict compound #{c+1}/#{compounds.size} #{compound.inchi}"
 
-          database_activities = training_dataset.values(compound,prediction_feature)
+          database_activities = @training_dataset.values(compound,prediction_feature)
           if database_activities and !database_activities.empty?
             database_activities.each do |database_activity|
               $logger.debug "do not predict compound, it occurs in dataset with activity #{database_activity}"
-              prediction_dataset << [compound, nil, nil, database_activity, nil]
+              prediction_dataset << [compound, database_activity, nil]
             end
             next
           else
-=begin
-            @training_activities = @training_dataset.data_entries.collect{|entry|
-              act = entry[prediction_feature_pos] if entry
-              @prediction_feature.feature_type=="classification" ? @prediction_feature.value_map.invert[act] : act
-            }
-=end
-
-            #@query_fingerprint = @feature_dataset.features.collect { |f| 
-              #val = query_fingerprints[compound][f.title]
-              #bad_request_error "Can not parse value '#{val}' to numeric" if val and !val.numeric?
-              #val ? val.to_f : 0.0
-            #} # query structure
 
             # TODO reintroduce for regression
             #mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(self)
             #mtf.transform
             #
 
-            feature_dataset.data_entries.each_with_index do |fingerprint, i|
+            puts "Transform: #{Time.now-time}"
+            time = Time.now
 
-              sim = OpenTox::Algorithm::Similarity.send(similarity_algorithm,fingerprint, query_fingerprint[c])
+            # find neighbors
+            neighbors = []
+            @feature_dataset.data_entries.each_with_index do |fingerprint, i|
+
+              sim = OpenTox::Algorithm::Similarity.send(similarity_algorithm,fingerprint, @query_fingerprint[c])
               # TODO fix for multi feature datasets
-              neighbors << [feature_dataset.compounds[i],training_dataset.data_entries[i].first,sim] if sim > self.min_sim
-            end
-            similarity_sum = 0.0
-            confidence_sum = 0.0
-            prediction = nil
-            activities = training_dataset.data_entries.flatten.uniq.sort
-            neighbors.each do |n|
-              similarity_sum += n.last
-              if activities.index(n[1]) == 0
-                confidence_sum += n.last
-              elsif activities.index(n[1]) == 1
-                confidence_sum -= n.last
-              end
-            end
-             
-            if confidence_sum > 0.0
-              prediction = activities[0]
-            else
-              prediction = activities[1]
+              neighbors << [@feature_dataset.compounds[i],@training_dataset.data_entries[i].first,sim] if sim > self.min_sim
             end
 
-            p prediction, confidence_sum/similarity_sum
-  
+            prediction = OpenTox::Algorithm::Classification.send(prediction_algorithm, neighbors)
 
-            
-=begin
-            prediction = OpenTox::Algorithm::Neighbors.send(prediction_algorithm, 
-                { :props => mtf.props,
-                  :activities => mtf.activities,
-                  :sims => mtf.sims,
-                  :value_map => @prediction_feature.feature_type=="classification" ?  @prediction_feature.value_map : nil,
-                  :min_train_performance => @min_train_performance
-                  } )
-           
-            predicted_value = prediction[:prediction]#.to_f
-            confidence_value = prediction[:confidence]#.to_f
+            puts "Prediction: #{Time.now-time}"
+            time = Time.now
 
-            # AM: transform to original space
-            confidence_value = ((confidence_value+1.0)/2.0).abs if @similarity_algorithm =~ /cosine/
-            predicted_value = @prediction_feature.value_map[prediction[:prediction].to_i] if @prediction_feature.feature_type == "classification"
-            $logger.debug "predicted value: #{predicted_value}, confidence: #{confidence_value}"
-=end
+            # AM: transform to original space (TODO)
+            confidence_value = ((confidence_value+1.0)/2.0).abs if similarity_algorithm =~ /cosine/
+
+
+            $logger.debug "predicted value: #{prediction[:prediction]}, confidence: #{prediction[:confidence]}"
           end
+          prediction_dataset << [ compound, prediction[:prediction], prediction[:confidence] ]
 
-=begin
-          @prediction_dataset << [ compound, predicted_value, confidence_value, nil, nil ]
+        end 
+        prediction_dataset
 
-          if @compound_uri # add neighbors only for compound predictions
-            @neighbors.each do |neighbor|
-              n =  neighbor[:compound]
-              @prediction_feature.feature_type == "classification" ? a = @prediction_feature.value_map[neighbor[:activity]] : a = neighbor[:activity]
-              @prediction_dataset << [ n, nil, nil, a, neighbor[:similarity] ]
-            end
-          end
-=end
-
-        end # iteration over compounds
-        @prediction_dataset
-
+      end
+      
+      def training_activities
+        # TODO select predicted variable
+            #@training_activities = @training_dataset.data_entries.collect{|entry|
+              #act = entry[prediction_feature_pos] if entry
+              #@prediction_feature.feature_type=="classification" ? @prediction_feature.value_map.invert[act] : act
+            #}
+        @training_dataset.data_entries.flatten
       end
 
     end

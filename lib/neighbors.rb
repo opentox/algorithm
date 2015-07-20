@@ -33,6 +33,10 @@ module OpenTox
 
         $logger.debug "Weighted Majority Vote Classification."
 
+        p params[:value_map]
+
+        # TODO: use value_maps again
+        params[:activities].collect!{|a| a == "false" ? 2 : 1}
         params[:activities].each_index do |idx|
           neighbor_weight = params[:sims][1][idx]
           neighbor_contribution += params[:activities][idx] * neighbor_weight
