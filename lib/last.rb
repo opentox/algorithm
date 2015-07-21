@@ -36,7 +36,7 @@ module OpenTox
           @last.SetConsoleOut(false)
     
     
-          feature_dataset = OpenTox::Dataset.new
+          feature_dataset = OpenTox::CalculatedDataset.new
           feature_dataset["title"] = "LAST representatives for #{@fminer.training_dataset.title}",
           feature_dataset.creator = __FILE__
           feature_dataset.parameters = [

@@ -33,8 +33,12 @@ module OpenTox
         resource_not_found_error "No feature '#{params[:prediction_feature]}' in dataset '#{params[:dataset]}'" unless 
           @training_dataset.features.include?( params[:prediction_feature] ) 
         unless params[:min_frequency].nil? 
+          # set minfreq directly
+          if params[:min_frequency].numeric?
+            @minfreq=params[:min_frequency].to_i
+            $logger.debug "min_frequency #{@minfreq}"
           # check for percentage
-          if params[:min_frequency].include? "pc"
+          elsif params[:min_frequency].include? "pc"
             per_mil=params[:min_frequency].gsub(/pc/,"")
             if per_mil.numeric?
               per_mil = per_mil.to_i * 10
@@ -49,14 +53,8 @@ module OpenTox
             else
               bad_request=true
             end
-          # set minfreq directly
           else
-            if params[:min_frequency].numeric?
-              @minfreq=params[:min_frequency].to_i
-              $logger.debug "min_frequency #{@minfreq}"
-            else
               bad_request=true
-            end
           end
           bad_request_error "Minimum frequency must be integer [n], or a percentage [n]pc, or a per-mil [n]pm , with n greater 0" if bad_request
         end

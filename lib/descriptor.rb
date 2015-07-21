@@ -63,7 +63,6 @@ module OpenTox
         obmol = OpenBabel::OBMol.new
         obconversion.set_in_format('inchi')
         smarts_pattern = OpenBabel::OBSmartsPattern.new
-        #fingerprint = {}
         smarts = [smarts] unless smarts.is_a? Array
         fingerprint = Array.new(compounds.size){Array.new(smarts.size,false)}
         compounds.each_with_index do |compound,c|
@@ -87,6 +86,8 @@ module OpenTox
 
       def self.physchem compounds, descriptors=UNIQUEDESCRIPTORS
         compounds = parse compounds
+        dataset = OpenTox::CalculatedDataset.new
+        dataset.compounds = compounds
         des = {}
         descriptors.each do |d|
           lib, descriptor = d.split(".",2)
@@ -95,13 +96,27 @@ module OpenTox
           des[lib] << descriptor
         end
         result = {}
-        des.each do |lib,d|
-          send(lib, compounds, d).each do |compound,values|
-            result[compound] ||= {}
-            result[compound].merge! values
-          end 
+        features = []
+        data_entries = Array.new(compounds.size){Array.new(des.size)}
+        n = 0
+        des.each do |lib,descriptors|
+          features += descriptors.collect do |d|
+            OpenTox::Feature.find_or_create_by(
+              :title => "#{lib}.#{d}",
+              :creator => __FILE__
+            )
+          end
+          r = send(lib, compounds, descriptors)
+          #p r
+          r.each_with_index do |values,i|
+            data_entries[i][n] = values
+          end
+          n += 1
         end
-        result
+        #dataset.features = features
+        #dataset.data_entries = data_entries
+        #dataset
+        data_entries
       end
 
       def self.openbabel compounds, descriptors
@@ -111,12 +126,11 @@ module OpenTox
         obmol = OpenBabel::OBMol.new
         obconversion = OpenBabel::OBConversion.new
         obconversion.set_in_format 'inchi'
-        fingerprint = {}
-        compounds.each do |compound|
+        fingerprint = Array.new(compounds.size){Array.new(obdescriptors.size)}
+        compounds.each_with_index do |compound,c|
           obconversion.read_string obmol, compound.inchi
-          fingerprint[compound] = {}
-          obdescriptors.each_with_index do |descriptor,i|
-            fingerprint[compound]["Openbabel."+descriptors[i]] = fix_value(descriptor.predict(obmol))
+          obdescriptors.each_with_index do |descriptor,d|
+            fingerprint[c][d] = fix_value(descriptor.predict(obmol))
           end
         end
         fingerprint
@@ -238,6 +252,7 @@ module OpenTox
       end
 
       def self.parse compounds
+        p compounds
         case compounds.class.to_s
         when "OpenTox::Compound"
           compounds = [compounds]

@@ -46,13 +46,14 @@ module OpenTox
       # Prepare lazar object (includes graph mining)
       # @param[Array] lazar parameters as strings
       # @param[Hash] REST parameters, as input by user
-      def self.create feature_dataset, prediction_feature=nil, params={}
+      def self.create training_dataset, feature_dataset, prediction_feature=nil, params={}
         
         lazar = OpenTox::Model::Lazar.new
 
         bad_request_error "No features found in feature dataset #{feature_dataset.id}." if feature_dataset.features.empty?
         lazar.feature_dataset_id = feature_dataset.id
-        @training_dataset = OpenTox::Dataset.find(feature_dataset.parameters.select{|p| p["title"] == "dataset_id"}.first["paramValue"])
+        @training_dataset = training_dataset
+        #@training_dataset = OpenTox::Dataset.find(feature_dataset.parameters.select{|p| p["title"] == "dataset_id"}.first["paramValue"])
         bad_request_error "Training dataset compounds do not match feature dataset compounds. Please ensure that they are in the same order." unless @training_dataset.compounds == feature_dataset.compounds
         lazar.training_dataset_id = @training_dataset.id
 
@@ -141,19 +142,17 @@ module OpenTox
           bad_request_error "Please provide one of the parameters: :compound, :compounds, :dataset"
         end
 
-        puts "Setup: #{Time.now-time}"
+        $logger.debug "Setup: #{Time.now-time}"
         time = Time.now
 
         @query_fingerprint = OpenTox::Algorithm::Descriptor.send( feature_calculation_algorithm, compounds, @feature_dataset.features.collect{|f| f["title"]} )
 
-        puts "Fingerprint calculation: #{Time.now-time}"
+        $logger.debug "Fingerprint calculation: #{Time.now-time}"
         time = Time.now
 
         # AM: transform to cosine space
         min_sim = (min_sim.to_f*2.0-1.0).to_s if similarity_algorithm =~ /cosine/
 
-        p compounds.size
-        i = 0
         compounds.each_with_index do |compound,c|
 
           $logger.debug "predict compound #{c+1}/#{compounds.size} #{compound.inchi}"
@@ -172,9 +171,6 @@ module OpenTox
             #mtf.transform
             #
 
-            puts "Transform: #{Time.now-time}"
-            time = Time.now
-
             # find neighbors
             neighbors = []
             @feature_dataset.data_entries.each_with_index do |fingerprint, i|
@@ -186,7 +182,7 @@ module OpenTox
 
             prediction = OpenTox::Algorithm::Classification.send(prediction_algorithm, neighbors)
 
-            puts "Prediction: #{Time.now-time}"
+            $logger.debug "Prediction: #{Time.now-time}"
             time = Time.now
 
             # AM: transform to original space (TODO)
