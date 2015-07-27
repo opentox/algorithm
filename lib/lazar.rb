@@ -25,13 +25,14 @@ module OpenTox
       # algorithms
       field :feature_generation, type: String
       field :feature_calculation_algorithm, type: String
-      field :prediction_algorithm, type: Symbol
-      field :similarity_algorithm, type: Symbol
+      field :prediction_algorithm, type: String
+      field :similarity_algorithm, type: String
       # prediction features
       field :prediction_feature_id, type: BSON::ObjectId
       field :predicted_value_id, type: BSON::ObjectId
       field :predicted_variables, type: Array
       # parameters
+      field :nr_hits, type: Boolean
       field :min_sim, type: Float
       field :propositionalized, type:Boolean
       field :min_train_performance, type: Float
@@ -46,7 +47,7 @@ module OpenTox
       # Prepare lazar object (includes graph mining)
       # @param[Array] lazar parameters as strings
       # @param[Hash] REST parameters, as input by user
-      def self.create training_dataset, feature_dataset, prediction_feature=nil, params={}
+      def self.create training_dataset, feature_dataset, prediction_feature=nil, nr_hits=false, params={}
         
         lazar = OpenTox::Model::Lazar.new
 
@@ -79,22 +80,20 @@ module OpenTox
         lazar.prediction_algorithm =~ /majority_vote/ ? lazar.propositionalized = false :  lazar.propositionalized = true
 
         lazar.min_sim = params[:min_sim].to_f if params[:min_sim] and params[:min_sim].numeric?
-        lazar.nr_hits =  params[:nr_hits] if params[:nr_hits]
-        lazar.feature_generation = feature_dataset.creator
+        lazar.nr_hits =  nr_hits
+        lazar.feature_generation = feature_dataset.training_algorithm
         #lazar.parameters << {"title" => "feature_generation_uri", "paramValue" => params[:feature_generation_uri]}
-        # TODO insert algorithm into feature dataset
-        # TODO store algorithms in mongodb?
         if lazar.feature_generation =~ /fminer|bbrc|last/
-          if (lazar[:nr_hits] == "true")
-            lazar.feature_calculation_algorithm = "smarts_count"
+          if lazar[:nr_hits] 
+            lazar.feature_calculation_algorithm = "OpenTox::Algorithm::Descriptor.smarts_count"
           else
-            lazar.feature_calculation_algorithm = "smarts_match"
+            lazar.feature_calculation_algorithm = "OpenTox::Algorithm::Descriptor.smarts_match"
           end
-          lazar.similarity_algorithm = "tanimoto"
+          lazar.similarity_algorithm = "OpenTox::Algorithm::Similarity.tanimoto"
           lazar.min_sim = 0.3 unless lazar.min_sim
         elsif lazar.feature_generation =~/descriptor/ or lazar.feature_generation.nil?
           # cosine similartiy is default (e.g. used when no fetature_generation_uri is given and a feature_dataset_uri is provided instead)
-          lazar.similarity_algorithm = "cosine"
+          lazar.similarity_algorithm = "OpenTox::Algorithm::Similarity.cosine"
           lazar.min_sim = 0.7 unless lazar.min_sim
         else
           bad_request_error "unkown feature generation method #{lazar.feature_generation}"
@@ -116,7 +115,7 @@ module OpenTox
         time = Time.now
 
         # prepare prediction dataset
-        prediction_dataset = OpenTox::Dataset.new
+        prediction_dataset = LazarPrediction.new
         prediction_feature = OpenTox::Feature.find prediction_feature_id
         prediction_dataset.title = "Lazar prediction for #{prediction_feature.title}",
         prediction_dataset.creator = __FILE__,
@@ -145,7 +144,11 @@ module OpenTox
         $logger.debug "Setup: #{Time.now-time}"
         time = Time.now
 
-        @query_fingerprint = OpenTox::Algorithm::Descriptor.send( feature_calculation_algorithm, compounds, @feature_dataset.features.collect{|f| f["title"]} )
+        # TODO: remove eval
+        #p ("#{feature_calculation_algorithm}(#{compounds}, #{@feature_dataset.features.collect{|f| f.smarts}})")
+        #@query_fingerprint = eval("#{feature_calculation_algorithm}(#{compounds}, #{@feature_dataset.features.collect{|f| f.smarts}})")
+        @query_fingerprint = Algorithm.run(feature_calculation_algorithm, compounds, @feature_dataset.features.collect{|f| f.smarts} )
+        #p @query_fingerprint 
 
         $logger.debug "Fingerprint calculation: #{Time.now-time}"
         time = Time.now
@@ -173,14 +176,21 @@ module OpenTox
 
             # find neighbors
             neighbors = []
-            @feature_dataset.data_entries.each_with_index do |fingerprint, i|
+            #@feature_dataset.data_entries.each_with_index do |fingerprint, i|
+            @feature_dataset.compounds.each_with_index do |compound, i|
+              #p compound
+              #p @feature_dataset.features.size
+              fingerprint = @feature_dataset.feature_values(compound)
+              #fingerprint = @feature_dataset.features(compound)
+              #p fingerprint
 
-              sim = OpenTox::Algorithm::Similarity.send(similarity_algorithm,fingerprint, @query_fingerprint[c])
+              sim = Algorithm.run(similarity_algorithm,[fingerprint, @query_fingerprint[c]])
               # TODO fix for multi feature datasets
               neighbors << [@feature_dataset.compounds[i],@training_dataset.data_entries[i].first,sim] if sim > self.min_sim
             end
+            #p neighbors
 
-            prediction = OpenTox::Algorithm::Classification.send(prediction_algorithm, neighbors)
+            prediction = Algorithm.run(prediction_algorithm, neighbors)
 
             $logger.debug "Prediction: #{Time.now-time}"
             time = Time.now

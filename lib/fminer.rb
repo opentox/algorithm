@@ -97,11 +97,12 @@ module OpenTox
       # @param[Hash] Maps dependent variable values to Integers
       
       def add_fminer_data(fminer_instance, value_map)
+        # TODO store warnings in dataset
         id=1
         @training_dataset.compounds.each do |compound|
           compound_activities = @training_dataset.values(compound, @prediction_feature)
           begin
-            if @prediction_feature.feature_type == "classification"
+            if @prediction_feature.nominal
               compound_activities = compound_activities.to_scale.mode
             else
               compound_activities = compound_activities.to_scale.median
@@ -113,7 +114,7 @@ module OpenTox
           if compound_activities.nil?
             $logger.warn "No activity for '#{compound.inchi}' and feature '#{@prediction_feature.title}'"
           else
-            if @prediction_feature.feature_type == "classification"
+            if @prediction_feature.nominal
               activity= value_map.invert[compound_activities].to_i # activities are mapped to 1..n
               bad_request_error "activity could not be mapped, is #{compound_activities} (#{compound_activities.class}), available: #{value_map.values} (#{value_map.values.collect{|k| k.class}})" if activity<1
               @db_class_sizes[activity-1].nil? ? @db_class_sizes[activity-1]=1 : @db_class_sizes[activity-1]+=1 # AM effect
@@ -180,15 +181,16 @@ module OpenTox
       # @param [Integer] per-mil value
       # return [Integer] min-frequency
       def min_frequency(training_dataset,prediction_feature,per_mil)
-        nr_labeled_cmpds=0
-        f_idx=training_dataset.features.index prediction_feature
-        training_dataset.compounds.each_with_index { |cmpd, c_idx|
-          if ( training_dataset.data_entries[c_idx] )
-               unless training_dataset.data_entries[c_idx][f_idx].nil?
-                 nr_labeled_cmpds += 1 
-               end
-          end
-        }
+        nr_labeled_cmpds = DataEntry.where(dataset_id: training_dataset.id, feature_id: prediction_feature.id).in(compound_id: training_dataset.compound_ids).count
+        #nr_labeled_cmpds=0
+        #f_idx=training_dataset.features.index prediction_feature
+        #training_dataset.compounds.each_with_index { |cmpd, c_idx|
+          #if ( training_dataset.data_entries[c_idx] )
+               #unless training_dataset.data_entries[c_idx][f_idx].nil?
+                 #nr_labeled_cmpds += 1 
+               #end
+          #end
+        #}
         minfreq = per_mil * nr_labeled_cmpds.to_f / 1000.0 # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
         minfreq = 2 unless minfreq > 2
         Integer (minfreq)

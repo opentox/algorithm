@@ -15,6 +15,9 @@ module OpenTox
       #   - get_target Set to "true" to obtain target variable as feature
       # @return [text/uri-list] Task URI
       def self.bbrc params
+
+        table_of_elements = [
+"H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"]
         
         @fminer=OpenTox::Algorithm::Fminer.new
         @fminer.check_params(params,5)
@@ -23,14 +26,13 @@ module OpenTox
 
         @bbrc = Bbrc::Bbrc.new
         @bbrc.Reset
-        if @fminer.prediction_feature.feature_type == "regression"
+        if @fminer.prediction_feature.numeric 
           @bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
         else
           bad_request_error "No accept values for "\
                             "dataset '#{@fminer.training_dataset.id}' and "\
-                            "feature '#{@fminer.prediction_feature.id}'" unless 
-                             @fminer.prediction_feature.accept_values
-          value_map=@fminer.prediction_feature.value_map
+                            "feature '#{@fminer.prediction_feature.id}'" unless @fminer.prediction_feature.accept_values
+          value_map = @fminer.prediction_feature.accept_values.each_index.inject({}) { |h,idx| h[idx+1]=@fminer.prediction_feature.accept_values[idx]; h }
         end
         @bbrc.SetMinfreq(@fminer.minfreq)
         @bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -38,16 +40,18 @@ module OpenTox
         @bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
         @bbrc.SetConsoleOut(false)
 
-        feature_dataset = OpenTox::CalculatedDataset.new
-        feature_dataset.title = "BBRC representatives"
-        feature_dataset.creator = __FILE__
-        feature_dataset.parameters = [
-            { "title" => "dataset_id", "paramValue" => params[:dataset].id },
-            { "title" => "prediction_feature_id", "paramValue" => params[:prediction_feature].id },
-            { "title" => "min_frequency", "paramValue" => @fminer.minfreq },
-            { "title" => "nr_hits", "paramValue" => (params[:nr_hits] == "true" ? "true" : "false") },
-            { "title" => "backbone", "paramValue" => (params[:backbone] == "false" ? "false" : "true") }
-        ] 
+        feature_dataset = FminerDataset.new(
+            :training_dataset_id => params[:dataset].id,
+            :training_algorithm => "#{self.to_s}.bbrc",
+            :training_feature_id => params[:prediction_feature].id ,
+            :training_parameters => {
+              :min_frequency => @fminer.minfreq,
+              :nr_hits => (params[:nr_hits] == "true" ? "true" : "false"),
+              :backbone => (params[:backbone] == "false" ? "false" : "true") 
+            }
+
+        )
+        feature_dataset.compounds = params[:dataset].compounds
 
         @fminer.compounds = []
         @fminer.db_class_sizes = Array.new # AM: effect
@@ -59,27 +63,32 @@ module OpenTox
         g_median=@fminer.all_activities.values.to_scale.median
 
         #task.progress 10
-        step_width = 80 / @bbrc.GetNoRootNodes().to_f
-        #features_smarts = Set.new
+        #step_width = 80 / @bbrc.GetNoRootNodes().to_f
         features = []
-        data_entries = Array.new(params[:dataset].compounds.size) {[]}
+        feature_ids = []
+        matches = {}
 
         $logger.debug "Setup: #{Time.now-time}"
         time = Time.now
         ftime = 0
+        itime = 0
+        rtime = 0
   
         # run @bbrc
-        
-        fminer_results = {}
-
         (0 .. @bbrc.GetNoRootNodes()-1).each do |j|
           results = @bbrc.MineRoot(j)
-          #task.progress 10+step_width*(j+1)
           results.each do |result|
+            rt = Time.now
             f = YAML.load(result)[0]
-            smarts = f[0]
-            p_value = f[1]
+            smarts = f.shift
+            # convert fminer representation into a more human readable format
+            smarts.gsub!(%r{\[#(\d+)&(\w)\]}) do
+             element = table_of_elements[$1.to_i-1]
+             $2 == "a" ? element.downcase : element
+            end
+            p_value = f.shift
   
+=begin
             if (!@bbrc.GetRegression)
               id_arrs = f[2..-1].flatten
               max = OpenTox::Algorithm::Fminer.effect(f[2..-1].reverse, @fminer.db_class_sizes) # f needs reversal for bbrc
@@ -99,62 +108,52 @@ module OpenTox
                 effect = 'deactivating'
               end
             end
+=end
+            rtime += Time.now - rt
   
             ft = Time.now
-            feature = OpenTox::Feature.find_or_create_by({
-              "title" => smarts.dup,
-              "numeric" => true,
-              "substructure" => true,
-              "smarts" => smarts.dup,
+            feature = OpenTox::FminerSmarts.find_or_create_by({
+              "smarts" => smarts,
               "pValue" => p_value.to_f.abs.round(5),
-              "effect" => effect,
-              "parameters" => [
-                { "title" => "dataset_id", "paramValue" => params[:dataset].id },
-                { "title" => "prediction_feature_id", "paramValue" => params[:prediction_feature].id }
-              ]
+              #"effect" => effect,
+              "dataset_id" => feature_dataset.id
             })
-            features << feature
+            feature_dataset.add_feature feature
+            feature_ids << feature.id.to_s
             ftime += Time.now - ft
 
-            id_arrs.each { |id_count_hash|
-              id=id_count_hash.keys[0].to_i
-              count=id_count_hash.values[0].to_i
-              fminer_results[@fminer.compounds[id]] || fminer_results[@fminer.compounds[id]] = {}
-              compound_idx = params[:dataset].compounds.index @fminer.compounds[id] 
-              feature_idx = features.index feature
-              data_entries[compound_idx] ||= []
-              if params[:nr_hits] == "true"
-                fminer_results[@fminer.compounds[id]][feature] = count
-                data_entries[compound_idx][feature_idx] = count
-              else
-                fminer_results[@fminer.compounds[id]][feature] = 1
-                data_entries[compound_idx][feature_idx] = 1
+            it = Time.now
+            f.first.each do |id_count_hash|
+              id_count_hash.each do |id,count|
+                matches[@fminer.compounds[id].id.to_s] = {feature.id.to_s => count}
               end
-            }
+            end
+            itime += Time.now - it
   
-          end # end of
-        end   # feature parsing
-
-        $logger.debug "Fminer: #{Time.now-time} (find/create Features: #{ftime})"
-        time = Time.now
-
-        # convert nil entries to 0
-        data_entries.collect! do |r| 
-          if r.empty? 
-            Array.new(features.size,0) 
-          else
-            r[features.size-1] = 0 if r.size < features.size # grow array to match feature size
-            r.collect!{|c| c.nil? ? 0 : c} # remove nils
           end
         end
 
-        feature_dataset.compounds = params[:dataset].compounds
-        feature_dataset.features = features
-        feature_dataset.data_entries = data_entries
+        $logger.debug "Fminer: #{Time.now-time} (read: #{rtime}, iterate: #{itime}, find/create Features: #{ftime})"
+        time = Time.now
+
+        n = 0
+        feature_dataset.compound_ids.each do |cid|
+          cid = cid.to_s
+          feature_dataset.feature_ids.each_with_index do |fid,i|
+            fid = fid.to_s
+            unless matches[cid] and matches[cid][fid]# fminer returns only matches
+              count = 0
+            else
+              count = matches[cid][fid]
+            end
+            feature_dataset.bulk << [cid,fid,count]
+            n +=1
+          end
+        end
 
         $logger.debug "Prepare save: #{Time.now-time}"
         time = Time.now
-        #File.open("kazius.json","w+"){|f| f.puts feature_dataset.inspect}
+        feature_dataset.bulk_write
         feature_dataset.save
 
         $logger.debug "Save: #{Time.now-time}"
