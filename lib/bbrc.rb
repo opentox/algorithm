@@ -14,13 +14,13 @@ module OpenTox
       #   - nr_hits Set to "true" to get hit count instead of presence
       #   - get_target Set to "true" to obtain target variable as feature
       # @return [text/uri-list] Task URI
-      def self.bbrc params
+      def self.bbrc dataset, params={}
 
         table_of_elements = [
 "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"]
         
         @fminer=OpenTox::Algorithm::Fminer.new
-        @fminer.check_params(params,5)
+        @fminer.check_params(dataset,params,5)
 
         time = Time.now
 
@@ -41,7 +41,7 @@ module OpenTox
         @bbrc.SetConsoleOut(false)
 
         feature_dataset = FminerDataset.new(
-            :training_dataset_id => params[:dataset].id,
+            :training_dataset_id => dataset.id,
             :training_algorithm => "#{self.to_s}.bbrc",
             :training_feature_id => params[:prediction_feature].id ,
             :training_parameters => {
@@ -51,22 +51,14 @@ module OpenTox
             }
 
         )
-        feature_dataset.compounds = params[:dataset].compounds
+        feature_dataset.compounds = dataset.compounds
 
-        @fminer.compounds = []
-        @fminer.db_class_sizes = Array.new # AM: effect
-        @fminer.all_activities = Hash.new # DV: for effect calculation in regression part
-        @fminer.smi = [] # AM LAST: needed for matching the patterns back
-  
         # Add data to fminer
         @fminer.add_fminer_data(@bbrc, value_map)
         g_median=@fminer.all_activities.values.to_scale.median
 
         #task.progress 10
         #step_width = 80 / @bbrc.GetNoRootNodes().to_f
-        features = []
-        feature_ids = []
-        matches = {}
 
         $logger.debug "Setup: #{Time.now-time}"
         time = Time.now
@@ -81,12 +73,13 @@ module OpenTox
             rt = Time.now
             f = YAML.load(result)[0]
             smarts = f.shift
-            # convert fminer representation into a more human readable format
+            # convert fminer SMARTS representation into a more human readable format
             smarts.gsub!(%r{\[#(\d+)&(\w)\]}) do
              element = table_of_elements[$1.to_i-1]
              $2 == "a" ? element.downcase : element
             end
             p_value = f.shift
+            f.flatten!
   
 =begin
             if (!@bbrc.GetRegression)
@@ -118,14 +111,13 @@ module OpenTox
               #"effect" => effect,
               "dataset_id" => feature_dataset.id
             })
-            feature_dataset.add_feature feature
-            feature_ids << feature.id.to_s
+            feature_dataset.feature_ids << feature.id
             ftime += Time.now - ft
 
             it = Time.now
-            f.first.each do |id_count_hash|
+            f.each do |id_count_hash|
               id_count_hash.each do |id,count|
-                matches[@fminer.compounds[id].id.to_s] = {feature.id.to_s => count}
+                feature_dataset[id-1, feature_dataset.feature_ids.size-1] = count.to_i
               end
             end
             itime += Time.now - it
@@ -136,25 +128,11 @@ module OpenTox
         $logger.debug "Fminer: #{Time.now-time} (read: #{rtime}, iterate: #{itime}, find/create Features: #{ftime})"
         time = Time.now
 
-        n = 0
-        feature_dataset.compound_ids.each do |cid|
-          cid = cid.to_s
-          feature_dataset.feature_ids.each_with_index do |fid,i|
-            fid = fid.to_s
-            unless matches[cid] and matches[cid][fid]# fminer returns only matches
-              count = 0
-            else
-              count = matches[cid][fid]
-            end
-            feature_dataset.bulk << [cid,fid,count]
-            n +=1
-          end
-        end
+        feature_dataset.fill_nil_with 0
 
         $logger.debug "Prepare save: #{Time.now-time}"
         time = Time.now
-        feature_dataset.bulk_write
-        feature_dataset.save
+        feature_dataset.save_all
 
         $logger.debug "Save: #{Time.now-time}"
         feature_dataset

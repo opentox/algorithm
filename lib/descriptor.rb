@@ -252,7 +252,6 @@ module OpenTox
       end
 
       def self.parse compounds
-        p compounds
         case compounds.class.to_s
         when "OpenTox::Compound"
           compounds = [compounds]

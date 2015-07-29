@@ -21,10 +21,10 @@ module OpenTox
       # @param[Hash] parameters of the REST call
       # @param[Integer] per-mil value for min frequency
       
-      def check_params(params,per_mil)
-        bad_request_error "Please submit a dataset." unless params[:dataset] and  !params[:dataset].nil?
+      def check_params(dataset, params,per_mil)
+        bad_request_error "Please submit a dataset." unless dataset and  !dataset.nil?
         @training_dataset = OpenTox::Dataset.new 
-        @training_dataset = params[:dataset]
+        @training_dataset = dataset
         unless params[:prediction_feature] # try to read prediction_feature from dataset
           resource_not_found_error "Please provide a prediction_feature parameter" unless @training_dataset.features.size == 1
           params[:prediction_feature] = @training_dataset.features.first
@@ -97,6 +97,11 @@ module OpenTox
       # @param[Hash] Maps dependent variable values to Integers
       
       def add_fminer_data(fminer_instance, value_map)
+        @compounds = []
+        @db_class_sizes = Array.new # AM: effect
+        @all_activities = Hash.new # DV: for effect calculation in regression part
+        @smi = [] # AM LAST: needed for matching the patterns back
+  
         # TODO store warnings in dataset
         id=1
         @training_dataset.compounds.each do |compound|
@@ -115,7 +120,7 @@ module OpenTox
             $logger.warn "No activity for '#{compound.inchi}' and feature '#{@prediction_feature.title}'"
           else
             if @prediction_feature.nominal
-              activity= value_map.invert[compound_activities].to_i # activities are mapped to 1..n
+              activity= value_map.invert[compound_activities] # activities are mapped to 1..n
               bad_request_error "activity could not be mapped, is #{compound_activities} (#{compound_activities.class}), available: #{value_map.values} (#{value_map.values.collect{|k| k.class}})" if activity<1
               @db_class_sizes[activity-1].nil? ? @db_class_sizes[activity-1]=1 : @db_class_sizes[activity-1]+=1 # AM effect
             elsif @prediction_feature.feature_type == "regression"
