@@ -13,7 +13,7 @@ module OpenTox
       include OpenTox
       include Mongoid::Document
       include Mongoid::Timestamps
-      store_in collection: "model"
+      store_in collection: "models"
 
       field :title, type: String
       field :description, type: String
@@ -74,8 +74,8 @@ module OpenTox
         end
 
         unless lazar.prediction_algorithm
-          lazar.prediction_algorithm = :weighted_majority_vote if prediction_feature.nominal
-          lazar.prediction_algorithm = :local_svm_regression if prediction_feature.numeric
+          lazar.prediction_algorithm = "OpenTox::Algorithm::Classification.weighted_majority_vote" if prediction_feature.nominal
+          lazar.prediction_algorithm = "OpenTox::Algorithm::Regression.local_svm_regression" if prediction_feature.numeric
         end
         lazar.prediction_algorithm =~ /majority_vote/ ? lazar.propositionalized = false :  lazar.propositionalized = true
 
@@ -144,11 +144,7 @@ module OpenTox
         $logger.debug "Setup: #{Time.now-time}"
         time = Time.now
 
-        # TODO: remove eval
-        #p ("#{feature_calculation_algorithm}(#{compounds}, #{@feature_dataset.features.collect{|f| f.smarts}})")
-        #@query_fingerprint = eval("#{feature_calculation_algorithm}(#{compounds}, #{@feature_dataset.features.collect{|f| f.smarts}})")
         @query_fingerprint = Algorithm.run(feature_calculation_algorithm, compounds, @feature_dataset.features.collect{|f| f.smarts} )
-        #p @query_fingerprint 
 
         $logger.debug "Fingerprint calculation: #{Time.now-time}"
         time = Time.now
@@ -164,7 +160,9 @@ module OpenTox
           if database_activities and !database_activities.empty?
             database_activities.each do |database_activity|
               $logger.debug "do not predict compound, it occurs in dataset with activity #{database_activity}"
-              prediction_dataset << [compound, database_activity, nil]
+              prediction_dataset.compound_ids << compound.id
+              prediction_dataset[c,0] = database_activity
+              prediction_dataset[c,1] = nil
             end
             next
           else
@@ -176,23 +174,16 @@ module OpenTox
 
             # find neighbors
             neighbors = []
-            #@feature_dataset.data_entries.each_with_index do |fingerprint, i|
-            @feature_dataset.compounds.each_with_index do |compound, i|
-              #p compound
-              #p @feature_dataset.features.size
-              fingerprint = @feature_dataset.feature_values(compound)
-              #fingerprint = @feature_dataset.features(compound)
-              #p fingerprint
+            @feature_dataset.data_entries.each_with_index do |fingerprint, i|
 
-              sim = Algorithm.run(similarity_algorithm,[fingerprint, @query_fingerprint[c]])
+              sim = Algorithm.run(similarity_algorithm,fingerprint, @query_fingerprint[c])
               # TODO fix for multi feature datasets
               neighbors << [@feature_dataset.compounds[i],@training_dataset.data_entries[i].first,sim] if sim > self.min_sim
             end
-            #p neighbors
 
             prediction = Algorithm.run(prediction_algorithm, neighbors)
 
-            $logger.debug "Prediction: #{Time.now-time}"
+            $logger.debug "Prediction time: #{Time.now-time}"
             time = Time.now
 
             # AM: transform to original space (TODO)
@@ -201,7 +192,9 @@ module OpenTox
 
             $logger.debug "predicted value: #{prediction[:prediction]}, confidence: #{prediction[:confidence]}"
           end
-          prediction_dataset << [ compound, prediction[:prediction], prediction[:confidence] ]
+          prediction_dataset.compound_ids << compound
+          prediction_dataset[c,0] = prediction[:prediction]
+          prediction_dataset[c,1] = prediction[:confidence] 
 
         end 
         prediction_dataset

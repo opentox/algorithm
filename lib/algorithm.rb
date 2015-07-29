@@ -2,9 +2,9 @@ module OpenTox
 
   module Algorithm 
 
-    def self.run algorithm, arg1, arg2 #parameters
+    def self.run algorithm, object, parameters={}
       klass,method = algorithm.split('.')
-      Object.const_get(klass).send(method, arg1,arg2)
+      parameters.empty? ?  Object.const_get(klass).send(method,object) : Object.const_get(klass).send(method,object, parameters)
     end
 
   end

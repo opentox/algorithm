@@ -40,14 +40,15 @@ module OpenTox
         @bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
         @bbrc.SetConsoleOut(false)
 
+        params[:nr_hits] ? nr_hits = params[:nr_hits] : nr_hits = false
         feature_dataset = FminerDataset.new(
             :training_dataset_id => dataset.id,
             :training_algorithm => "#{self.to_s}.bbrc",
             :training_feature_id => params[:prediction_feature].id ,
             :training_parameters => {
               :min_frequency => @fminer.minfreq,
-              :nr_hits => (params[:nr_hits] == "true" ? "true" : "false"),
-              :backbone => (params[:backbone] == "false" ? "false" : "true") 
+              :nr_hits => nr_hits,
+              :backbone => (params[:backbone] == false ? false : true) 
             }
 
         )
@@ -117,7 +118,8 @@ module OpenTox
             it = Time.now
             f.each do |id_count_hash|
               id_count_hash.each do |id,count|
-                feature_dataset[id-1, feature_dataset.feature_ids.size-1] = count.to_i
+                nr_hits ? count = count.to_i : count = 1
+                feature_dataset[id-1, feature_dataset.feature_ids.size-1] = count
               end
             end
             itime += Time.now - it
