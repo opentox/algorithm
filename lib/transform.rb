@@ -231,7 +231,7 @@ module OpenTox
       # Attaches transformations to an OpenTox::Model
       # Stores props, sims, performs similarity calculations
       class ModelTransformer
-        attr_accessor :model, :similarity_algorithm, :activities, :sims
+        attr_accessor :model, :similarity_algorithm, :activities, :sims, :n_prop, :q_prop
 
         # @params[OpenTox::Model] model Model to transform
         def initialize model
@@ -282,6 +282,7 @@ module OpenTox
           @ids = [] # surviving compounds become neighbors
           @sims = [] # calculated by neighbor routine
           
+=begin
           neighbors
           n_prop_tmp = []; @ids.each { |idx| n_prop_tmp << @n_prop[idx] }; @n_prop = n_prop_tmp # select neighbors from matrix
           acts_tmp = []; @ids.each { |idx| acts_tmp << @activities[idx] }; @activities = acts_tmp
@@ -315,6 +316,7 @@ module OpenTox
           $logger.debug "Sims: #{@sims.size}, Acts: #{@activities.size}"
 
           @sims = [ gram_matrix, @sims ] 
+=end
 
         end
 
@@ -393,7 +395,8 @@ module OpenTox
         # @param[Array] A propositionalized data entry
         # @return[Float] Similarity to query structure
         def similarity(training_props)
-          OpenTox::Algorithm::Similarity.send(@model.similarity_algorithm,training_props, @q_prop)
+          eval("#{@model.similarity_algorithm}(#{training_props}, #{@q_prop})")
+          #OpenTox::Algorithm::Similarity.send(@model.similarity_algorithm,training_props, @q_prop)
         end
 
 

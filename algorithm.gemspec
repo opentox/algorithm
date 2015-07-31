@@ -20,7 +20,8 @@ Gem::Specification.new do |s|
   # specify any dependencies here; for example:
   #s.add_runtime_dependency "opentox-server"
   s.add_runtime_dependency "opentox-client"
-  s.add_runtime_dependency 'rinruby'#, "~>2.0.2"
+  s.add_runtime_dependency 'rserve-client'#, "~>2.0.2"
+  #s.add_runtime_dependency 'rinruby'#, "~>2.0.2"
   s.add_runtime_dependency 'nokogiri'#, "~>1.4.4"
   s.add_runtime_dependency 'statsample'#, "~>1.1"
   s.add_runtime_dependency 'gsl'#, "~>1.14"

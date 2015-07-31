@@ -1,7 +1,6 @@
 require 'digest/md5'
 ENV["JAVA_HOME"] ||= "/usr/lib/jvm/java-7-openjdk" 
 BABEL_3D_CACHE_DIR = File.join(File.dirname(__FILE__),"..",'/babel_3d_cache')
-# TODO store 3D structures in mongodb
 # TODO store descriptors in mongodb
 
 module OpenTox
@@ -59,6 +58,7 @@ module OpenTox
         bad_request_error "Compounds for smarts_match are empty" unless compounds
         bad_request_error "Smarts for smarts_match are empty" unless smarts
         parse compounds
+        @count = count
         obconversion = OpenBabel::OBConversion.new
         obmol = OpenBabel::OBMol.new
         obconversion.set_in_format('inchi')
@@ -100,13 +100,19 @@ module OpenTox
             @data_entries
           end
         when "OpenTox::Dataset"
-          dataset = OpenTox::Dataset.new(:compound_ids => @compounds.collect{|c| c.id})
+          dataset = OpenTox::DescriptorDataset.new(:compound_ids => @compounds.collect{|c| c.id})
           if @smarts
             dataset.feature_ids = @smarts.collect{|smart| Smarts.find_or_create_by(:smarts => smart).id}
+            @count ? algo = "count" : algo = "match"
+            dataset.feature_calculation_algorithm = "#{self}.smarts_#{algo}"
+            
           elsif @physchem_descriptors
             dataset.feature_ids = @physchem_descriptors.collect{|d| PhysChemDescriptor.find_or_create_by(:name => d, :creator => __FILE__).id}
             dataset.data_entries = @data_entries
+            dataset.feature_calculation_algorithm = "#{self}.physchem"
+            #TODO params?
           end
+          dataset.save_all
           dataset
         end
       end
