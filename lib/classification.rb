@@ -8,12 +8,8 @@ module OpenTox
       # @return [Numeric] A prediction value.
       def self.weighted_majority_vote(neighbors)
 
-        return {:prediction => nil, :confidence => nil} if neighbors.empty?
-
         neighbor_contribution = 0.0
         confidence_sum = 0.0
-        confidence = 0.0
-        prediction = nil
 
         $logger.debug "Weighted Majority Vote Classification."
 
@@ -39,14 +35,14 @@ module OpenTox
           elsif confidence_sum < 0.0
             prediction = values[0] 
           end
+        elsif values.size == 1 # all neighbors have the same value
+          prediction = values[0] 
         else 
           prediction = (neighbor_contribution/confidence_sum).round  # AM: new multinomial prediction
         end 
 
-        $logger.debug "Prediction: '" + prediction.to_s + "'." unless prediction.nil?
         confidence = (confidence_sum/neighbors.size).abs 
-        $logger.debug "Confidence: '" + confidence.to_s + "'." unless prediction.nil?
-        [prediction, confidence.abs]
+        {:value => prediction, :confidence => confidence.abs}
       end
 
       # Local support vector regression from neighbors 

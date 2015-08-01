@@ -403,11 +403,11 @@ module OpenTox
         # Converts fingerprints to matrix, order of rows by fingerprints. nil values allowed.
         # Same for compound fingerprints.
         def get_matrices
-          @compounds = @model.training_dataset.compounds.clone
+          @compounds = @model.training_dataset.compounds
           # TODO select predicted variable
           @activities = @model.training_activities
-          @n_prop = @model.feature_dataset.data_entries.clone
-          @q_prop = @model.query_fingerprint.flatten.clone
+          @n_prop = @model.feature_dataset.data_entries
+          @q_prop = @model.query_fingerprint.flatten
         end
 
         # Returns propositionalized data, if appropriate, or nil

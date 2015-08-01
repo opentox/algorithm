@@ -1,6 +1,9 @@
 module OpenTox
   module Algorithm
     class Fminer
+      TABLE_OF_ELEMENTS = [
+"H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"]
+        
       #
       # Run bbrc algorithm on dataset
       #
@@ -14,27 +17,40 @@ module OpenTox
       #   - nr_hits Set to "true" to get hit count instead of presence
       #   - get_target Set to "true" to obtain target variable as feature
       # @return [text/uri-list] Task URI
-      def self.bbrc dataset, params={}
-
-        table_of_elements = [
-"H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"]
-        
-        @fminer=OpenTox::Algorithm::Fminer.new
-        @fminer.check_params(dataset,params,5)
+      def self.bbrc training_dataset, params={}
 
         time = Time.now
+        bad_request_error "More than one prediction feature found in training_dataset #{training_dataset.id}" unless training_dataset.features.size == 1
+
+        prediction_feature = training_dataset.features.first
+        if params[:min_frequency]
+          minfreq = params[:min_frequency]
+        else
+          per_mil = 5 # value from latest version
+          i = training_dataset.feature_ids.index prediction_feature.id
+          nr_labeled_cmpds = training_dataset.data_entries.select{|de| !de[i].nil?}.size
+          minfreq = per_mil * nr_labeled_cmpds.to_f / 1000.0 # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
+          minfreq = 2 unless minfreq > 2
+          minfreq = minfreq.round
+        end
+
+        #@fminer=OpenTox::Algorithm::Fminer.new
+        #@fminer.check_params(dataset,params,5)
+        #p @fminer.instance_variables
+
 
         @bbrc = Bbrc::Bbrc.new
         @bbrc.Reset
-        if @fminer.prediction_feature.numeric 
+        if prediction_feature.numeric 
           @bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
         else
           bad_request_error "No accept values for "\
-                            "dataset '#{@fminer.training_dataset.id}' and "\
-                            "feature '#{@fminer.prediction_feature.id}'" unless @fminer.prediction_feature.accept_values
-          value_map = @fminer.prediction_feature.accept_values.each_index.inject({}) { |h,idx| h[idx+1]=@fminer.prediction_feature.accept_values[idx]; h }
+                            "dataset '#{training_dataset.id}' and "\
+                            "feature '#{prediction_feature.id}'" unless prediction_feature.accept_values
+          act2value = prediction_feature.accept_values.each_index.inject({}) { |h,idx| h[idx+1]=prediction_feature.accept_values[idx]; h }
+          value2act = act2value.invert
         end
-        @bbrc.SetMinfreq(@fminer.minfreq)
+        @bbrc.SetMinfreq(minfreq)
         @bbrc.SetType(1) if params[:feature_type] == "paths"
         @bbrc.SetBackbone(false) if params[:backbone] == "false"
         @bbrc.SetChisqSig(params[:min_chisq_significance].to_f) if params[:min_chisq_significance]
@@ -42,21 +58,28 @@ module OpenTox
 
         params[:nr_hits] ? nr_hits = params[:nr_hits] : nr_hits = false
         feature_dataset = FminerDataset.new(
-            :training_dataset_id => dataset.id,
+            :training_dataset_id => training_dataset.id,
             :training_algorithm => "#{self.to_s}.bbrc",
-            :training_feature_id => params[:prediction_feature].id ,
+            :training_feature_id => prediction_feature.id ,
             :training_parameters => {
-              :min_frequency => @fminer.minfreq,
+              :min_frequency => minfreq,
               :nr_hits => nr_hits,
               :backbone => (params[:backbone] == false ? false : true) 
             }
 
         )
-        feature_dataset.compounds = dataset.compounds
+        feature_dataset.compounds = training_dataset.compounds
 
+        $logger.debug "Setup: #{Time.now-time}"
+        time = Time.now
         # Add data to fminer
-        @fminer.add_fminer_data(@bbrc, value_map)
-        g_median=@fminer.all_activities.values.to_scale.median
+        #@fminer.add_fminer_data(@bbrc, value_map)
+        training_dataset.compounds.each_with_index do |compound,i|
+          @bbrc.AddCompound(compound.smiles,i+1)
+          act = value2act[training_dataset.data_entries[i].first]
+          @bbrc.AddActivity(act,i+1)
+        end
+        #g_median=@fminer.all_activities.values.to_scale.median
 
         #task.progress 10
         #step_width = 80 / @bbrc.GetNoRootNodes().to_f
@@ -76,7 +99,7 @@ module OpenTox
             smarts = f.shift
             # convert fminer SMARTS representation into a more human readable format
             smarts.gsub!(%r{\[#(\d+)&(\w)\]}) do
-             element = table_of_elements[$1.to_i-1]
+             element = TABLE_OF_ELEMENTS[$1.to_i-1]
              $2 == "a" ? element.downcase : element
             end
             p_value = f.shift

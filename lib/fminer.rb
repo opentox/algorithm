@@ -186,16 +186,8 @@ module OpenTox
       # @param [Integer] per-mil value
       # return [Integer] min-frequency
       def min_frequency(training_dataset,prediction_feature,per_mil)
-        nr_labeled_cmpds = DataEntry.where(dataset_id: training_dataset.id, feature_id: prediction_feature.id).in(compound_id: training_dataset.compound_ids).count
-        #nr_labeled_cmpds=0
-        #f_idx=training_dataset.features.index prediction_feature
-        #training_dataset.compounds.each_with_index { |cmpd, c_idx|
-          #if ( training_dataset.data_entries[c_idx] )
-               #unless training_dataset.data_entries[c_idx][f_idx].nil?
-                 #nr_labeled_cmpds += 1 
-               #end
-          #end
-        #}
+        i = training_dataset.feature_ids.index prediction_feature.id
+        nr_labeled_cmpds = training_dataset.data_entries.select{|de| !de[i].nil?}.size
         minfreq = per_mil * nr_labeled_cmpds.to_f / 1000.0 # AM sugg. 8-10 per mil for BBRC, 50 per mil for LAST
         minfreq = 2 unless minfreq > 2
         Integer (minfreq)

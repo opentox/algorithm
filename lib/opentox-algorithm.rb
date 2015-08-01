@@ -15,7 +15,7 @@ require_relative '../last-utils/lu.rb'
 #Dir[File.join(File.dirname(__FILE__),"*.rb")].each{ |f| require_relative f}
 require_relative "algorithm.rb"
 require_relative "descriptor.rb"
-require_relative "fminer.rb"
+#require_relative "fminer.rb"
 require_relative "lazar.rb"
 require_relative "transform.rb"
 require_relative "similarity.rb"
