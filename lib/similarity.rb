@@ -10,22 +10,27 @@ module OpenTox
 
     class Similarity
 
+      #TODO weighted tanimoto
+
       # Tanimoto similarity
       # @param [Array] a fingerprints of first compound
       # @param [Array] b fingerprints of second compound
       # @return [Float] Tanimoto similarity
       def self.tanimoto(a,b)
-        #a = fingerprints.first
-        #b = fingerprints.last
+        bad_request_error "fingerprints #{a} and #{b} don't have equal size" unless a.size == b.size
+        #common = 0.0
+        #a.each_with_index do |n,i|
+          #common += 1 if n == b[i]
+        #end
+        #common/a.size
+        # TODO check if calculation is correct
         common_p_sum = 0.0
         all_p_sum = 0.0
-        size = [ a.size, b.size ].min
-        $logger.warn "fingerprints don't have equal size" if a.size != b.size
-        (0...size).each { |idx|
-          common_p_sum += [ a[idx].to_f, b[idx].to_f ].min
-          all_p_sum += [ a[idx].to_f, b[idx].to_f ].max
+        (0...a.size).each { |idx|
+          common_p_sum += [ a[idx], b[idx] ].min
+          all_p_sum += [ a[idx], b[idx] ].max
         }
-        (all_p_sum > 0.0) ? (common_p_sum/all_p_sum) : 0.0
+        common_p_sum/all_p_sum
       end
 
 

@@ -51,7 +51,8 @@ module OpenTox
 
       def predict object
 
-        time = Time.now
+        t = Time.now
+        at = Time.now
 
         @training_dataset = OpenTox::Dataset.find(training_dataset_id)
         @feature_dataset = OpenTox::Dataset.find(feature_dataset_id)
@@ -68,17 +69,22 @@ module OpenTox
           bad_request_error "Please provide a OpenTox::Compound an Array of OpenTox::Compounds or an OpenTox::Dataset as parameter."
         end
 
-        $logger.debug "Setup: #{Time.now-time}"
-        time = Time.now
+        $logger.debug "Setup: #{Time.now-t}"
+        t = Time.now
 
         @query_fingerprint = Algorithm.run(feature_calculation_algorithm, compounds, @feature_dataset.features.collect{|f| f.name} )
 
-        $logger.debug "Query fingerprint calculation: #{Time.now-time}"
+        $logger.debug "Query fingerprint calculation: #{Time.now-t}"
+        t = Time.now
 
         predictions = []
         prediction_feature = OpenTox::Feature.find prediction_feature_id
         tt = 0
         pt = 0
+        nt = 0
+        st = 0
+        nit = 0
+        @training_fingerprints ||= @feature_dataset.data_entries
         compounds.each_with_index do |compound,c|
           t = Time.new
 
@@ -95,11 +101,11 @@ module OpenTox
             if prediction_algorithm =~ /Regression/
               mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(self)
               mtf.transform
-              training_fingerprints = mtf.n_prop
+              @training_fingerprints = mtf.n_prop
               query_fingerprint = mtf.q_prop
               neighbors = [[nil,nil,nil,query_fingerprint]]
             else
-              training_fingerprints = @feature_dataset.data_entries
+              #training_fingerprints = @feature_dataset.data_entries
               query_fingerprint = @query_fingerprint[c]
               neighbors = []
             end
@@ -108,22 +114,27 @@ module OpenTox
             
 
             # find neighbors
-            training_fingerprints.each_with_index do |fingerprint, i|
+            @training_fingerprints.each_with_index do |fingerprint, i|
+              ts = Time.new
               sim = Algorithm.run(similarity_algorithm,fingerprint, query_fingerprint)
+              st += Time.now-ts
+              ts = Time.new
               if sim > self.min_sim
                 if prediction_algorithm =~ /Regression/
-                  neighbors << [@feature_dataset.compounds[i],sim,training_activities[i], fingerprint]
+                  neighbors << [@feature_dataset.compound_ids[i],sim,training_activities[i], fingerprint]
                 else
-                  neighbors << [@feature_dataset.compounds[i],sim,training_activities[i]] 
+                  neighbors << [@feature_dataset.compound_ids[i],sim,training_activities[i]] # use compound_ids, instantiation of Compounds is too time consuming
                 end
               end
+              nit += Time.now-ts
             end
 
             if neighbors.empty?
               predictions << {:compound => compound, :value => nil, :confidence => nil, :warning => "No neighbors with similarity > #{min_sim} in dataset #{training_dataset.id}"}
-              #$logger.warn "No neighbors found for compound #{compound}."
               next
             end
+            nt += Time.now-t
+            t = Time.new
 
             if prediction_algorithm =~ /Regression/
               prediction = Algorithm.run(prediction_algorithm, neighbors, :min_train_performance => self.min_train_performance)
@@ -145,7 +156,9 @@ module OpenTox
 
         end 
         $logger.debug "Transform time: #{tt}"
+        $logger.debug "Neighbor search time: #{nt} (Similarity calculation: #{st}, Neighbor insert: #{nit})"
         $logger.debug "Prediction time: #{pt}"
+        $logger.debug "Total prediction time: #{Time.now-at}"
 
         # serialize result
         case object.class.to_s

@@ -34,11 +34,6 @@ module OpenTox
           minfreq = minfreq.round
         end
 
-        #@fminer=OpenTox::Algorithm::Fminer.new
-        #@fminer.check_params(dataset,params,5)
-        #p @fminer.instance_variables
-
-
         @bbrc = Bbrc::Bbrc.new
         @bbrc.Reset
         if prediction_feature.numeric 
@@ -47,8 +42,7 @@ module OpenTox
           bad_request_error "No accept values for "\
                             "dataset '#{training_dataset.id}' and "\
                             "feature '#{prediction_feature.id}'" unless prediction_feature.accept_values
-          act2value = prediction_feature.accept_values.each_index.inject({}) { |h,idx| h[idx+1]=prediction_feature.accept_values[idx]; h }
-          value2act = act2value.invert
+          value2act = Hash[[*prediction_feature.accept_values.map.with_index]]
         end
         @bbrc.SetMinfreq(minfreq)
         @bbrc.SetType(1) if params[:feature_type] == "paths"
@@ -70,10 +64,7 @@ module OpenTox
         )
         feature_dataset.compounds = training_dataset.compounds
 
-        $logger.debug "Setup: #{Time.now-time}"
-        time = Time.now
-        # Add data to fminer
-        #@fminer.add_fminer_data(@bbrc, value_map)
+        # add data 
         training_dataset.compounds.each_with_index do |compound,i|
           @bbrc.AddCompound(compound.smiles,i+1)
           act = value2act[training_dataset.data_entries[i].first]
@@ -84,7 +75,7 @@ module OpenTox
         #task.progress 10
         #step_width = 80 / @bbrc.GetNoRootNodes().to_f
 
-        $logger.debug "Setup: #{Time.now-time}"
+        $logger.debug "BBRC setup: #{Time.now-time}"
         time = Time.now
         ftime = 0
         itime = 0
