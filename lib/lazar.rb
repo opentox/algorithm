@@ -170,7 +170,9 @@ module OpenTox
           # prepare prediction dataset
           prediction_dataset = LazarPrediction.new(
             :title => "Lazar prediction for #{prediction_feature.title}",
-            :creator =>  __FILE__
+            :creator =>  __FILE__,
+            :prediction_feature_id => prediction_feature.id
+
           )
           confidence_feature = OpenTox::NumericFeature.find_or_create_by( "title" => "Prediction confidence" )
           warning_feature = OpenTox::NominalFeature.find_or_create_by("title" => "Warnings")
@@ -181,6 +183,14 @@ module OpenTox
           return prediction_dataset
         end
 
+      end
+
+      def training_dataset
+        Dataset.find training_dataset_id
+      end
+
+      def prediction_feature
+        Feature.find prediction_feature_id
       end
       
       def training_activities

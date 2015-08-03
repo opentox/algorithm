@@ -34,7 +34,7 @@ module OpenTox
           minfreq = minfreq.round
         end
 
-        @bbrc = Bbrc::Bbrc.new
+        @bbrc ||= Bbrc::Bbrc.new
         @bbrc.Reset
         if prediction_feature.numeric 
           @bbrc.SetRegression(true) # AM: DO NOT MOVE DOWN! Must happen before the other Set... operations!
