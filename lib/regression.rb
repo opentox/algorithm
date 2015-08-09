@@ -1,13 +1,38 @@
-#require "rinruby"
-
 # TODO install R packages kernlab, caret, doMC, class, e1071
-# TODO use Rserve
 
+
+        # log transform activities (create new dataset)
+        # scale, normalize features, might not be necessary
+        # http://stats.stackexchange.com/questions/19216/variables-are-often-adjusted-e-g-standardised-before-making-a-model-when-is
+        # http://stats.stackexchange.com/questions/7112/when-and-how-to-use-standardized-explanatory-variables-in-linear-regression
+        # zero-order correlation and the semi-partial correlation
+        # seems to be necessary for svm
+        #   http://stats.stackexchange.com/questions/77876/why-would-scaling-features-decrease-svm-performance?lq=1
+        #   http://stackoverflow.com/questions/15436367/svm-scaling-input-values
+        # use lasso or elastic net??
+        # select relevant features
+        #   remove features with a single value
+        #   remove correlated features
+        #   remove features not correlated with endpoint
 module OpenTox
   module Algorithm
     
     class Regression
-require "rserve"
+
+      def self.weighted_average neighbors
+        weighted_sum = 0.0
+        sim_sum = 0.0
+        neighbors.each do |row|
+          n,sim,acts = row
+          acts.each do |act|
+            weighted_sum += sim*Math.log10(act)
+            sim_sum += sim
+          end
+        end
+        confidence = sim_sum/neighbors.size.to_f
+        sim_sum == 0 ? prediction = nil : prediction = 10**(weighted_sum/sim_sum)
+        [prediction,confidence]
+      end
 
       # Local support vector regression from neighbors 
       # @param [Hash] params Keys `:props, :activities, :sims, :min_train_performance` are required

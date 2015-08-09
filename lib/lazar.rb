@@ -13,34 +13,26 @@ module OpenTox
       field :creator, type: String, default: __FILE__
       # datasets
       field :training_dataset_id, type: BSON::ObjectId
-      field :feature_dataset_id, type: BSON::ObjectId
       # algorithms
-      field :feature_calculation_algorithm, type: String
       field :prediction_algorithm, type: String
-      field :similarity_algorithm, type: String
-      field :min_sim, type: Float
+      field :neighbor_algorithm, type: String
+      field :neighbor_algorithm_parameters, type: Hash
       # prediction feature
       field :prediction_feature_id, type: BSON::ObjectId
 
       attr_accessor :prediction_dataset
       attr_accessor :training_dataset
-      attr_accessor :feature_dataset
-      attr_accessor :query_fingerprint
-      attr_accessor :neighbors
 
       # Create a lazar model from a training_dataset and a feature_dataset
       # @param [OpenTox::Dataset] training_dataset
-      # @param [OpenTox::Dataset] feature_dataset
       # @return [OpenTox::Model::Lazar] Regression or classification model
-      def self.create training_dataset, feature_dataset
+      def self.create training_dataset
 
-        bad_request_error "No features found in feature dataset #{feature_dataset.id}." if feature_dataset.features.empty?
         bad_request_error "More than one prediction feature found in training_dataset #{training_dataset.id}" unless training_dataset.features.size == 1
-        bad_request_error "Training dataset compounds do not match feature dataset compounds. Please ensure that they are in the same order." unless training_dataset.compounds == feature_dataset.compounds
 
+        # TODO document convention
         prediction_feature = training_dataset.features.first
         prediction_feature.nominal ?  lazar = OpenTox::Model::LazarClassification.new : lazar = OpenTox::Model::LazarRegression.new
-        lazar.feature_dataset_id = feature_dataset.id
         lazar.training_dataset_id = training_dataset.id
         lazar.prediction_feature_id = prediction_feature.id
         lazar.title = prediction_feature.title 
@@ -49,6 +41,105 @@ module OpenTox
         lazar
       end
 
+      def predict object
+
+        t = Time.now
+        at = Time.now
+
+        training_dataset = Dataset.find training_dataset_id
+        prediction_feature = Feature.find prediction_feature_id
+
+        # parse data
+        compounds = []
+        case object.class.to_s
+        when "OpenTox::Compound"
+          compounds = [object] 
+        when "Array"
+          compounds = object
+        when "OpenTox::Dataset"
+          compounds = object.compounds
+        else 
+          bad_request_error "Please provide a OpenTox::Compound an Array of OpenTox::Compounds or an OpenTox::Dataset as parameter."
+        end
+
+        # make predictions
+        predictions = []
+        compounds.each_with_index do |compound,c|
+          t = Time.new
+          neighbors = Algorithm.run(neighbor_algorithm, compound, neighbor_algorithm_parameters)
+          # add activities
+          # TODO: improve efficiency, takes 3 times longer than previous version
+          # TODO database activity??
+          neighbors.collect! do |n|
+            rows = training_dataset.compound_ids.each_index.select{|i| training_dataset.compound_ids[i] == n.first}
+            acts = rows.collect{|row| training_dataset.data_entries[row][0]}.compact
+            acts.empty? ? nil : n << acts
+          end
+          neighbors.compact! # remove neighbors without training activities
+          predictions << Algorithm.run(prediction_algorithm, neighbors)
+        end 
+
+        # serialize result
+        case object.class.to_s
+        when "OpenTox::Compound"
+          return predictions.first
+        when "Array"
+          return predictions
+        when "OpenTox::Dataset"
+          # prepare prediction dataset
+          prediction_dataset = LazarPrediction.new(
+            :title => "Lazar prediction for #{prediction_feature.title}",
+            :creator =>  __FILE__,
+            :prediction_feature_id => prediction_feature.id
+
+          )
+          confidence_feature = OpenTox::NumericFeature.find_or_create_by( "title" => "Prediction confidence" )
+          # TODO move into warnings field
+          warning_feature = OpenTox::NominalFeature.find_or_create_by("title" => "Warnings")
+          prediction_dataset.features = [ prediction_feature, confidence_feature, warning_feature ]
+          prediction_dataset.compounds = compounds
+          prediction_dataset.data_entries = predictions
+          prediction_dataset.save_all
+          return prediction_dataset
+        end
+
+      end
+      
+      def training_activities
+        i = training_dataset.feature_ids.index prediction_feature_id
+        training_dataset.data_entries.collect{|de| de[i]}
+      end
+
+    end
+
+    class LazarClassification < Lazar
+      def initialize
+        super
+        self.prediction_algorithm = "OpenTox::Algorithm::Classification.weighted_majority_vote"
+        self.neighbor_algorithm = "OpenTox::Algorithm::Neighbor.fingerprint_similarity"
+        self.neighbor_algorithm_parameters = {:min_sim => 0.7}
+      end
+    end
+
+    class LazarFminerClassification < LazarClassification
+      field :feature_dataset_id, type: BSON::ObjectId
+      field :feature_calculation_algorithm, type: String
+
+      def self.create training_dataset
+        model = super(training_dataset)
+        model.update "_type" => self.to_s # adjust class
+        model = self.find model.id # adjust class
+        model.neighbor_algorithm = "OpenTox::Algorithm::Neighbor.fminer_similarity"
+        model.neighbor_algorithm_parameters = {
+          :feature_calculation_algorithm => "OpenTox::Algorithm::Descriptor.smarts_match",
+          :feature_dataset_id => Algorithm::Fminer.bbrc(training_dataset).id,
+          :min_sim => 0.3
+        }
+        model.save
+        model
+      end
+
+=begin
       def predict object
 
         t = Time.now
@@ -98,17 +189,9 @@ module OpenTox
             next
           else
 
-            if prediction_algorithm =~ /Regression/
-              mtf = OpenTox::Algorithm::Transform::ModelTransformer.new(self)
-              mtf.transform
-              @training_fingerprints = mtf.n_prop
-              query_fingerprint = mtf.q_prop
-              neighbors = [[nil,nil,nil,query_fingerprint]]
-            else
-              #training_fingerprints = @feature_dataset.data_entries
-              query_fingerprint = @query_fingerprint[c]
-              neighbors = []
-            end
+            #training_fingerprints = @feature_dataset.data_entries
+            query_fingerprint = @query_fingerprint[c]
+            neighbors = []
             tt += Time.now-t
             t = Time.new
             
@@ -146,7 +229,7 @@ module OpenTox
 
 
             # AM: transform to original space (TODO)
-            confidence_value = ((confidence_value+1.0)/2.0).abs if prediction.first and similarity_algorithm =~ /cosine/
+            #confidence_value = ((confidence_value+1.0)/2.0).abs if prediction.first and similarity_algorithm =~ /cosine/
 
 
             $logger.debug "predicted value: #{prediction[:value]}, confidence: #{prediction[:confidence]}"
@@ -184,43 +267,18 @@ module OpenTox
         end
 
       end
-
-      def training_dataset
-        Dataset.find training_dataset_id
-      end
-
-      def prediction_feature
-        Feature.find prediction_feature_id
-      end
-      
-      def training_activities
-        i = @training_dataset.feature_ids.index prediction_feature_id
-        @training_dataset.data_entries.collect{|de| de[i]}
-      end
-
+=end
     end
 
     class LazarRegression < Lazar
-      field :min_train_performance, type: Float, default: 0.1
+
       def initialize
         super
-        self.prediction_algorithm = "OpenTox::Algorithm::Regression.local_svm_regression" 
-        self.similarity_algorithm = "OpenTox::Algorithm::Similarity.cosine"
-        self.min_sim = 0.7 
-
-        # AM: transform to cosine space
-        min_sim = (min_sim.to_f*2.0-1.0).to_s if similarity_algorithm =~ /cosine/
+        self.neighbor_algorithm = "OpenTox::Algorithm::Neighbor.fingerprint_similarity"
+        self.prediction_algorithm = "OpenTox::Algorithm::Regression.weighted_average" 
+        self.neighbor_algorithm_parameters = {:min_sim => 0.7}
       end
-    end
 
-    class LazarClassification < Lazar
-      def initialize
-        super
-        self.prediction_algorithm = "OpenTox::Algorithm::Classification.weighted_majority_vote"
-        self.similarity_algorithm = "OpenTox::Algorithm::Similarity.tanimoto"
-        self.feature_calculation_algorithm = "OpenTox::Algorithm::Descriptor.smarts_match"
-        self.min_sim = 0.3
-      end
     end
 
   end

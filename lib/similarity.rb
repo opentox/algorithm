@@ -23,7 +23,7 @@ module OpenTox
           #common += 1 if n == b[i]
         #end
         #common/a.size
-        # TODO check if calculation is correct
+        # TODO check if calculation speed can be improved
         common_p_sum = 0.0
         all_p_sum = 0.0
         (0...a.size).each { |idx|

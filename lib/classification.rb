@@ -3,10 +3,35 @@ module OpenTox
     
     class Classification
 
+      def self.weighted_majority_vote neighbors
+        return [nil,nil] if neighbors.empty?
+        weighted_sum = {}
+        sim_sum = 0.0
+        neighbors.each do |row|
+          n,sim,acts = row
+          acts.each do |act|
+            weighted_sum[act] ||= 0
+            weighted_sum[act] += sim
+          end
+        end
+        case weighted_sum.size
+        when 1
+          return [weighted_sum.keys.first, 1.0]
+        when 2
+          sim_sum = weighted_sum[weighted_sum.keys[0]]
+          sim_sum -= weighted_sum[weighted_sum.keys[1]]
+          sim_sum > 0 ? prediction = weighted_sum.keys[0] : prediction = weighted_sum.keys[1] 
+          confidence = (sim_sum/neighbors.size).abs 
+          return [prediction,confidence]
+        else
+          bad_request_error "Cannot predict more than 2 classes, multinomial classifications is not yet implemented. Received classes were: '#{weighted.sum.keys}'"
+        end
+      end
+
       # Classification with majority vote from neighbors weighted by similarity
       # @param [Hash] params Keys `:activities, :sims, :value_map` are required
       # @return [Numeric] A prediction value.
-      def self.weighted_majority_vote(neighbors)
+      def self.fminer_weighted_majority_vote neighbors, training_dataset
 
         neighbor_contribution = 0.0
         confidence_sum = 0.0
@@ -15,6 +40,7 @@ module OpenTox
 
         values = neighbors.collect{|n| n[2]}.uniq
         neighbors.each do |neighbor|
+          i = training_dataset.compound_ids.index n.id
           neighbor_weight = neighbor[1]
           activity = values.index(neighbor[2]) + 1 # map values to integers > 1
           neighbor_contribution += activity * neighbor_weight
